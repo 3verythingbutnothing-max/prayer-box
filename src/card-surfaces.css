@@ -1,0 +1,133 @@
+/* Quiet stationery details shared by the prayer, community and account cards. */
+:root {
+  --card-fibers: repeating-linear-gradient(
+      112deg,
+      #896a9407 0 1px,
+      transparent 1px 5px
+    ),
+    repeating-linear-gradient(22deg, #896a9405 0 1px, transparent 1px 7px);
+  --card-shadow: inset 0 1px 0 #ffffffde, 0 3px 0 #e9e0eb80,
+    0 9px 22px -16px #654a7466;
+}
+
+.panel,
+.account-page .panel,
+.community-page .panel,
+.about-care-card,
+.about-theme {
+  background-image: var(--card-fibers);
+  box-shadow: var(--card-shadow);
+}
+
+/* A slim pastel edge makes each request feel like a little paper note. */
+.prayer-card,
+.own-request,
+.inbox-card {
+  --note-edge: #e4d8f4;
+  border-color: #d9ccdf;
+  box-shadow: inset 3px 0 0 var(--note-edge), var(--card-shadow);
+}
+
+.testimony-card {
+  --note-edge: #f1cfb5;
+  border-color: #e3cdbb;
+}
+
+.box-hero {
+  background-image: var(--card-fibers);
+  box-shadow: inset 0 0 0 4px #ffffff45, 0 4px 0 #e7deed70;
+}
+
+.ministry-hero {
+  box-shadow: inset 0 0 0 4px #ffffff55, 0 4px 0 #dce7d780;
+}
+
+.side-note,
+.community-care-note,
+.account-tax-note,
+.account-privacy-note {
+  position: relative;
+  background-image: var(--card-fibers);
+  box-shadow: inset 0 0 0 4px #ffffff4d, 0 3px 0 #e9e0dd80,
+    0 8px 18px -16px #654a7455;
+}
+
+.side-note.butter-wash {
+  border: 1px solid #eadca7;
+}
+
+.side-note.sage-wash {
+  border-color: #cbdac6;
+}
+
+/* The dots are decorative only and never intercept a card's controls. */
+.side-note::before,
+.community-care-note::before,
+.account-tax-note::before,
+.account-privacy-note::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 38px;
+  height: 24px;
+  background: radial-gradient(circle, #9a7cac 0.8px, transparent 1px) 0 0 / 7px
+    7px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.reply-note,
+.friend-reminder,
+.testimony-link {
+  background-image: var(--card-fibers);
+  box-shadow: inset 0 1px 0 #ffffffb3, 0 2px 0 #e4d8e55c;
+}
+
+.account-contribute,
+.account-monthly-card,
+.about-care-personal {
+  background-color: #f6f0ff;
+  border-color: #d9c9e7;
+}
+
+.community-invitation {
+  background-color: #fff5ed;
+  border-color: #e5d1c0;
+}
+
+.about-care-together {
+  background-color: #eff7f1;
+  border-color: #cbded0;
+}
+
+.about-belief {
+  background-color: var(--lavender);
+}
+
+/* Keep statements and other printed pages free of decorative ink. */
+@media print {
+  .panel,
+  .account-page .panel,
+  .community-page .panel,
+  .about-care-card,
+  .about-theme,
+  .box-hero,
+  .side-note,
+  .community-care-note,
+  .account-tax-note,
+  .account-privacy-note,
+  .reply-note,
+  .friend-reminder,
+  .testimony-link {
+    background-image: none;
+    box-shadow: none;
+  }
+
+  .side-note::before,
+  .community-care-note::before,
+  .account-tax-note::before,
+  .account-privacy-note::before {
+    display: none;
+  }
+}

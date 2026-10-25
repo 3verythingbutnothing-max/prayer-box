@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Founder specifications and local review evidence are not public source.
+/AGENTS.md
+/START_HERE.md
+/Prayer_Box_Codex_Brief_v4.md
+/Prayer_Box_Community_and_Prayer_Copy.md
+/DESIGN.md
+/SECURITY_PLAN.md
+/SECURITY_TEST_PLAN.md
+/PROTOTYPE_QA.md
+/output/
