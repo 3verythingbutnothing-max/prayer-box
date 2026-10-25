@@ -583,3 +583,66 @@ test("friends-only requests and box ceilings intersect both accepted circles", (
     "approved members remain intended recipients",
   );
 });
+
+test("self-directed distress is not classified as an outward threat, while threats and solicitation remain held", () => {
+  assert.equal(screenText("I want to kill myself.").state, "approved");
+  assert.equal(screenText("I will hurt myself.").state, "approved");
+  assert.equal(
+    screenText("My friend says he wants to die. Please pray for him.").state,
+    "approved",
+  );
+  assert.equal(screenText("I will hurt you.").state, "pending");
+  assert.equal(
+    screenText("I am going to attack my neighbour.").state,
+    "pending",
+  );
+  assert.equal(
+    screenText("I feel hopeless. Please send me money.").state,
+    "changes",
+  );
+});
+
+test("explicit outward intent includes names, arbitrary targets, and contractions", () => {
+  const examples = [
+    "I will kill Alex.",
+    "I want to hurt my boss.",
+    "I'll hurt Morgan.",
+    "I’ll kill the person who took my bag.",
+    "I'm going to attack my neighbour.",
+    "We’ll hurt the people at the meeting.",
+  ];
+  for (const text of examples)
+    assert.equal(screenText(text).state, "pending", text);
+});
+
+test("a self-directed phrase never hides an additional outward threat", () => {
+  const examples = [
+    "I will kill myself and everyone else.",
+    "I will hurt myself and Alex.",
+    "I will kill myself and my family.",
+    "I will hurt myself and then attack my boss.",
+    "I want to kill myself. I'll hurt Alex too.",
+    "I will hurt myself and I will hurt you.",
+  ];
+  for (const text of examples)
+    assert.equal(screenText(text).state, "pending", text);
+});
+
+test("clear self-directed distress, past thoughts, negation, and inanimate idioms are not outward threats", () => {
+  const examples = [
+    "I'll hurt myself.",
+    "I’m going to kill myself.",
+    "I will hurt myself and need help.",
+    "I will hurt myself and I don't want to live.",
+    "I will hurt myself but not anyone else.",
+    "I used to have thoughts of hurting myself and am asking for support.",
+    "I once thought I would hurt my boss, but I no longer feel that way.",
+    "I don't want to hurt my boss.",
+    "I will not hurt anyone.",
+    "I want to kill time before my appointment.",
+    "I will kill the computer process.",
+    "I want to attack the problem one step at a time.",
+  ];
+  for (const text of examples)
+    assert.equal(screenText(text).state, "approved", text);
+});

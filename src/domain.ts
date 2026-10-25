@@ -55,6 +55,7 @@ export interface PrayerRequest {
   replies: Reply[];
   moderation: Moderation;
   reviewReason?: string;
+  platformAcknowledgment?: string;
   assignedTo?: string;
   workState: "new" | "assigned" | "follow-up" | "archived";
 }
@@ -408,6 +409,47 @@ export function getAudienceLabel(audience: Audience, recipient: BoxId): string {
     : "Sender and Elena only";
 }
 
+/** Limited demo cue for explicit outward intent; never a full safety classifier. */
+function hasOutwardThreatExample(normalized: string): boolean {
+  if (/\byou\s+should\s+die\b/.test(normalized)) return true;
+  const directIntent =
+    /\b(?:(?:i|we)\s+(?:will|shall|want\s+to|intend\s+to|plan\s+to|am\s+going\s+to|are\s+going\s+to)|(?:i|we)'ll|i'm\s+going\s+to|we're\s+going\s+to)\s+(?:hurt|kill|attack)\b/g;
+  const selfTarget = /^(?:myself|ourselves|my\s+self|our\s+selves|me|us)\b/;
+  const clearlyInnocentTarget =
+    /^(?:time|(?:a|the|this)\s+(?:computer\s+)?(?:process|program|bug|problem|task)|(?:some|the)\s+weeds|(?:a|the)\s+few\s+minutes|after|when|because|during|from|for|while|if)\b/;
+
+  function targetsOthers(target: string): boolean {
+    const object = target.trim().replace(/^["'“”]+/, "");
+    if (!object || clearlyInnocentTarget.test(object)) return false;
+    const self = object.match(selfTarget);
+    if (!self) return true; // Names and arbitrary outward targets remain reviewable.
+    const remainder = object.slice(self[0].length).trim();
+    const continuation = remainder.match(
+      /^(?:,\s*)?(?:and|or|as\s+well\s+as|along\s+with)\s+(?:then\s+)?(.+)$/,
+    );
+    if (!continuation) return false;
+    const next = continuation[1].replace(/^(?:hurt|kill|attack)\s+/, "");
+    // These begin a feeling/help/negated clause rather than another target.
+    // A second explicit threat is independently found by directIntent below.
+    if (
+      /^(?:i|we|need|want|feel|hope|wish|please|not|never|don'?t|do\s+not|can'?t|cannot)\b/.test(
+        next,
+      )
+    )
+      return false;
+    return targetsOthers(next);
+  }
+
+  for (const intent of normalized.matchAll(directIntent)) {
+    const afterIntent = normalized.slice(
+      (intent.index ?? 0) + intent[0].length,
+    );
+    const target = afterIntent.slice(0, 200).split(/[.!?;]/, 1)[0];
+    if (targetsOthers(target)) return true;
+  }
+  return false;
+}
+
 /**
  * A deliberately limited, deterministic walkthrough of review states.
  * This does not inspect media, authenticate users, detect all abuse, judge
@@ -421,6 +463,7 @@ export function screenText(text: string): {
   const normalized = text
     .normalize("NFKC")
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/[’‘]/g, "'")
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
@@ -468,9 +511,7 @@ export function screenText(text: string): {
         "This example contains payment instructions or a request for money. Prayer Box is for prayer. Remove payment handles and fundraising links; asking for prayer about financial hardship is welcome. You can appeal if we misunderstood.",
     };
   }
-  if (
-    /\b(?:i\s+will\s+(?:hurt|kill)\s+you|you\s+should\s+die)\b/.test(normalized)
-  ) {
+  if (hasOutwardThreatExample(normalized)) {
     return {
       state: "pending",
       category: "Safety review",

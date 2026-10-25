@@ -1362,6 +1362,12 @@ export default function AccountPages({
                     A saved text acknowledgment can welcome a new request. It
                     never implies someone has read or prayed over it.
                   </p>
+                  <p>
+                    This optional box welcome is separate from Prayer Box’s
+                    first automatic comment, which only the requester can see.
+                    Changing this setting does not turn that private platform
+                    acknowledgment on or off.
+                  </p>
                   <label className="field">
                     Box you own
                     <select value={ownedAutomaticBox} disabled>

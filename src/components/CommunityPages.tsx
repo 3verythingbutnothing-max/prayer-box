@@ -17,6 +17,7 @@ interface CommunityPagesProps {
   onUpdateRequests: (
     update: (rows: PrayerRequest[]) => PrayerRequest[],
   ) => void;
+  onCareConcern: (requestId: string) => void;
   membershipStatus: MembershipStatus;
   onMembershipChange: (status: MembershipStatus) => void;
   friends: string[];
@@ -1239,6 +1240,12 @@ function ReviewPage(props: CommunityPagesProps) {
                     }}
                   >
                     Reject
+                  </button>
+                  <button
+                    className="text-link"
+                    onClick={() => props.onCareConcern(request.id)}
+                  >
+                    This person may need help
                   </button>
                 </div>
               </article>

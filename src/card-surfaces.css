@@ -1,13 +1,10 @@
 /* Quiet stationery details shared by the prayer, community and account cards. */
 :root {
-  --card-fibers: repeating-linear-gradient(
-      112deg,
-      #896a9407 0 1px,
-      transparent 1px 5px
-    ),
-    repeating-linear-gradient(22deg, #896a9405 0 1px, transparent 1px 7px);
-  --card-shadow: inset 0 1px 0 #ffffffde, 0 3px 0 #e9e0eb80,
-    0 9px 22px -16px #654a7466;
+  --card-fibers:
+    repeating-linear-gradient(112deg, #58758d07 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(22deg, #58758d05 0 1px, transparent 1px 7px);
+  --card-shadow:
+    inset 0 1px 0 #ffffffde, 0 3px 0 #e1e6ec80, 0 9px 22px -16px #36526d55;
 }
 
 .panel,
@@ -25,7 +22,15 @@
 .inbox-card {
   --note-edge: #e4d8f4;
   border-color: #d9ccdf;
-  box-shadow: inset 3px 0 0 var(--note-edge), var(--card-shadow);
+  box-shadow:
+    inset 3px 0 0 var(--note-edge),
+    var(--card-shadow);
+}
+
+.prayer-card:not(.testimony-card),
+.own-request,
+.inbox-card {
+  background-color: #fcf9ff;
 }
 
 .testimony-card {
@@ -35,11 +40,15 @@
 
 .box-hero {
   background-image: var(--card-fibers);
-  box-shadow: inset 0 0 0 4px #ffffff45, 0 4px 0 #e7deed70;
+  box-shadow:
+    inset 0 0 0 4px #ffffff65,
+    0 4px 0 #d8e5f070;
 }
 
 .ministry-hero {
-  box-shadow: inset 0 0 0 4px #ffffff55, 0 4px 0 #dce7d780;
+  box-shadow:
+    inset 0 0 0 4px #ffffff55,
+    0 4px 0 #dce7d780;
 }
 
 .side-note,
@@ -48,8 +57,10 @@
 .account-privacy-note {
   position: relative;
   background-image: var(--card-fibers);
-  box-shadow: inset 0 0 0 4px #ffffff4d, 0 3px 0 #e9e0dd80,
-    0 8px 18px -16px #654a7455;
+  box-shadow:
+    inset 0 0 0 4px #ffffff4d,
+    0 3px 0 #e9e0dd80,
+    0 8px 18px -16px #36526d55;
 }
 
 .side-note.butter-wash {
@@ -71,7 +82,7 @@
   right: 15px;
   width: 38px;
   height: 24px;
-  background: radial-gradient(circle, #9a7cac 0.8px, transparent 1px) 0 0 / 7px
+  background: radial-gradient(circle, #6d8ba5 0.8px, transparent 1px) 0 0 / 7px
     7px;
   opacity: 0.35;
   pointer-events: none;
@@ -81,14 +92,35 @@
 .friend-reminder,
 .testimony-link {
   background-image: var(--card-fibers);
-  box-shadow: inset 0 1px 0 #ffffffb3, 0 2px 0 #e4d8e55c;
+  box-shadow:
+    inset 0 1px 0 #ffffffb3,
+    0 2px 0 #e4d8e55c;
 }
 
 .account-contribute,
-.account-monthly-card,
 .about-care-personal {
   background-color: #f6f0ff;
   border-color: #d9c9e7;
+}
+
+/* Cooler paper for account utilities; prayer and testimony notes keep their cues. */
+.account-monthly-card,
+.account-privacy-note,
+.community-care-note {
+  background-color: var(--blue-wash);
+  border-color: var(--blue-line);
+}
+
+.account-privacy-note .account-soft-icon,
+.account-monthly-card .account-soft-icon {
+  background-color: var(--blue);
+  color: var(--navy);
+}
+
+.account-privacy-note h2,
+.account-monthly-card h2,
+.community-care-note h2 {
+  color: var(--navy);
 }
 
 .community-invitation {

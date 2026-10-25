@@ -15,6 +15,18 @@ import PrayerDetail from "./components/PrayerDetail";
 import AccountPages from "./components/AccountPages";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
+import CareResources from "./components/CareResources";
+import {
+  CareReviewQueue,
+  PrivateSupportNotifications,
+} from "./components/CareFlow";
+import {
+  addCareConcern,
+  buildPlatformAcknowledgment,
+  hasSupportLanguage,
+  visibleSupportNotes,
+} from "./care";
+import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
 
 type Membership = "none" | "pending" | "invited" | "approved";
@@ -57,7 +69,18 @@ const boxNames: Record<BoxId, string> = {
   grace: "Grace Church",
   mine: "Elena",
 };
-const cloneFixtures = () => structuredClone(seedRequests);
+const withPlatformAcknowledgment = (row: PrayerRequest): PrayerRequest =>
+  row.moderation === "approved" && !row.platformAcknowledgment
+    ? {
+        ...row,
+        platformAcknowledgment: buildPlatformAcknowledgment(
+          row.text,
+          row.topic,
+        ),
+      }
+    : row;
+const cloneFixtures = () =>
+  structuredClone(seedRequests).map(withPlatformAcknowledgment);
 
 function PrayerCard({
   row,
@@ -226,6 +249,12 @@ export default function App() {
     Partial<Record<BoxId, string[]>>
   >({});
   const [reports, setReports] = useState<Report[]>([]);
+  const [careConcerns, setCareConcerns] = useState<CareConcern[]>([]);
+  const [supportNotes, setSupportNotes] = useState<SupportNote[]>([]);
+  const [dismissedSupportNotes, setDismissedSupportNotes] = useState<string[]>(
+    [],
+  );
+  const [readSupportNotes, setReadSupportNotes] = useState<string[]>([]);
   const [heldStories, setHeldStories] = useState<HeldStory[]>([]);
   const [restricted, setRestricted] = useState<string[]>([]);
   const [composer, setComposer] = useState<{
@@ -233,7 +262,7 @@ export default function App() {
     initial?: PrayerRequest;
   } | null>(null);
   const [dialog, setDialog] = useState<
-    "demo" | "notifications" | "blocked" | "share" | null
+    "demo" | "notifications" | "blocked" | "share" | "support" | null
   >(null);
   const [scenario, setScenario] = useState<Scenario>("normal");
   const [tab, setTab] = useState<"requests" | "testimonies">("requests");
@@ -265,6 +294,12 @@ export default function App() {
     (viewer === "member" && memberActive) ||
     (viewer === "elena" && membership === "approved");
   const privacy = privacyByViewer[viewer] ?? "private";
+  const privateSupportNotes = visibleSupportNotes(supportNotes, viewer).filter(
+    (note) => !dismissedSupportNotes.includes(note.id),
+  );
+  const unreadSupport = privateSupportNotes.some(
+    (note) => !readSupportNotes.includes(note.id),
+  );
   const blockedActors = blocked[viewer] ?? [];
   const accessContext = {
     elenaApprovedMember: membership === "approved",
@@ -390,6 +425,104 @@ export default function App() {
     navigate(
       recipient === "grace" && groupMember ? "inbox" : `box/${recipient}`,
     );
+  }
+
+  function raiseCareConcern(requestId: string) {
+    const row = requests.find((request) => request.id === requestId);
+    const isReviewEvidence =
+      viewer === "operator" &&
+      row &&
+      (row.moderation !== "approved" || row.media?.status === "pending");
+    if (!row || viewer === "guest" || (!canRead(row) && !isReviewEvidence)) {
+      notify(
+        "Only an accessible request or assigned review example can be flagged for care.",
+      );
+      return;
+    }
+    if (careConcerns.some((concern) => concern.requestId === row.id)) {
+      notify(
+        "A care concern is already recorded for this request. No duplicate note was added.",
+      );
+      return;
+    }
+    setCareConcerns((previous) =>
+      addCareConcern(previous, {
+        id: crypto.randomUUID(),
+        requestId: row.id,
+        authorId: row.authorId,
+        title: row.topic,
+        evidence: row.text,
+        anonymous: row.anonymous,
+        reportedBy: viewer,
+        status: "new",
+      }),
+    );
+    notify(
+      "A compassionate review was requested in this demo. The request stays in place; no account was blocked, restricted or contacted.",
+    );
+  }
+
+  function sendSupportNote(concernId: string) {
+    const concern = careConcerns.find((item) => item.id === concernId);
+    if (viewer !== "operator" || !concern || concern.status !== "new") return;
+    const sourceId = requests.find(
+      (row) => row.id === concern.requestId,
+    )?.sourceId;
+    const alreadyOffered = (note: SupportNote) =>
+      note.authorId === concern.authorId &&
+      (note.requestId === concern.requestId ||
+        (!!sourceId &&
+          requests.some(
+            (row) => row.id === note.requestId && row.sourceId === sourceId,
+          )));
+    const existed = supportNotes.some(alreadyOffered);
+    setSupportNotes((previous) =>
+      previous.some(alreadyOffered)
+        ? previous
+        : [
+            ...previous,
+            {
+              id: crypto.randomUUID(),
+              concernId: concern.id,
+              authorId: concern.authorId,
+              requestId: concern.requestId,
+            },
+          ],
+    );
+    setCareConcerns((previous) =>
+      previous.map((item) =>
+        item.id === concern.id ? { ...item, status: "support-sent" } : item,
+      ),
+    );
+    notify(
+      existed
+        ? "Support has already been offered privately for this request. No duplicate reminder was added or reopened."
+        : "A private support note was added to the requester's demo notifications. No external message or emergency alert was sent.",
+    );
+  }
+
+  function commitRequests(rows: PrayerRequest[]) {
+    setRequests((previous) => [
+      ...previous,
+      ...rows.map(withPlatformAcknowledgment),
+    ]);
+    const offers = rows.filter((row) => hasSupportLanguage(row.text));
+    if (offers.length)
+      setSupportNotes((previous) => {
+        const next = [...previous];
+        for (const row of offers) {
+          const concernId = `private-offer-${row.sourceId}`;
+          if (!next.some((note) => note.concernId === concernId)) {
+            next.push({
+              id: crypto.randomUUID(),
+              concernId,
+              authorId: row.authorId,
+              requestId: row.id,
+            });
+          }
+        }
+        return next;
+      });
   }
 
   function renderBox() {
@@ -1048,6 +1181,8 @@ export default function App() {
           )
         }
         onBlock={(actor) => removeActor(actor)}
+        onCareConcern={() => raiseCareConcern(row.id)}
+        onSupport={() => setDialog("support")}
         onReuse={() => {
           if (row.authorId !== viewer) {
             notify("Only the author can authorize another delivery.");
@@ -1088,7 +1223,12 @@ export default function App() {
             onNavigate={navigate}
             onNotice={notify}
             onViewerChange={setViewer}
-            onUpdateRequests={setRequests}
+            onUpdateRequests={(update) =>
+              setRequests((previous) =>
+                update(previous).map(withPlatformAcknowledgment),
+              )
+            }
+            onCareConcern={raiseCareConcern}
             membershipStatus={membership}
             onMembershipChange={setMembership}
             friends={friends}
@@ -1098,6 +1238,19 @@ export default function App() {
             officialReplyAllowed={officialAllowed}
             onOfficialReplyChange={setOfficialAllowed}
           />
+          {page === "review" && viewer === "operator" && (
+            <CareReviewQueue
+              concerns={careConcerns}
+              onSend={sendSupportNote}
+              onClose={(id) =>
+                setCareConcerns((previous) =>
+                  previous.map((item) =>
+                    item.id === id ? { ...item, status: "closed" } : item,
+                  ),
+                )
+              }
+            />
+          )}
           {page === "review" && viewer === "operator" && (
             <section className="validated-reports panel">
               <h2>Reports that need a person</h2>
@@ -1315,10 +1468,20 @@ export default function App() {
             <button
               className="icon-button notification-button"
               aria-label="Open fictional notifications"
-              onClick={() => setDialog("notifications")}
+              onClick={() => {
+                setReadSupportNotes((previous) => [
+                  ...new Set([
+                    ...previous,
+                    ...privateSupportNotes.map((note) => note.id),
+                  ]),
+                ]);
+                setDialog("notifications");
+              }}
             >
               <Icon name="bell" />
-              {!notificationRead && <span className="notification-dot" />}
+              {(!notificationRead || unreadSupport) && (
+                <span className="notification-dot" />
+              )}
             </button>
             <div className="account-menu-wrap">
               <button
@@ -1618,6 +1781,9 @@ export default function App() {
         <nav aria-label="Footer">
           <a href="#about">About</a>
           <a href="#donations">Donations</a>
+          <button onClick={() => setDialog("support")}>
+            Support resources
+          </button>
           <button onClick={() => setDialog("demo")}>Prototype details</button>
         </nav>
         <p className="footer-foundation">
@@ -1680,7 +1846,7 @@ export default function App() {
           offerGrace={offerGrace}
           boxCeilings={accessContext.boxCeilings}
           onClose={() => setComposer(null)}
-          onCommit={(rows) => setRequests((previous) => [...previous, ...rows])}
+          onCommit={commitRequests}
           onNavigate={navigate}
           onSignIn={() => setViewer("elena")}
         />
@@ -1791,6 +1957,10 @@ export default function App() {
                 setBlocked({});
                 setBoxRemoved({});
                 setReports([]);
+                setCareConcerns([]);
+                setSupportNotes([]);
+                setDismissedSupportNotes([]);
+                setReadSupportNotes([]);
                 setRestricted([]);
                 setMembership("none");
                 setMemberActive(true);
@@ -1824,6 +1994,13 @@ export default function App() {
             In-app fictional notices. No sensitive prayer text, identity, or
             media appears in a preview.
           </p>
+          <PrivateSupportNotifications
+            notes={privateSupportNotes}
+            onOpen={() => setDialog("support")}
+            onDismiss={(id) =>
+              setDismissedSupportNotes((previous) => [...previous, id])
+            }
+          />
           <button
             className="notification-item"
             onClick={() => {
@@ -1859,11 +2036,28 @@ export default function App() {
           </button>
         </Modal>
       )}
+      {dialog === "support" && (
+        <Modal
+          title="Support is here for you"
+          onClose={() => setDialog(null)}
+          wide
+        >
+          <CareResources />
+          <div className="modal-actions">
+            <button
+              className="button secondary"
+              onClick={() => setDialog(null)}
+            >
+              Close resources
+            </button>
+          </div>
+        </Modal>
+      )}
       {dialog === "share" && (
         <Modal title="Share this little box" onClose={() => setDialog(null)}>
           <p>
-            Share {boxNames[box]}’s fictional box in this prototype. Demo changes
-            stay in your own browser session.
+            Share {boxNames[box]}’s fictional box in this prototype. Demo
+            changes stay in your own browser session.
           </p>
           <label className="field">
             Prayer box demo link

@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { getAudienceLabel, getEffectiveAudience, screenText } from "../domain";
 import type { Audience, BoxId, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
+import { buildPlatformAcknowledgment, hasSupportLanguage } from "../care";
+import CareResources from "./CareResources";
+import { PlatformAcknowledgment } from "./CareFlow";
 
 type Props = {
   recipient: BoxId;
@@ -45,6 +48,10 @@ const examples = [
     label: "A sincere question · review example",
     text: "I heard someone say the Trinity is false and I feel confused. Please pray for understanding as I talk with a trusted pastor. This is a fictional context-review example.",
   },
+  {
+    label: "Support and safety · fictional example",
+    text: "This is a fictional example. I have been having suicidal thoughts and need help staying safe. Please pray for support and strength to reach someone I trust.",
+  },
 ];
 
 export default function PrayerComposer({
@@ -61,9 +68,9 @@ export default function PrayerComposer({
   onNavigate,
   onSignIn,
 }: Props) {
-  const [step, setStep] = useState<"write" | "preview" | "checking" | "result">(
-    "write",
-  );
+  const [step, setStep] = useState<
+    "write" | "support" | "preview" | "checking" | "result"
+  >("write");
   const [text, setText] = useState(initial?.text ?? examples[0].text);
   const [topic, setTopic] = useState(initial?.topic ?? examples[0].label);
   const [personal, setPersonal] = useState(recipient !== "grace");
@@ -77,6 +84,8 @@ export default function PrayerComposer({
   );
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
+  const [acknowledgments, setAcknowledgments] = useState<PrayerRequest[]>([]);
+  const [supportShownFor, setSupportShownFor] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   const personRecipient = recipient === "grace" ? "maria" : recipient;
@@ -130,6 +139,10 @@ export default function PrayerComposer({
           topic,
           createdAt: "Just now · example",
           media: media ? { kind: media, status: "pending" } : undefined,
+          platformAcknowledgment:
+            check.state === "approved"
+              ? buildPlatformAcknowledgment(text, topic)
+              : undefined,
           replies:
             check.state === "approved" && automatic[target]
               ? [
@@ -162,6 +175,10 @@ export default function PrayerComposer({
         };
       });
       onCommit(records);
+      setAcknowledgments((previous) => [
+        ...previous,
+        ...records.filter((row) => row.platformAcknowledgment),
+      ]);
       setOutcomes((previous) =>
         retryOnly
           ? previous.map(
@@ -220,20 +237,60 @@ export default function PrayerComposer({
 
   return (
     <Modal
+      key={step === "support" ? "support-resources" : "prayer-composer"}
       title={
-        step === "result"
-          ? "Your delivery update"
-          : initial
-            ? "Send a separate copy"
-            : "Leave a prayer request"
+        step === "support"
+          ? "Support is here for you"
+          : step === "result"
+            ? "Your delivery update"
+            : initial
+              ? "Send a separate copy"
+              : "Leave a prayer request"
       }
-      onClose={onClose}
+      onClose={() => {
+        if (step === "support") {
+          setSupportShownFor(text);
+          setStep("preview");
+        } else onClose();
+      }}
       wide
     >
-      <p className="prototype-note">
-        <Icon name="info" size={16} /> Fictional walkthrough. No prayer request
-        or media leaves this browser.
-      </p>
+      {step !== "support" && (
+        <p className="prototype-note">
+          <Icon name="info" size={16} /> Fictional walkthrough. No prayer
+          request or media leaves this browser.
+        </p>
+      )}
+      {step === "support" && (
+        <>
+          <CareResources />
+          <p className="quiet-copy">
+            Some words in this draft may relate to distress. These resources are
+            here for you or someone you care about. Asking for support is
+            welcome; this does not flag your account for misconduct.
+          </p>
+          <div className="modal-actions">
+            <button
+              className="button secondary"
+              onClick={() => {
+                setSupportShownFor(text);
+                setStep("write");
+              }}
+            >
+              Back to my draft
+            </button>
+            <button
+              className="button"
+              onClick={() => {
+                setSupportShownFor(text);
+                setStep("preview");
+              }}
+            >
+              Continue reviewing my prayer
+            </button>
+          </div>
+        </>
+      )}
       {step === "write" && (
         <>
           <p className="form-intro">
@@ -281,7 +338,15 @@ export default function PrayerComposer({
               rows={5}
               maxLength={5000}
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setText(next);
+                setTopic(
+                  examples
+                    .find((example) => example.text === next)
+                    ?.label.split(" ·")[0] ?? "A prayer request",
+                );
+              }}
             />
           </label>
           <div className="media-tools" aria-label="Fictional media examples">
@@ -457,7 +522,13 @@ export default function PrayerComposer({
             <button
               className="button"
               disabled={!text.trim() || !destinations.length}
-              onClick={() => setStep("preview")}
+              onClick={() =>
+                setStep(
+                  hasSupportLanguage(text) && supportShownFor !== text
+                    ? "support"
+                    : "preview",
+                )
+              }
             >
               Review request <Icon name="arrow" size={18} />
             </button>
@@ -567,6 +638,12 @@ export default function PrayerComposer({
               Simulated result · no actual delivery
             </p>
           </div>
+          {acknowledgments[0] && (
+            <PlatformAcknowledgment
+              request={acknowledgments[0]}
+              viewer={viewer}
+            />
+          )}
           {outcomes.map((outcome) => (
             <div
               className={`result-row result-${outcome.status}`}

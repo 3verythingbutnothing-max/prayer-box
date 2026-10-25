@@ -1,0 +1,222 @@
+.care-resources {
+  --care-blue: var(--blue, #dfecf7);
+  --care-navy: var(--navy, #2f4b68);
+  --care-line: var(--blue-line, #c6d9e9);
+  color: var(--ink, #293545);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.care-resources p {
+  margin: 0 0 16px;
+  line-height: 1.7;
+}
+.care-resources .care-immediate {
+  padding: 16px 18px;
+  border: 1px solid var(--care-line);
+  border-left: 4px solid var(--care-navy);
+  border-radius: 12px;
+  background: var(--blue-wash, #eef5fa);
+}
+.care-immediate strong {
+  font-weight: 550;
+}
+.care-quick-help {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 20px 0 14px;
+}
+.care-soft-icon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--care-navy);
+  background: var(--care-blue);
+}
+.care-quick-help p:first-child {
+  margin: 0 0 6px;
+}
+.care-resources .care-sources {
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--muted, #5c6876);
+  margin: 8px 0 0;
+}
+.care-source {
+  color: var(--care-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.care-resources .care-link-note {
+  font-size: 12px;
+  color: var(--muted, #5c6876);
+  margin-bottom: 20px;
+}
+.care-region-field {
+  margin: 0 0 17px;
+}
+.care-region-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  margin-bottom: 7px;
+}
+.care-region-field select {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 34px 10px 13px;
+  border: 1px solid var(--control-line, #788697);
+  border-radius: 10px;
+  color: var(--ink, #293545);
+  background-color: #fff;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.care-resources .care-field-help {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--muted, #5c6876);
+}
+.care-local-support {
+  border: 1px solid var(--care-line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.care-local-support h3 {
+  color: var(--care-navy);
+  font-size: 16px;
+  line-height: 1.45;
+  margin: 0 0 9px;
+  font-weight: 550;
+}
+.care-local-support p {
+  font-size: 13px;
+  margin-bottom: 13px;
+}
+.care-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.care-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--care-navy);
+  background: #fff;
+  color: var(--care-navy);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+}
+.care-action-primary {
+  background: var(--care-navy);
+  color: #fff;
+}
+.care-action:hover {
+  background: var(--care-blue);
+}
+.care-action-primary:hover {
+  background: var(--navy-hover, #233d56);
+}
+.care-resources .care-service-note {
+  font-size: 12px;
+  color: var(--muted, #5c6876);
+  margin: 12px 0 0;
+}
+.care-resources .care-human-support {
+  font-size: 13px;
+}
+.care-encouragement {
+  background: var(--care-blue);
+  border-radius: 13px;
+  padding: 17px 18px;
+  margin-bottom: 16px;
+  color: var(--care-navy);
+}
+.care-resources .care-encouragement-label {
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.035em;
+  margin: 0 0 7px;
+}
+.care-encouragement p:last-child {
+  font-size: 13px;
+  margin-bottom: 0;
+}
+.care-resources .care-demo-note {
+  font-size: 11.5px;
+  color: var(--muted, #5c6876);
+  border-top: 1px solid var(--care-line);
+  padding-top: 13px;
+  margin: 0 0 14px;
+}
+.care-demo-note strong {
+  color: var(--care-navy);
+  font-weight: 550;
+}
+.care-resources a:focus-visible,
+.care-resources select:focus-visible {
+  outline: 3px solid var(--care-navy);
+  outline-offset: 3px;
+}
+.care-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.care-resources--compact {
+  font-size: 13px;
+}
+.care-resources--compact .care-immediate {
+  padding: 13px 14px;
+}
+.care-resources--compact .care-local-support {
+  padding: 15px;
+}
+.care-resources--compact .care-quick-help {
+  margin-top: 16px;
+}
+@media (max-width: 440px) {
+  .care-resources .care-immediate {
+    padding: 14px;
+  }
+  .care-local-support {
+    padding: 15px;
+  }
+  .care-quick-help {
+    gap: 10px;
+  }
+  .care-soft-icon {
+    width: 35px;
+    height: 35px;
+  }
+  .care-actions .care-action {
+    flex: 1 1 auto;
+  }
+  .care-actions .care-action:only-child {
+    flex-grow: 0;
+    width: 100%;
+  }
+  .care-encouragement {
+    padding: 15px;
+  }
+}

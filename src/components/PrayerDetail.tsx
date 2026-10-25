@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
+import { PlatformAcknowledgment } from "./CareFlow";
 
 type Props = {
   request: PrayerRequest;
@@ -19,6 +20,8 @@ type Props = {
   onNavigate: (route: string) => void;
   onReport: (reason: string, actorId: string) => void;
   onBlock: (actorId: string) => void;
+  onCareConcern: () => void;
+  onSupport: () => void;
   onReuse: () => void;
   onNotice: (message: string) => void;
 };
@@ -39,10 +42,14 @@ export default function PrayerDetail({
   onNavigate,
   onReport,
   onBlock,
+  onCareConcern,
+  onSupport,
   onReuse,
   onNotice,
 }: Props) {
-  const [safety, setSafety] = useState<"report" | "block" | null>(null);
+  const [safety, setSafety] = useState<
+    "options" | "report" | "block" | "care" | null
+  >(null);
   const [reportReason, setReportReason] = useState("Scam or request for money");
   const [target, setTarget] = useState(request.authorId);
   const [friendDismissed, setFriendDismissed] = useState(false);
@@ -155,10 +162,10 @@ export default function PrayerDetail({
               {!author && (
                 <button
                   className="icon-button"
-                  aria-label="Report or block this requester"
+                  aria-label="Request safety and care options"
                   onClick={() => {
                     setTarget(request.authorId);
-                    setSafety("report");
+                    setSafety("options");
                   }}
                 >
                   <Icon name="more" />
@@ -364,6 +371,11 @@ export default function PrayerDetail({
                   never a promise of an outcome.
                 </p>
                 <div className="replies">
+                  <PlatformAcknowledgment
+                    request={request}
+                    viewer={viewer}
+                    testimonyOnly={testimonyOnly}
+                  />
                   {request.replies
                     .filter((r) =>
                       testimonyOnly
@@ -390,9 +402,7 @@ export default function PrayerDetail({
                         <div className="reply-heading">
                           <strong>{r.name}</strong>
                           {r.automatic ? (
-                            <span className="chip">
-                              Automatic acknowledgment
-                            </span>
+                            <span className="chip">Automatic box welcome</span>
                           ) : r.official ? (
                             <span className="chip">Organization reply</span>
                           ) : null}
@@ -648,72 +658,183 @@ export default function PrayerDetail({
               A guide to personal prayer <Icon name="arrow" size={15} />
             </button>
           </div>
+          <div className="side-note support-resource-note">
+            <Icon name="heart" size={23} />
+            <h2>Support when things feel heavy.</h2>
+            <p>
+              You can ask for prayer and reach out for practical, professional
+              support. Help is available for you or someone you care about.
+            </p>
+            <button className="text-link" onClick={onSupport}>
+              Ways to get support <Icon name="arrow" size={15} />
+            </button>
+          </div>
         </aside>
       </div>
       {safety && (
         <Modal
+          key={safety}
           title={
-            safety === "report"
-              ? "Help keep this space caring"
-              : "Block this account"
+            safety === "options"
+              ? "Care and safety"
+              : safety === "care"
+                ? "Ask for a compassionate check-in"
+                : safety === "report"
+                  ? "Help keep this space caring"
+                  : "Block this account"
           }
           onClose={() => setSafety(null)}
         >
-          <p>
-            {target === request.authorId && request.anonymous
-              ? "This reports or blocks the account behind this anonymous request without revealing their identity."
-              : "This applies to the real account behind the content, including replies made with an organization byline."}
-          </p>
-          <p>
-            All of this account’s requests and linked material will be removed
-            from your affected box or personal view. An ordinary church member’s
-            action does not delete the shared inbox for everyone.
-          </p>
-          {safety === "report" && (
-            <label className="field">
-              Why are you reporting this?
-              <select
-                value={reportReason}
-                onChange={(event) => setReportReason(event.target.value)}
+          {safety === "options" ? (
+            <>
+              <p>
+                If someone may need support, ask for a compassionate check-in.
+                Reporting harmful conduct and blocking are separate choices.
+              </p>
+              <div className="care-action-choices">
+                <button
+                  className="button secondary"
+                  onClick={() => setSafety("care")}
+                >
+                  <Icon name="heart" size={18} /> This person may need help
+                </button>
+                <button
+                  className="text-link"
+                  onClick={() => setSafety("report")}
+                >
+                  Report harmful content
+                </button>
+                <button
+                  className="text-link"
+                  onClick={() => setSafety("block")}
+                >
+                  Block this account
+                </button>
+              </div>
+            </>
+          ) : safety === "care" ? (
+            <>
+              <p>
+                This asks a limited care reviewer to look at the text of this
+                request and consider a private support note. It does not report
+                the requester for misconduct, remove their prayer, block them,
+                or restrict their account.
+              </p>
+              <p className="quiet-copy">
+                Only the reported request is included in the care case. An
+                anonymous requester stays anonymous in this demo. No team or
+                emergency service is alerted outside the prototype.
+              </p>
+              <p>
+                If someone may be in immediate danger, contact local emergency
+                or crisis services now. Do not wait for Prayer Box to respond.
+              </p>
+              <button
+                className="text-link"
+                onClick={() => {
+                  setSafety(null);
+                  onSupport();
+                }}
               >
-                <option>Scam or request for money</option>
-                <option>Spam or repeated content</option>
-                <option>Hate or harassment</option>
-                <option>Unsafe media or threat</option>
-                <option>Another safety concern</option>
-              </select>
-            </label>
-          )}
-          <p className="quiet-copy">
-            A report is a review signal. Restrictions follow evidence and
-            review; mass reports do not decide guilt. Blocking cannot promise
-            that a person will lose access to a group delivery they otherwise
-            belong to.
-          </p>
-          <div className="modal-actions">
-            <button
-              className="button secondary"
-              onClick={() => setSafety(null)}
-            >
-              Cancel
-            </button>
-            <button
-              className="button"
-              onClick={() => {
-                if (safety === "report") onReport(reportReason, target);
-                else onBlock(target);
-                setSafety(null);
-              }}
-            >
-              {safety === "report"
-                ? "Report & remove from my view"
-                : "Block & remove from my view"}
-            </button>
-          </div>
-          {safety === "report" && (
-            <button className="text-link" onClick={() => setSafety("block")}>
-              Block without a report
-            </button>
+                Open crisis and support resources{" "}
+                <Icon name="arrow" size={16} />
+              </button>
+              <div className="modal-actions">
+                <button
+                  className="button secondary"
+                  onClick={() => setSafety(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="button"
+                  onClick={() => {
+                    onCareConcern();
+                    setSafety(null);
+                  }}
+                >
+                  Request compassionate review
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>
+                {target === request.authorId && request.anonymous
+                  ? "This reports or blocks the account behind this anonymous request without revealing their identity."
+                  : "This applies to the real account behind the content, including replies made with an organization byline."}
+              </p>
+              <p>
+                All of this account’s requests and linked material will be
+                removed from your affected box or personal view. An ordinary
+                church member’s action does not delete the shared inbox for
+                everyone.
+              </p>
+              {safety === "report" && (
+                <label className="field">
+                  Why are you reporting this?
+                  <select
+                    value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)}
+                  >
+                    <option>Scam or request for money</option>
+                    <option>Spam or repeated content</option>
+                    <option>Hate or harassment</option>
+                    <option>Unsafe media or threat</option>
+                    <option>Another safety concern</option>
+                  </select>
+                </label>
+              )}
+              <p className="quiet-copy">
+                A report is a review signal. Restrictions follow evidence and
+                review; mass reports do not decide guilt. Blocking cannot
+                promise that a person will lose access to a group delivery they
+                otherwise belong to.
+              </p>
+              <div className="modal-actions">
+                <button
+                  className="button secondary"
+                  onClick={() => setSafety(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="button"
+                  onClick={() => {
+                    if (safety === "report") onReport(reportReason, target);
+                    else onBlock(target);
+                    setSafety(null);
+                  }}
+                >
+                  {safety === "report"
+                    ? "Report & remove from my view"
+                    : "Block & remove from my view"}
+                </button>
+              </div>
+              {safety === "report" && (
+                <button
+                  className="text-link"
+                  onClick={() => setSafety("block")}
+                >
+                  Block without a report
+                </button>
+              )}
+              {safety === "report" && target === request.authorId && (
+                <div className="care-request-action">
+                  <strong>Does this person need support?</strong>
+                  <p className="quiet-copy">
+                    A care concern keeps their request in place and asks for a
+                    compassionate check-in.
+                  </p>
+                  <button
+                    className="button secondary compact"
+                    onClick={() => setSafety("care")}
+                  >
+                    This person may need help
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </Modal>
       )}
