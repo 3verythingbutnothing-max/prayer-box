@@ -4,6 +4,7 @@ import {
   canViewRequest,
   getAudienceLabel,
   getEffectiveAudience,
+  isOwnPrayerBox,
   screenText,
   seedRequests,
 } from "./domain";
@@ -23,6 +24,9 @@ import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
 import { useAppInstall } from "./app-install";
 import { useActionFeedback } from "./action-feedback";
 import type { FeedbackTone } from "./feedback-cues";
+import { defaultWidgetPreferences } from "./widgets";
+import type { WidgetPreferences } from "./widgets";
+import type { UiLanguage } from "./localization";
 import {
   formatStoryDate,
   getStoryPosts,
@@ -211,9 +215,11 @@ function PrayerCard({
 function EmptyState({
   kind,
   onAction,
+  receivingOwnBox = false,
 }: {
   kind: Scenario;
   onAction: () => void;
+  receivingOwnBox?: boolean;
 }) {
   return (
     <div
@@ -237,7 +243,9 @@ function EmptyState({
             ? "The fictional connection was interrupted. Your saved demo content is still here."
             : kind === "denied"
               ? "Only permitted recipients and approved members can open this space. No private details are shown."
-              : "There aren’t any requests in this view yet. You’re welcome to begin with a few honest words."}
+              : receivingOwnBox
+                ? "Your box is ready to receive requests from others. To ask for prayer, visit someone else’s box."
+                : "There aren’t any requests in this view yet. You’re welcome to begin with a few honest words."}
       </p>
       <button className="button secondary" onClick={onAction}>
         {kind === "error"
@@ -246,7 +254,9 @@ function EmptyState({
             ? "Finish loading demo"
             : kind === "denied"
               ? "Return to a public box"
-              : "Leave a prayer request"}
+              : receivingOwnBox
+                ? "Visit another prayer box"
+                : "Leave a prayer request"}
       </button>
     </div>
   );
@@ -259,6 +269,13 @@ export default function App() {
     () => window.location.hash.slice(1) || "box/maria",
   );
   const [viewer, setViewer] = useState<Viewer>("elena");
+  const [language, setLanguage] = useState<UiLanguage>("en");
+  const [widgetPreferences, setWidgetPreferences] = useState<WidgetPreferences>(
+    defaultWidgetPreferences,
+  );
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const [requests, setRequests] = useState<PrayerRequest[]>(cloneFixtures);
   const [organizationWebsite, setOrganizationWebsite] = useState(
     "https://example.org/",
@@ -442,6 +459,14 @@ export default function App() {
   }, [heldStories, page, viewer]);
 
   function openComposer(recipient: BoxId, initial?: PrayerRequest) {
+    if (isOwnPrayerBox(viewer, recipient)) {
+      acknowledge(
+        "info",
+        "Your box is for receiving prayer requests.",
+        "To ask for prayer, choose someone else’s personal or community box.",
+      );
+      return;
+    }
     if (restricted.includes(viewer)) {
       notify(
         "This fictional account is temporarily restricted after a validated review. An appeal requires a human decision.",
@@ -605,7 +630,16 @@ export default function App() {
     );
   }
 
-  function commitRequests(rows: PrayerRequest[]) {
+  function commitRequests(rows: PrayerRequest[]): boolean {
+    if (
+      viewer === "guest" ||
+      rows.some(
+        (row) =>
+          row.authorId !== viewer ||
+          isOwnPrayerBox(row.authorId, row.recipient),
+      )
+    )
+      return false;
     setRequests((previous) => [
       ...previous,
       ...rows.map((row) =>
@@ -632,6 +666,7 @@ export default function App() {
         }
         return next;
       });
+    return true;
   }
 
   function deleteDeliveries(ids: string[]) {
@@ -679,6 +714,11 @@ export default function App() {
   }
 
   function renderBox() {
+    const receivingOwnBox = isOwnPrayerBox(viewer, box);
+    const emptyBoxAction = () =>
+      receivingOwnBox
+        ? navigate(viewer === "maria" ? "box/grace" : "box/maria")
+        : openComposer(box);
     const mine =
       box === ownBox &&
       ((viewer === "elena" && box === "mine") || viewer === "maria");
@@ -686,8 +726,7 @@ export default function App() {
     const rows = requests.filter(
       (r) =>
         r.recipient === box &&
-        r.authorId !==
-          (box === "mine" ? "elena" : box === "maria" ? "maria" : "grace") &&
+        !isOwnPrayerBox(r.authorId, box) &&
         r.moderation === "approved" &&
         canRead(r),
     );
@@ -774,9 +813,14 @@ export default function App() {
               </button>
             )}
             <div className="hero-actions">
-              <button className="button" onClick={() => openComposer(box)}>
+              <button
+                className="button"
+                onClick={() =>
+                  receivingOwnBox ? navigate("requests") : openComposer(box)
+                }
+              >
                 <Icon name="note" size={18} />
-                Leave a prayer request
+                {receivingOwnBox ? "My requests" : "Leave a prayer request"}
               </button>
               <button
                 className="button secondary"
@@ -794,6 +838,12 @@ export default function App() {
                 Pray with others <Icon name="arrow" size={17} />
               </button>
             </div>
+            {receivingOwnBox && (
+              <p className="own-box-guidance">
+                This box receives requests from others. Ask for prayer in
+                someone else’s box.
+              </p>
+            )}
           </div>
           <div className="hero-art">
             <BoxArt />
@@ -892,9 +942,10 @@ export default function App() {
               ) : scenario !== "normal" ? (
                 <EmptyState
                   kind={scenario}
+                  receivingOwnBox={receivingOwnBox}
                   onAction={() =>
                     scenario === "empty"
-                      ? openComposer(box)
+                      ? emptyBoxAction()
                       : setScenario("normal")
                   }
                 />
@@ -908,7 +959,11 @@ export default function App() {
                   />
                 ))
               ) : (
-                <EmptyState kind="empty" onAction={() => openComposer(box)} />
+                <EmptyState
+                  kind="empty"
+                  receivingOwnBox={receivingOwnBox}
+                  onAction={emptyBoxAction}
+                />
               )}
             </div>
             <p className="list-end">
@@ -1038,7 +1093,10 @@ export default function App() {
           </p>
         </header>
         <div className="page-toolbar">
-          <button className="button" onClick={() => openComposer("maria")}>
+          <button
+            className="button"
+            onClick={() => openComposer(viewer === "maria" ? "grace" : "maria")}
+          >
             <Icon name="note" size={18} />A new prayer request
           </button>
           {own.length > 0 && (
@@ -1058,6 +1116,8 @@ export default function App() {
             {sourceIds.map((source) => {
               const copies = own.filter((r) => r.sourceId === source);
               const first = copies[0];
+              const copyTarget =
+                first.recipient === "maria" ? "grace" : "maria";
               return (
                 <article className="own-request panel" key={source}>
                   <div className="section-heading">
@@ -1115,17 +1175,14 @@ export default function App() {
                     >
                       Add update or testimony
                     </button>
-                    <button
-                      className="text-link"
-                      onClick={() =>
-                        openComposer(
-                          first.recipient === "maria" ? "grace" : "maria",
-                          first,
-                        )
-                      }
-                    >
-                      Send a separate copy <Icon name="arrow" size={15} />
-                    </button>
+                    {!isOwnPrayerBox(viewer, copyTarget) && (
+                      <button
+                        className="text-link"
+                        onClick={() => openComposer(copyTarget, first)}
+                      >
+                        Send a separate copy <Icon name="arrow" size={15} />
+                      </button>
+                    )}
                     <button
                       className="text-link delete-action"
                       onClick={() => setDeleteStory(source)}
@@ -1138,7 +1195,12 @@ export default function App() {
             })}
           </div>
         ) : (
-          <EmptyState kind="empty" onAction={() => openComposer("maria")} />
+          <EmptyState
+            kind="empty"
+            onAction={() =>
+              openComposer(viewer === "maria" ? "grace" : "maria")
+            }
+          />
         )}
       </div>
     );
@@ -1396,7 +1458,15 @@ export default function App() {
               </article>
             ))
           ) : (
-            <EmptyState kind="empty" onAction={() => openComposer("grace")} />
+            <EmptyState
+              kind="empty"
+              receivingOwnBox={viewer === "owner"}
+              onAction={() =>
+                viewer === "owner"
+                  ? navigate("box/maria")
+                  : openComposer("grace")
+              }
+            />
           )}
         </div>
         <p className="quiet-copy">
@@ -1509,7 +1579,13 @@ export default function App() {
             </p>
           }
         >
-          <MobileAppPage app={appInstall} />
+          <MobileAppPage
+            app={appInstall}
+            widgetPreferences={widgetPreferences}
+            onWidgetSave={setWidgetPreferences}
+            language={language}
+            onNavigate={navigate}
+          />
         </Suspense>
       );
     if (page === "feedback")
@@ -1549,6 +1625,8 @@ export default function App() {
       return (
         <>
           <CommunityPages
+            language={language}
+            onLanguageChange={setLanguage}
             key={resetVersion}
             page={page}
             viewer={viewer}
@@ -2358,9 +2436,11 @@ export default function App() {
           <p className="quiet-copy">
             Confirmed: church-approved access, sender-chosen separate
             deliveries, anonymous identity protection, and a Trinitarian
-            foundation. Proposed: exact public wording, Bible edition,
-            future-member history, retention, block/group semantics, moderation
-            operations, providers and donation surplus policy.
+            foundation. English and NIV selection are confirmed. Still
+            unresolved: exact editorial wording, NIV quotation rights, native
+            widget packaging, future-member history, retention, block/group
+            semantics, moderation operations, providers and donation surplus
+            policy.
           </p>
           <div className="modal-actions">
             <button
@@ -2387,6 +2467,8 @@ export default function App() {
                 setReminders(true);
                 setAutomatic({ mine: false, maria: false, grace: false });
                 setAutomaticMessages({});
+                setLanguage("en");
+                setWidgetPreferences(defaultWidgetPreferences);
                 setResetVersion((version) => version + 1);
                 setScenario("normal");
                 notify(

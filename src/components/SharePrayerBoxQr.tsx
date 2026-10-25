@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { prayerBoxUrl } from "../domain";
 import type { BoxId } from "../domain";
 import type { createPrayerBoxQr } from "../qr";
@@ -22,6 +23,146 @@ function modulePath(qr: Qr, cell: number) {
     }
   }
   return runs.join("");
+}
+
+function qrCardDimensions(qr: Qr | null) {
+  const cell = 10;
+  const border = 24;
+  const top = 112;
+  const square = qr ? (qr.size + 2 * qr.quietZone) * cell : 530;
+  return {
+    cell,
+    border,
+    top,
+    square,
+    width: square + border * 2,
+    height: top + square + 126,
+  };
+}
+
+/** The same self-contained vector card is shown on screen and exported. */
+export function PrayerBoxQrCard({
+  qr,
+  boxName,
+  elementRef,
+}: {
+  qr: Qr;
+  boxName: string;
+  elementRef?: RefObject<SVGSVGElement | null>;
+}) {
+  const { cell, border, top, square, width, height } = qrCardDimensions(qr);
+  const title = `${boxName}’s Prayer Box`;
+  const printedUrl = new URL(qr.url);
+  return (
+    <svg
+      ref={elementRef}
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={`QR code for ${title}. ${qr.url}`}
+      style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+    >
+      <title>{`${title} — shareable QR code`}</title>
+      <desc>Scan to open {qr.url}. Fictional frontend demo.</desc>
+      <rect width={width} height={height} rx="30" fill="#FFFBF5" />
+      <rect
+        x="1"
+        y="1"
+        width={width - 2}
+        height={height - 2}
+        rx="29"
+        fill="none"
+        stroke="#C6D9E9"
+        strokeWidth="2"
+      />
+      <path
+        d={`M1 30Q1 1 30 1h${width - 60}q29 0 29 29v58H1Z`}
+        fill="#EEF5FA"
+      />
+      <g transform="translate(29 13)">
+        <PrayerBoxMark size={76} />
+      </g>
+      <text x="121" y="51" fontSize="31" fontWeight="700" fill="#2F4B68">
+        Prayer Box
+      </text>
+      <text x="122" y="77" fontSize="18" fill="#5C6876">
+        A little box. A place for prayer.
+      </text>
+      {/* The entire code and its four-module quiet zone stay opaque white. */}
+      <rect x={border} y={top} width={square} height={square} fill="#FFFFFF" />
+      <path
+        d={modulePath(qr, cell)}
+        transform={`translate(${border + qr.quietZone * cell} ${top + qr.quietZone * cell})`}
+        fill="#233D56"
+        shapeRendering="crispEdges"
+      />
+      {/* The small badge occupies data cells only; functional patterns stay intact. */}
+      <g
+        data-qr-logo="Prayer Box"
+        aria-hidden="true"
+        transform={`translate(${border + (qr.quietZone + qr.logo.column) * cell} ${top + (qr.quietZone + qr.logo.row) * cell})`}
+      >
+        <rect
+          width={qr.logo.size * cell}
+          height={qr.logo.size * cell}
+          fill="#FFFFFF"
+        />
+        <rect
+          x={cell * 0.25}
+          y={cell * 0.25}
+          width={(qr.logo.size - 0.5) * cell}
+          height={(qr.logo.size - 0.5) * cell}
+          rx={cell}
+          fill="#FFFBF5"
+          stroke="#C6D9E9"
+          strokeWidth="1.25"
+        />
+        <g transform={`translate(${cell * 0.5} ${cell * 0.5})`}>
+          <PrayerBoxMark size={(qr.logo.size - 1) * cell} />
+        </g>
+      </g>
+      <text
+        x={width / 2}
+        y={top + square + 29}
+        textAnchor="middle"
+        fontSize="26"
+        fontWeight="700"
+        fill="#2F4B68"
+      >
+        {title}
+      </text>
+      <text
+        x={width / 2}
+        y={top + square + 56}
+        textAnchor="middle"
+        fontSize="19"
+        fill="#293545"
+      >
+        Scan to leave a prayer request
+      </text>
+      <text
+        x={width / 2}
+        y={top + square + 82}
+        textAnchor="middle"
+        fontSize="14"
+        fill="#5C6876"
+      >
+        {printedUrl.host}
+        {printedUrl.pathname}
+      </text>
+      <text
+        x={width / 2}
+        y={top + square + 101}
+        textAnchor="middle"
+        fontSize="14"
+        fill="#5C6876"
+      >
+        {printedUrl.hash} · Fictional demo
+      </text>
+    </svg>
+  );
 }
 
 function saveBlob(blob: Blob, filename: string) {
@@ -116,14 +257,7 @@ export default function SharePrayerBoxQr({
     };
   }, [pageUrl, box]);
 
-  const cell = 10;
-  const border = 24;
-  const top = 112;
-  const square = qr ? (qr.size + 2 * qr.quietZone) * cell : 530;
-  const width = square + border * 2;
-  const height = top + square + 126;
-  const title = `${boxName}’s Prayer Box`;
-  const printedUrl = new URL(permalink);
+  const { width, height } = qrCardDimensions(qr);
 
   async function download(format: "png" | "svg") {
     if (!svg.current || exportingNow.current) return;
@@ -166,95 +300,7 @@ export default function SharePrayerBoxQr({
     <div className="qr-share-layout">
       <div className="qr-share-preview" aria-busy={!qr && !loadError}>
         {qr ? (
-          <svg
-            ref={svg}
-            xmlns="http://www.w3.org/2000/svg"
-            width={width}
-            height={height}
-            viewBox={`0 0 ${width} ${height}`}
-            role="img"
-            aria-label={`QR code for ${title}. ${qr.url}`}
-            style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
-          >
-            <title>{title} — shareable QR code</title>
-            <desc>Scan to open {qr.url}. Fictional frontend demo.</desc>
-            <rect width={width} height={height} rx="30" fill="#FFFBF5" />
-            <rect
-              x="1"
-              y="1"
-              width={width - 2}
-              height={height - 2}
-              rx="29"
-              fill="none"
-              stroke="#C6D9E9"
-              strokeWidth="2"
-            />
-            <path
-              d={`M1 30Q1 1 30 1h${width - 60}q29 0 29 29v58H1Z`}
-              fill="#EEF5FA"
-            />
-            <g transform="translate(29 13)">
-              <PrayerBoxMark size={76} />
-            </g>
-            <text x="121" y="51" fontSize="31" fontWeight="700" fill="#2F4B68">
-              Prayer Box
-            </text>
-            <text x="122" y="77" fontSize="18" fill="#5C6876">
-              A little box. A place for prayer.
-            </text>
-            {/* The entire code and its four-module quiet zone stay opaque white. */}
-            <rect
-              x={border}
-              y={top}
-              width={square}
-              height={square}
-              fill="#FFFFFF"
-            />
-            <path
-              d={modulePath(qr, cell)}
-              transform={`translate(${border + qr.quietZone * cell} ${top + qr.quietZone * cell})`}
-              fill="#233D56"
-              shapeRendering="crispEdges"
-            />
-            <text
-              x={width / 2}
-              y={top + square + 29}
-              textAnchor="middle"
-              fontSize="26"
-              fontWeight="700"
-              fill="#2F4B68"
-            >
-              {title}
-            </text>
-            <text
-              x={width / 2}
-              y={top + square + 56}
-              textAnchor="middle"
-              fontSize="19"
-              fill="#293545"
-            >
-              Scan to leave a prayer request
-            </text>
-            <text
-              x={width / 2}
-              y={top + square + 82}
-              textAnchor="middle"
-              fontSize="14"
-              fill="#5C6876"
-            >
-              {printedUrl.host}
-              {printedUrl.pathname}
-            </text>
-            <text
-              x={width / 2}
-              y={top + square + 101}
-              textAnchor="middle"
-              fontSize="14"
-              fill="#5C6876"
-            >
-              {printedUrl.hash} · Fictional demo
-            </text>
-          </svg>
+          <PrayerBoxQrCard qr={qr} boxName={boxName} elementRef={svg} />
         ) : (
           <p className="qr-share-placeholder" role="status">
             {loadError
@@ -288,7 +334,9 @@ export default function SharePrayerBoxQr({
           >
             <Icon name="download" size={18} /> Download SVG
           </button>
-          <p className="quiet-copy">PNG for slides · SVG for crisp printing</p>
+          <p className="quiet-copy">
+            Logo included · PNG for slides · SVG for crisp printing
+          </p>
           {exportError ? (
             <p className="qr-share-error" role="alert">
               {exportError}

@@ -1,9 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { Viewer } from "../domain";
 import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
 import { PreferenceSwitch } from "../ui";
 import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
+import { parseContributionAmount } from "../donation-amount";
+import type { ContributionAmount } from "../donation-amount";
+import "../donation-refinements.css";
 
 type AccountPage = "donations" | "donation-history" | "settings";
 type Privacy = "public" | "friends" | "private";
@@ -47,6 +50,7 @@ const money = (amount: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     amount,
   );
+type ContributionFrequency = "one-time" | "monthly";
 const AS_OF = "2026-10-24";
 const records = [
   {
@@ -103,7 +107,9 @@ function AccountIcon({
     | "check"
     | "close"
     | "note"
-    | "shield";
+    | "shield"
+    | "pause"
+    | "play";
   size?: number;
 }) {
   const paths: Record<string, ReactNode> = {
@@ -119,6 +125,8 @@ function AccountIcon({
     arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
     download: <path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" />,
     check: <path d="m5 12 4 4L19 6" />,
+    pause: <path d="M9 5v14M15 5v14" />,
+    play: <path d="m8 5 11 7-11 7Z" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
     note: (
       <>
@@ -154,10 +162,12 @@ function AccountDialog({
   title,
   children,
   onClose,
+  className = "",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -176,7 +186,7 @@ function AccountDialog({
   return (
     <dialog
       ref={ref}
-      className="account-dialog"
+      className={`account-dialog ${className}`}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -201,83 +211,176 @@ function AccountDialog({
 
 function FundingMeter({ example }: { example: boolean }) {
   const gradientId = useId().replaceAll(":", "");
-  const shimmerId = `${gradientId}-gold`;
-  const shimmerMaskId = `${gradientId}-mask`;
-  const [fill, setFill] = useState(0);
+  const goldId = `${gradientId}-gold`;
+  const glintId = `${gradientId}-glint`;
+  const rainbowMaskId = `${gradientId}-rainbow-mask`;
+  const goldMaskId = `${gradientId}-gold-mask`;
+  const meterRef = useRef<HTMLElement>(null);
+  const [motionPaused, setMotionPaused] = useState(false);
+  const [onScreen, setOnScreen] = useState(false);
+  const [pageVisible, setPageVisible] = useState(() => !document.hidden);
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setFill(example ? 0.6 : 0));
-    return () => cancelAnimationFrame(frame);
-  }, [example]);
+    const meter = meterRef.current;
+    const updateVisibility = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", updateVisibility);
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(([entry]) =>
+            setOnScreen(entry.isIntersecting),
+          );
+    if (meter && observer) observer.observe(meter);
+    else setOnScreen(true);
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
+  }, []);
   const angle = Math.PI * (1 - 0.6);
   return (
     <figure
-      className={`account-meter${example ? "" : " account-meter-no-cost"}`}
+      ref={meterRef}
+      className={`account-meter donation-meter${example ? "" : " account-meter-no-cost"}`}
+      data-motion={
+        onScreen && pageVisible && !motionPaused ? "running" : "paused"
+      }
       aria-label={
         example
           ? "Fictional funding example: 60 dollars available toward 100 dollars of hosting need. 40 dollars remaining."
           : "No hosting costs this month. Actual hosting need: zero dollars. The full rainbow with a gold edge is decorative; no funding percentage applies."
       }
     >
-      <svg
-        className="account-meter-svg"
-        viewBox="0 0 320 180"
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient
-            id={gradientId}
-            x1="25"
-            y1="0"
-            x2="295"
-            y2="0"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop stopColor="#F0A6B6" />
-            <stop offset=".2" stopColor="#F6BE96" />
-            <stop offset=".4" stopColor="#E8D575" />
-            <stop offset=".6" stopColor="#9AC5A7" />
-            <stop offset=".8" stopColor="#91BFD2" />
-            <stop offset="1" stopColor="#B6A1D8" />
-          </linearGradient>
-          <linearGradient id={shimmerId} x1="0" x2="1" y1="0" y2="0">
-            <stop stopColor="#FFF6CE" stopOpacity="0" />
-            <stop offset=".5" stopColor="#FFF7DA" stopOpacity=".92" />
-            <stop offset="1" stopColor="#E6BE6D" stopOpacity="0" />
-          </linearGradient>
-          <mask
-            id={shimmerMaskId}
-            maskUnits="userSpaceOnUse"
-            x="0"
-            y="0"
-            width="320"
-            height="180"
-          >
-            <path
-              d="M35 150A125 125 0 0 1 285 150"
-              fill="none"
-              stroke="#fff"
-              strokeWidth="20"
-              strokeLinecap="round"
+      <div className="donation-meter-art">
+        <svg
+          className="account-meter-svg"
+          viewBox="0 0 320 180"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient
+              id={gradientId}
+              x1="0"
+              y1="0"
+              x2="320"
+              y2="0"
+              gradientUnits="userSpaceOnUse"
+              spreadMethod="repeat"
+            >
+              <stop stopColor="#F23D5E" />
+              <stop offset=".16" stopColor="#FF881F" />
+              <stop offset=".32" stopColor="#FFD22F" />
+              <stop offset=".49" stopColor="#27B76A" />
+              <stop offset=".66" stopColor="#238FE8" />
+              <stop offset=".83" stopColor="#9057E8" />
+              <stop offset="1" stopColor="#F23D5E" />
+            </linearGradient>
+            <linearGradient id={goldId} x1="0" y1="0" x2="0.7" y2="1">
+              <stop stopColor="#9F620B" />
+              <stop offset=".24" stopColor="#FFE59A" />
+              <stop offset=".42" stopColor="#D4A021" />
+              <stop offset=".63" stopColor="#FFF2B7" />
+              <stop offset=".82" stopColor="#B97A10" />
+              <stop offset="1" stopColor="#F4CF65" />
+            </linearGradient>
+            <linearGradient id={glintId} x1="0" x2="1" y1="0" y2="0">
+              <stop stopColor="#FFF8D9" stopOpacity="0" />
+              <stop offset=".5" stopColor="#FFFFFF" stopOpacity=".95" />
+              <stop offset="1" stopColor="#FFF8D9" stopOpacity="0" />
+            </linearGradient>
+            <mask
+              id={rainbowMaskId}
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              width="320"
+              height="180"
+            >
+              <path
+                d="M35 150A125 125 0 0 1 285 150"
+                pathLength="100"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="20"
+                strokeLinecap="round"
+                strokeDasharray="100 100"
+                strokeDashoffset={example ? 40 : 0}
+              />
+            </mask>
+            <mask
+              id={goldMaskId}
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              width="320"
+              height="180"
+            >
+              <path
+                d="M35 150A125 125 0 0 1 285 150"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="29"
+                strokeLinecap="round"
+              />
+              <path
+                d="M35 150A125 125 0 0 1 285 150"
+                fill="none"
+                stroke="#000"
+                strokeWidth="20"
+                strokeLinecap="round"
+              />
+            </mask>
+          </defs>
+          <path
+            d="M35 150A125 125 0 0 1 285 150"
+            className="donation-meter-gold"
+            stroke={`url(#${goldId})`}
+          />
+          <path
+            d="M35 150A125 125 0 0 1 285 150"
+            className="donation-meter-track"
+          />
+          <g mask={`url(#${rainbowMaskId})`}>
+            <rect
+              x="-320"
+              y="0"
+              width="960"
+              height="180"
+              fill={`url(#${gradientId})`}
+              className="donation-meter-rainbow-drift donation-meter-motion-layer"
             />
-          </mask>
-        </defs>
-        <path
-          d="M35 150A125 125 0 0 1 285 150"
-          className="account-meter-outline"
-        />
-        <path
-          d="M35 150A125 125 0 0 1 285 150"
-          className="account-meter-track"
-        />
-        {example ? (
-          <>
-            <path
-              d="M35 150A125 125 0 0 1 285 150"
-              pathLength="100"
-              stroke={`url(#${gradientId})`}
-              className="account-meter-fill"
-              style={{ strokeDashoffset: 100 - fill * 100 } as CSSProperties}
+          </g>
+          <g mask={`url(#${goldMaskId})`}>
+            <rect
+              x="-95"
+              y="0"
+              width="80"
+              height="180"
+              fill={`url(#${glintId})`}
+              className="donation-meter-gold-glint donation-meter-motion-layer"
             />
+          </g>
+          <g
+            className="donation-meter-stars"
+            fill="#F7CE59"
+            stroke="#B87D16"
+            strokeWidth=".65"
+          >
+            {[
+              [40, 47, 1],
+              [279, 51, 0.8],
+              [160, 9, 0.7],
+              [303, 114, 0.65],
+              [17, 119, 0.55],
+            ].map(([x, y, scale], index) => (
+              <g key={index} transform={`translate(${x} ${y}) scale(${scale})`}>
+                <path
+                  d="M0-5 1.6-1.6 5 0 1.6 1.6 0 5-1.6 1.6-5 0-1.6-1.6Z"
+                  className="donation-meter-star donation-meter-motion-layer"
+                />
+              </g>
+            ))}
+          </g>
+          {example && (
             <circle
               cx={160 + 125 * Math.cos(angle)}
               cy={150 - 125 * Math.sin(angle)}
@@ -286,40 +389,32 @@ function FundingMeter({ example }: { example: boolean }) {
               stroke="var(--paper)"
               strokeWidth="2"
             />
-          </>
-        ) : (
-          <>
-            <path
-              d="M35 150A125 125 0 0 1 285 150"
-              className="account-meter-gold-edge"
-            />
-            <path
-              d="M35 150A125 125 0 0 1 285 150"
-              stroke={`url(#${gradientId})`}
-              className="account-meter-full-rainbow"
-            />
-            <g mask={`url(#${shimmerMaskId})`}>
-              <rect
-                x="-95"
-                y="0"
-                width="80"
-                height="180"
-                fill={`url(#${shimmerId})`}
-                className="account-meter-gold-shimmer"
-              />
-            </g>
-          </>
-        )}
-      </svg>
-      <div className="account-meter-center">
-        <span className="account-meter-kicker">
-          {example ? "Available for hosting" : "Monthly hosting need"}
-        </span>
-        <strong>{example ? "$60" : "$0"}</strong>
-        <span>
-          {example ? "of $100.00 USD needed" : "No hosting costs this month."}
-        </span>
+          )}
+        </svg>
+        <div className="account-meter-center">
+          <span className="account-meter-kicker">
+            {example ? "Available for hosting" : "Monthly hosting need"}
+          </span>
+          <strong>{example ? "$60" : "$0"}</strong>
+          <span>
+            {example ? "of $100.00 USD needed" : "No hosting costs this month."}
+          </span>
+        </div>
       </div>
+      <figcaption className="donation-meter-motion-control">
+        <button
+          type="button"
+          className="button secondary compact donation-motion-toggle"
+          aria-pressed={motionPaused}
+          onClick={() => setMotionPaused((paused) => !paused)}
+        >
+          <AccountIcon name={motionPaused ? "play" : "pause"} size={14} />
+          {motionPaused ? "Resume rainbow motion" : "Pause rainbow motion"}
+        </button>
+        <span className="donation-motion-reduced">
+          A little sparkle, with motion kept still.
+        </span>
+      </figcaption>
     </figure>
   );
 }
@@ -404,10 +499,22 @@ export default function AccountPages({
 }: AccountPagesProps) {
   const feedback = useActionFeedback();
   const [example, setExample] = useState(false);
-  const [frequency, setFrequency] = useState<"one-time" | "monthly">(
-    "one-time",
-  );
-  const [amount, setAmount] = useState(10);
+  const [frequency, setFrequency] = useState<ContributionFrequency>("one-time");
+  const [amountChoice, setAmountChoice] = useState<number | "custom">(10);
+  const [customAmount, setCustomAmount] = useState("");
+  const [amountError, setAmountError] = useState("");
+  const amountId = useId();
+  const customAmountField = useRef<HTMLInputElement>(null);
+  const selectedAmount: ContributionAmount =
+    amountChoice === "custom"
+      ? parseContributionAmount(customAmount)
+      : { cents: amountChoice * 100 };
+  const amount =
+    selectedAmount.cents === undefined ? null : selectedAmount.cents / 100;
+  const [contributionPreview, setContributionPreview] = useState<{
+    cents: number;
+    frequency: ContributionFrequency;
+  } | null>(null);
   const [dialog, setDialog] = useState<
     "contribution" | "cancel" | "delete" | null
   >(null);
@@ -455,6 +562,23 @@ export default function AccountPages({
   const [showRecovery, setShowRecovery] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [blocked, setBlocked] = useState(true);
+  function reviewContribution(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    feedback.prepare();
+    if (selectedAmount.cents === undefined) {
+      setAmountError(selectedAmount.error);
+      customAmountField.current?.focus();
+      feedback.respond({
+        tone: "error",
+        title: "Please check your contribution amount.",
+        message: selectedAmount.error,
+      });
+      return;
+    }
+    setAmountError("");
+    setContributionPreview({ cents: selectedAmount.cents, frequency });
+    setDialog("contribution");
+  }
   const privacy = privacyValue ?? localPrivacy;
   const reminders = remindersValue ?? localReminders;
   const country = countryPreference?.country ?? localCountry;
@@ -722,64 +846,133 @@ export default function AccountPages({
                   Try the contribution flow with example amounts. No money will
                   be collected.
                 </p>
-                <fieldset className="account-segment-field">
-                  <legend className="account-sr-only">
-                    Contribution frequency
-                  </legend>
-                  <div className="account-segments" data-selection={frequency}>
-                    <span
-                      className="account-segment-indicator"
-                      aria-hidden="true"
-                    />
-                    {(["one-time", "monthly"] as const).map((value) => (
+                <form
+                  className="donation-contribution-form"
+                  noValidate
+                  onSubmit={reviewContribution}
+                >
+                  <fieldset className="account-segment-field">
+                    <legend className="account-sr-only">
+                      Contribution frequency
+                    </legend>
+                    <div
+                      className="account-segments"
+                      data-selection={frequency}
+                    >
+                      <span
+                        className="account-segment-indicator"
+                        aria-hidden="true"
+                      />
+                      {(["one-time", "monthly"] as const).map((value) => (
+                        <label
+                          key={value}
+                          className={frequency === value ? "is-selected" : ""}
+                        >
+                          <input
+                            type="radio"
+                            name="contribution-frequency"
+                            value={value}
+                            checked={frequency === value}
+                            onChange={() => setFrequency(value)}
+                          />
+                          <span>
+                            {value === "one-time" ? "One-time" : "Monthly"}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset className="account-amount-field">
+                    <legend>Example amount · USD</legend>
+                    <div className="account-amounts">
+                      {[5, 10, 25].map((value) => (
+                        <label
+                          key={value}
+                          className={
+                            amountChoice === value ? "is-selected" : ""
+                          }
+                        >
+                          <input
+                            type="radio"
+                            name="contribution-amount"
+                            checked={amountChoice === value}
+                            onChange={() => {
+                              setAmountChoice(value);
+                              setAmountError("");
+                            }}
+                          />
+                          <span>${value}</span>
+                        </label>
+                      ))}
                       <label
-                        key={value}
-                        className={frequency === value ? "is-selected" : ""}
-                      >
-                        <input
-                          type="radio"
-                          name="contribution-frequency"
-                          value={value}
-                          checked={frequency === value}
-                          onChange={() => setFrequency(value)}
-                        />
-                        <span>
-                          {value === "one-time" ? "One-time" : "Monthly"}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <fieldset className="account-amount-field">
-                  <legend>Example amount · USD</legend>
-                  <div className="account-amounts">
-                    {[5, 10, 25].map((value) => (
-                      <label
-                        key={value}
-                        className={amount === value ? "is-selected" : ""}
+                        className={`donation-custom-choice${amountChoice === "custom" ? " is-selected" : ""}`}
                       >
                         <input
                           type="radio"
                           name="contribution-amount"
-                          checked={amount === value}
-                          onChange={() => setAmount(value)}
+                          checked={amountChoice === "custom"}
+                          onChange={() => {
+                            setAmountChoice("custom");
+                            setAmountError("");
+                          }}
                         />
-                        <span>${value}</span>
+                        <span>Custom</span>
                       </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <p className="account-frequency-note">
-                  {frequency === "monthly"
-                    ? `${money(amount)} USD every month. Review billing dates and cancellation before simulating.`
-                    : `${money(amount)} USD once. No recurring contribution.`}
-                </p>
-                <button
-                  className="button account-wide-button"
-                  onClick={() => setDialog("contribution")}
-                >
-                  Preview contribution <AccountIcon name="arrow" size={17} />
-                </button>
+                    </div>
+                    {amountChoice === "custom" && (
+                      <div className="donation-custom-amount">
+                        <label className="field" htmlFor={`${amountId}-custom`}>
+                          Custom amount · USD
+                        </label>
+                        <div className="donation-custom-input">
+                          <span aria-hidden="true">$</span>
+                          <input
+                            ref={customAmountField}
+                            id={`${amountId}-custom`}
+                            type="text"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            required
+                            value={customAmount}
+                            placeholder="12.50"
+                            aria-invalid={!!amountError}
+                            aria-describedby={`${amountId}-amount-help${amountError ? ` ${amountId}-amount-error` : ""}`}
+                            onChange={(event) => {
+                              setCustomAmount(event.target.value);
+                              setAmountError("");
+                            }}
+                          />
+                        </div>
+                        <p
+                          className="account-small"
+                          id={`${amountId}-amount-help`}
+                        >
+                          For this demo: $0.01–$10,000.00 USD, with up to two
+                          decimal places.
+                        </p>
+                        {amountError && (
+                          <p
+                            className="donation-amount-error"
+                            role="alert"
+                            id={`${amountId}-amount-error`}
+                          >
+                            {amountError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </fieldset>
+                  <p className="account-frequency-note">
+                    {amount === null
+                      ? `Enter your custom USD amount to preview a ${frequency === "monthly" ? "monthly contribution" : "one-time contribution"}.`
+                      : frequency === "monthly"
+                        ? `${money(amount)} USD every month. Review billing dates and cancellation before simulating.`
+                        : `${money(amount)} USD once. No recurring contribution.`}
+                  </p>
+                  <button type="submit" className="button account-wide-button">
+                    Preview contribution <AccountIcon name="arrow" size={17} />
+                  </button>
+                </form>
                 <p className="account-small">
                   The receiving entity, payment provider and use of excess funds
                   need approval before contributions can open.
@@ -1704,10 +1897,11 @@ export default function AccountPages({
         </>
       ) : null}
 
-      {dialog === "contribution" ? (
+      {dialog === "contribution" && contributionPreview ? (
         <AccountDialog
           title="A contribution preview"
           onClose={() => setDialog(null)}
+          className="donation-dialog"
         >
           <p className="account-dialog-note">
             Fictional flow · no payment entry or charge
@@ -1715,28 +1909,32 @@ export default function AccountPages({
           <dl className="account-review-lines">
             <div>
               <dt>Amount</dt>
-              <dd>{money(amount)} USD</dd>
+              <dd>{money(contributionPreview.cents / 100)} USD</dd>
             </div>
             <div>
               <dt>Frequency</dt>
-              <dd>{frequency === "monthly" ? "Every month" : "One-time"}</dd>
+              <dd>
+                {contributionPreview.frequency === "monthly"
+                  ? "Every month"
+                  : "One-time"}
+              </dd>
             </div>
             <div>
               <dt>First example billing</dt>
               <dd>October 24, 2026</dd>
             </div>
-            {frequency === "monthly" ? (
+            {contributionPreview.frequency === "monthly" ? (
               <div>
                 <dt>Next example billing</dt>
                 <dd>November 24, 2026</dd>
               </div>
             ) : null}
           </dl>
-          {frequency === "monthly" ? (
+          {contributionPreview.frequency === "monthly" ? (
             <p>
-              You would authorize {money(amount)} USD each month until canceled.
-              You can cancel from My donations at any time, including if posting
-              is restricted.
+              You would authorize {money(contributionPreview.cents / 100)} USD
+              each month until canceled. You can cancel from My donations at any
+              time, including if posting is restricted.
             </p>
           ) : (
             <p>
@@ -1760,14 +1958,14 @@ export default function AccountPages({
               className="button"
               onClick={() => {
                 feedback.prepare();
-                if (frequency === "monthly") {
+                if (contributionPreview.frequency === "monthly") {
                   setPlanActive(true);
-                  setPlanAmount(amount);
+                  setPlanAmount(contributionPreview.cents / 100);
                   setPlanNextDay(24);
                 }
                 setDialog(null);
                 onNotice(
-                  `Preview complete: ${money(amount)} USD ${frequency === "monthly" ? "monthly" : "one-time"}. No money was charged and no subscription was created.`,
+                  `Preview complete: ${money(contributionPreview.cents / 100)} USD ${contributionPreview.frequency === "monthly" ? "monthly" : "one-time"}. No money was charged and no subscription was created.`,
                 );
                 feedback.respond({
                   tone: "success",
@@ -1778,7 +1976,9 @@ export default function AccountPages({
               }}
             >
               Simulate{" "}
-              {frequency === "monthly" ? "monthly plan" : "contribution"}
+              {contributionPreview.frequency === "monthly"
+                ? "monthly plan"
+                : "contribution"}
             </button>
           </div>
         </AccountDialog>
@@ -1787,6 +1987,7 @@ export default function AccountPages({
         <AccountDialog
           title="Cancel the example monthly plan?"
           onClose={() => setDialog(null)}
+          className="donation-dialog"
         >
           <p>
             The fictional {money(planAmount)} USD monthly plan will end

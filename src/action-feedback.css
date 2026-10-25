@@ -106,7 +106,7 @@
 }
 .feedback-preferences.panel {
   padding: 27px;
-  margin-block: 24px;
+  margin-block: 0 24px;
   background-color: #f0f5fa;
   border-color: #c9d9e7;
 }

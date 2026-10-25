@@ -46,16 +46,18 @@ Only `dist/` is deployed. The public repository contains the frontend source, fi
 - Share box: every personal or organization box page has a branded QR card, downloadable as PNG for slides or SVG for print, plus a copyable box link.
 - Shared inbox: `/#inbox` — approved members, assignment conflicts, owner reassignment and work states that do not narrow the audience.
 - Member controls: `/#members` — owner-only simulated approval, invitations, removal and official-reply permission.
-- About: `/#about` — proposed public copy, confirmed Trinitarian foundation, personal/in-person prayer, Lord’s Prayer guide and 40 fully populated Scripture selections.
+- About: `/#about` — proposed editorial copy, confirmed Trinitarian foundation, personal/in-person prayer, Lord’s Prayer guide and 40 Scripture selections with NIV reading links.
 - Get Help: `/#help` — regional crisis resources, official therapy/treatment pathways, affordability guidance and professional support alongside faith. It collects no clinical information and makes no referrals or appointments.
 - Report a bug: `/#feedback` — a matching feedback form with a cute bug illustration, bug/feature/other choices, a message, optional local picture previews and a clearly simulated Submit action. Available from the footer and account menu, including to visitors.
-- Donations: `/#donations` — truthful $0 initial hosting need shown with a full decorative rainbow, gold rim and one short shimmer; an optional positive-cost example still shows actual net coverage. Explicit monthly choice and simulated review remain.
+- Donations: `/#donations` — truthful $0 initial hosting need, a vivid moving rainbow, gold rim and tiny stars, with Pause/Resume and a static reduced-motion fallback. Preset/custom USD amounts support both one-time and monthly previews; an optional cost example shows actual net coverage.
 - My Donations: `/#donation-history` — Elena’s private fictional records, year/date filters, CSV and print/save-PDF, with simulated cancellation.
 - Settings: `/#settings` — privacy limits, optional country, associations, recovery fixtures, separate contact consents, reminders and off-by-default reviewed automatic acknowledgments.
-- Signup: `/#signup` — read-only example credentials, optional contact fixtures, recovery codes and an explicitly simulated bot-challenge state.
+- Signup: `/#signup` — read-only example credentials, English interface-language selection, separate NIV preference, optional contact fixtures, recovery codes and a simulated bot-challenge state.
 - Review queue: `/#review` — platform-reviewer fixture only; held text/media, appeals, reported evidence and explicit validated-report decisions.
 
 Use **Preview options** to switch fictional viewers, open boundary states, or reset shared demo data. Maria is independently approved by Grace Church. Samuel is the removable member. Elena starts unapproved. The platform-reviewer fixture has no general private-box access. Every browser receives all fixture source data; these controls illustrate the intended rules only.
+
+Owners cannot submit requests to their own personal or organization box. Own-box pages offer My requests and guidance to choose another box; optional destinations and the commit boundary also exclude owned boxes. Approved organization membership remains distinct from ownership, so ordinary approved members can ask their church for prayer. If the guest walkthrough signs into an account that owns the chosen destination, it retains the draft and asks for an explicit different box. These are prototype guards; production needs server enforcement.
 
 ## Private acknowledgment and care walkthrough
 
@@ -76,7 +78,7 @@ From **My Requests → Delete request**, select particular box deliveries or all
 
 ## Shareable Prayer Box QR cards
 
-Open **Share box** on Maria’s, Elena’s or Grace Church’s page. Its QR code is generated locally from that box’s normal permalink. The downloadable card includes the shared Prayer Box logo in a soft blue header, outside the scanning pattern. Dark square modules and a solid white four-module quiet zone remain clear. PNG exports use integer 3× scaling; the self-contained SVG can scale for print. Keep the complete card and white margin when placing it in a slide or handout.
+Open **Share box** on Maria’s, Elena’s or Grace Church’s page. Its QR code is generated locally from that box’s normal permalink. The Prayer Box logo now sits inside a small data-only area of the scanning pattern, as well as the card header. Placement preserves every functional module plus a one-module buffer, keeps logo coverage at or below 4% and retains the full white four-module quiet zone. The exact same vector card is used on screen and for PNG/SVG export. PNG uses integer 3× scaling; SVG scales for print. Keep the complete card and white margin when sharing.
 
 The encoder loads only when sharing is opened; copy-link access remains available if QR generation fails. No QR service, URL shortener, tracking, remote image generation, camera access or server is involved. Codes contain only the canonical box link, with page query parameters and earlier request routes removed. Sharing or scanning never grants additional request permissions. These three destinations are fictional prototype boxes; real account creation and server authorization remain unimplemented.
 
@@ -89,6 +91,16 @@ The responsive prototype can be added to a phone's home screen. Open [the mobile
 The manifest declares standalone display, a project-relative identity/start/scope, cream theme/launch colors, normal 192/512px icons and a separate maskable 512px icon. A 180px Apple icon and editable SVG source use the existing open-box/heart logo on pastel blue. The optional browser install event is captured when available; only an explicit button click opens its prompt. Other browsers show readable manual instructions. The page reports installed status only from an actual browser install or standalone signal.
 
 Current instructions link to [Apple's home-screen guide](https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios) and [Google's Android web-app guide](https://support.google.com/chrome/answer/9658361?hl=en&co=GENIE.Platform%3DAndroid). Browser menu names vary. This is a mobile web app, with no app-store package or native wrapper. It needs an internet connection. No service worker, offline prayer cache, push subscription, device permission or persistent prayer data was added; demo changes still clear on reload. Physical iOS/Android installation, virtual keyboards and device performance remain separate device checks.
+
+## Widget previews and language
+
+The Mobile app page includes small, medium and large prayer-reminder widget designs, a daily prayer-reading reference, a reminder-time preview and session-only Save demo widget choices. The previews contain no private request, identity, photograph, activity count or donation history. They do not add an OS widget or schedule an alert. Real Home Screen widgets need a separate native [Apple WidgetKit extension](https://developer.apple.com/documentation/widgetkit/creating-a-widget-extension) or [Android app-widget implementation](https://developer.android.com/develop/ui/views/appwidgets), packaging and device verification. The installed web-app icon alone provides neither.
+
+Signup offers **English** as the only shipped interface language, independently of country and Bible edition. A typed English catalog and fallback handle the new setup/widget copy; the rest of the existing interface remains English. No prayer content is machine-translated and no translation provider is connected. This is a foundation for future approved catalogs, not a claim of multilingual coverage.
+
+The founder selected **NIV**. About and widgets now link to the corresponding NIV readings on Bible Gateway; original encouragement is labeled separately. Permission to quote NIV text here has not been obtained. The earlier WEB text is preserved in source history/data and never relabeled NIV. Current and historical source notes are in [Scripture source notes](public/scripture-source-notes.md).
+
+Custom donation amounts use exact integer cents, with a disclosed fictional range of $0.01–$10,000.00 USD. Invalid, empty, exponent, comma-formatted, overprecise or oversized values are rejected rather than rounded or truncated. Review snapshots show the amount/currency and cadence, including continuing monthly authorization and cancellation; every final action remains simulated with no charge. Funding totals remain separate from the draft amount. Decorative color/star loops pause offscreen, on hidden pages or through Pause, and are static under reduced motion.
 
 ## Buttons and preference controls
 
@@ -118,7 +130,7 @@ The demo accepts ordinary HTTP/HTTPS addresses, adds HTTPS to a bare domain, and
 
 GitHub Pages serves the static frontend. There is no backend, database, real authentication, contact verification, working CAPTCHA, bot protection, media upload/recording/transcription, AI moderation, model training, email/SMS, payment processor or real financial transaction. Audio/video states and transcripts are UI simulations; no voice is recorded or played. Donation exports are fictional personal records, not tax receipts; entity status and deductibility are unverified.
 
-Confirmed requirements are in revision 4 and the founder’s subsequent screening/donation additions. The exact About/confirmation wording, Scripture edition, future-member retained-history policy, precise block/group confidentiality policy, retention, age/region rules, human review operations, providers, payment eligibility and surplus policy still require production decisions. The World English Bible edition used for review is proposed, sourced and documented in `public/scripture-source-notes.md`.
+Confirmed requirements are in revision 4 and the founder’s subsequent additions, including English and NIV selection. Exact editorial wording, NIV quotation rights, native widget packaging, future-member retained-history policy, precise block/group confidentiality policy, retention, age/region rules, human review operations, providers, payment eligibility and surplus policy still require production decisions. Current NIV links and the historical WEB source audit are documented in `public/scripture-source-notes.md`.
 
 The founder authorized hosting this fictional frontend on GitHub. Stop for separate explicit founder approval before a backend or real service integration, real accounts, submissions or payments. Production authorization must protect every request, reply, attachment, linked testimony, export and notification at the server; browser visibility is insufficient.
 
@@ -126,6 +138,6 @@ The founder authorized hosting this fictional frontend on GitHub. Stop for separ
 
 The founder's revision-4 brief controls; companion copy is proposed. The supplied briefs and the reviewable design/security plans were preserved in the local workspace. They are not part of this public source repository. The public demo keeps proposed copy visibly labeled for review.
 
-Applied available local skills: Sites (local-only workflow), web-design-taste, Emil design engineering, React best practices and animate. The brief’s `frontend-design` and `web-design-guidelines` skills were not installed locally; their official upstream instructions were inspected. No unrelated skill bundle was installed. Rubik is bundled locally with its OFL license. Icons are SVGs; the logo, favicon and hero share a vector redrawing of the founder’s supplied open-box and heart-note motif. The zero-cost shimmer uses CSS transform/opacity for one 300ms pass, with a static gold/rainbow reduced-motion fallback.
+Applied available local skills: Sites (local-only workflow), web-design-taste, Emil design engineering, React best practices and animate. The brief’s `frontend-design` and `web-design-guidelines` skills remain unavailable locally; their official upstream instructions were inspected earlier. No unrelated skill bundle was installed. Rubik is bundled locally with its OFL license. Icons are SVGs; the logo, favicon and hero share a vector redrawing of the founder’s supplied open-box and heart-note motif. The donation rainbow/glint uses CSS transforms and star opacity, with pause controls and a static reduced-motion fallback.
 
 The app uses React, TypeScript and Vite without routing, animation, database or service infrastructure packages. The small QR encoder is loaded on demand, with jsQR used only for development tests. All state is in React memory. Donation CSV downloads use a controlled schema with spreadsheet-formula neutralization; QR PNG/SVG downloads contain only the branded box-link card.

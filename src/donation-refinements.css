@@ -1,0 +1,217 @@
+/* Donation-only refinements: decorative color moves; all funding values stay still. */
+.donation-meter-art {
+  position: relative;
+}
+.donation-meter .donation-meter-gold {
+  fill: none;
+  stroke-width: 29px;
+  stroke-linecap: round;
+  filter: drop-shadow(0 2px 1px #895c1b26);
+}
+.donation-meter .donation-meter-track {
+  fill: none;
+  stroke: #f5ecda;
+  stroke-width: 20px;
+  stroke-linecap: round;
+}
+.donation-meter-rainbow-drift {
+  transform-box: fill-box;
+  animation: donation-rainbow-drift 8s linear infinite;
+}
+.donation-meter-gold-glint {
+  opacity: 0;
+  animation: donation-gold-glint 8s linear infinite;
+}
+.donation-meter-star {
+  opacity: 0.8;
+  animation: donation-star-glow 8s linear infinite;
+}
+.donation-meter-stars > g:nth-child(even) .donation-meter-star {
+  animation-delay: -4s;
+}
+.donation-meter[data-motion="paused"] .donation-meter-motion-layer {
+  animation-play-state: paused;
+}
+@keyframes donation-rainbow-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(33.333333%);
+  }
+}
+@keyframes donation-gold-glint {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.8;
+  }
+  58% {
+    transform: translateX(430px);
+    opacity: 0.8;
+  }
+  63%,
+  100% {
+    transform: translateX(430px);
+    opacity: 0;
+  }
+}
+@keyframes donation-star-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.donation-meter-motion-control {
+  display: flex;
+  justify-content: center;
+  margin-top: 2px;
+}
+.donation-meter-motion-control .donation-motion-toggle {
+  min-height: 44px;
+  padding: 8px 12px;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--navy);
+  background: #fffdf6;
+  border-color: #c5b994;
+}
+.donation-motion-reduced {
+  display: none;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+.account-page-donations .account-amounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.account-page-donations .account-amounts > label {
+  min-width: 0;
+}
+.account-page-donations .account-amounts label > span {
+  display: flex;
+  min-height: 48px;
+  padding: 10px 3px;
+  align-items: center;
+  justify-content: center;
+}
+.account-page-donations .account-amounts .donation-custom-choice > span {
+  font-size: 13px;
+}
+.donation-custom-amount {
+  margin-top: 18px;
+}
+.donation-custom-amount > .field {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.donation-custom-input {
+  position: relative;
+}
+.donation-custom-input > span {
+  position: absolute;
+  inset: 0 auto 0 15px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+.donation-custom-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 11px 13px 11px 32px;
+  border: 1px solid var(--control-line);
+  border-radius: 11px;
+  background: #fffdfa;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.donation-custom-input input[aria-invalid="true"] {
+  border-color: #a3414e;
+}
+.donation-custom-amount .account-small {
+  margin: 8px 0 0;
+}
+.donation-amount-error {
+  color: #913745;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+.account-page-donations .account-funding-lines > div {
+  align-items: baseline;
+  gap: 16px;
+}
+.account-page-donations .account-funding-lines dd {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Override the shared zero-padding modal shell only for donation review/cancel. */
+.account-dialog.donation-dialog {
+  padding: 26px;
+}
+.donation-dialog .account-dialog-heading {
+  align-items: flex-start;
+  gap: 16px;
+}
+.donation-dialog .account-review-lines dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.donation-dialog .account-dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.donation-dialog .account-dialog-actions .button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  justify-content: center;
+  white-space: normal;
+}
+@media (max-width: 480px) {
+  .account-dialog.donation-dialog {
+    padding: 20px;
+  }
+  .donation-dialog .account-dialog-actions {
+    grid-template-columns: 1fr;
+  }
+  .account-page-donations .account-funding-lines > div {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .donation-meter .donation-meter-motion-layer {
+    animation: none;
+  }
+  .donation-meter .donation-meter-gold-glint {
+    opacity: 0;
+  }
+  .donation-meter-motion-control .donation-motion-toggle {
+    display: none;
+  }
+  .donation-motion-reduced {
+    display: inline;
+  }
+}
+@media print {
+  .donation-meter .donation-meter-motion-layer {
+    animation: none;
+  }
+  .donation-meter-motion-control {
+    display: none;
+  }
+}

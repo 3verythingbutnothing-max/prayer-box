@@ -6,6 +6,14 @@
 export type Viewer =
   "elena" | "maria" | "member" | "owner" | "guest" | "operator";
 export type BoxId = "maria" | "grace" | "mine";
+/** Prototype ownership only; future submission authorization belongs on a server. */
+export function isOwnPrayerBox(actor: string, box: BoxId): boolean {
+  return (
+    (box === "mine" && actor === "elena") ||
+    (box === "maria" && actor === "maria") ||
+    (box === "grace" && actor === "owner")
+  );
+}
 export function prayerBoxUrl(pageUrl: string, box: BoxId): string {
   const url = new URL(pageUrl);
   url.search = "";

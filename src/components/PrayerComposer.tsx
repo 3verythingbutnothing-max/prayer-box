@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { getAudienceLabel, getEffectiveAudience, screenText } from "../domain";
+import {
+  getAudienceLabel,
+  getEffectiveAudience,
+  isOwnPrayerBox,
+  screenText,
+} from "../domain";
 import type { Audience, BoxId, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
 import { buildPlatformAcknowledgment, hasSupportLanguage } from "../care";
@@ -17,7 +22,7 @@ type Props = {
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
   onClose: () => void;
-  onCommit: (rows: PrayerRequest[]) => void;
+  onCommit: (rows: PrayerRequest[]) => boolean;
   onNavigate: (route: string) => void;
   onSignIn: () => void;
 };
@@ -56,7 +61,7 @@ const examples = [
 ];
 
 export default function PrayerComposer({
-  recipient,
+  recipient: initialRecipient,
   viewer,
   privacy,
   automatic,
@@ -70,6 +75,7 @@ export default function PrayerComposer({
   onSignIn,
 }: Props) {
   const feedback = useActionFeedback();
+  const [recipient, setRecipient] = useState(initialRecipient);
   const [step, setStep] = useState<
     "write" | "support" | "preview" | "checking" | "result"
   >("write");
@@ -92,8 +98,17 @@ export default function PrayerComposer({
   const submitting = useRef(false);
   const draftField = useRef<HTMLTextAreaElement>(null);
   const stepHeading = useRef<HTMLHeadingElement>(null);
+  const ownDestinationHeading = useRef<HTMLHeadingElement>(null);
+  const previousViewer = useRef(viewer);
   const previousStep = useRef(step);
   useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    const signedInNow =
+      previousViewer.current === "guest" && viewer !== "guest";
+    previousViewer.current = viewer;
+    if (signedInNow && isOwnPrayerBox(viewer, recipient))
+      ownDestinationHeading.current?.focus();
+  }, [viewer, recipient]);
   useEffect(() => {
     // Replacing a step removes its focused action. Keep keyboard/screen-reader
     // focus in the dialog instead of letting it fall back to the page body.
@@ -104,20 +119,37 @@ export default function PrayerComposer({
     else stepHeading.current?.focus();
   }, [step]);
   const personRecipient = recipient === "grace" ? "maria" : recipient;
+  const personalAllowed = !isOwnPrayerBox(viewer, personRecipient);
+  const churchAllowed = !isOwnPrayerBox(viewer, "grace");
   const destinations: BoxId[] = [
-    ...(personal ? [personRecipient] : []),
-    ...(church ? ["grace" as const] : []),
+    ...(personal && personalAllowed ? [personRecipient] : []),
+    ...(church && churchAllowed ? ["grace" as const] : []),
   ];
   const signedIn = viewer !== "guest";
 
   function submit(retryOnly = false) {
     if (submitting.current) return;
-    feedback.prepare();
-    submitting.current = true;
-    setStep("checking");
     const targets = retryOnly
       ? outcomes.filter((o) => o.status === "failed").map((o) => o.recipient)
       : destinations;
+    if (
+      !signedIn ||
+      !targets.length ||
+      targets.some((target) => isOwnPrayerBox(viewer, target))
+    ) {
+      feedback.prepare();
+      feedback.respond({
+        tone: "error",
+        title: "Choose another prayer box.",
+        message:
+          "Requests go to someone else’s box. Your own box is for receiving prayer requests from others.",
+      });
+      setStep("write");
+      return;
+    }
+    feedback.prepare();
+    submitting.current = true;
+    setStep("checking");
     timer.current = setTimeout(() => {
       const check = screenText(text);
       const records: PrayerRequest[] = [];
@@ -134,7 +166,7 @@ export default function PrayerComposer({
         const record: PrayerRequest = {
           id,
           sourceId: initial?.sourceId ?? `draft-${draftId.current}`,
-          authorId: viewer === "guest" ? "elena" : viewer,
+          authorId: viewer,
           authorName:
             viewer === "maria"
               ? "Maria"
@@ -192,7 +224,17 @@ export default function PrayerComposer({
           reason: check.reason,
         };
       });
-      onCommit(records);
+      if (!onCommit(records)) {
+        submitting.current = false;
+        setStep("write");
+        feedback.respond({
+          tone: "error",
+          title: "This request couldn’t be added.",
+          message:
+            "Check your account and choose someone else’s prayer box. Your draft is still here.",
+        });
+        return;
+      }
       setAcknowledgments((previous) => [
         ...previous,
         ...records.filter((row) => row.platformAcknowledgment),
@@ -324,6 +366,44 @@ export default function PrayerComposer({
           request or media leaves this browser.
         </p>
       )}
+      {(step === "write" || step === "preview") &&
+        isOwnPrayerBox(viewer, recipient) && (
+          <div className="notice butter">
+            <Icon name="box" />
+            <div>
+              <h3
+                className="own-destination-title"
+                ref={ownDestinationHeading}
+                tabIndex={-1}
+              >
+                Choose someone else’s prayer box.
+              </h3>
+              <p>
+                Your own box receives requests from others. Your draft is still
+                here; choose a different destination to continue.
+              </p>
+              <div className="modal-actions">
+                {(["maria", "grace"] as const)
+                  .filter((target) => !isOwnPrayerBox(viewer, target))
+                  .map((target) => (
+                    <button
+                      className="button secondary compact"
+                      key={target}
+                      onClick={() => {
+                        setRecipient(target);
+                        setPersonal(target !== "grace");
+                        setChurch(target === "grace");
+                        setStep("write");
+                      }}
+                    >
+                      Choose {names[target]}’s box{" "}
+                      <Icon name="arrow" size={16} />
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
       {step === "support" && (
         <>
           <CareResources />
@@ -443,7 +523,7 @@ export default function PrayerComposer({
           )}
           <fieldset className="destination-fieldset">
             <legend>Where this request will go</legend>
-            {recipient !== "grace" && (
+            {recipient !== "grace" && personalAllowed && (
               <label className="check-row">
                 <input
                   type="checkbox"
@@ -458,36 +538,37 @@ export default function PrayerComposer({
                 </span>
               </label>
             )}
-            {recipient === "maria" && offerGrace && (
+            {recipient === "maria" && offerGrace && churchAllowed && (
               <p className="quiet-copy">
                 Maria publicly displays her approved Grace Church association.
                 You can choose an additional delivery.
               </p>
             )}
-            {(recipient === "grace" ||
-              (recipient === "maria" && offerGrace)) && (
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={church}
-                  onChange={(event) => setChurch(event.target.checked)}
-                />
-                <span>
-                  <strong>
-                    {recipient === "grace"
-                      ? "Grace Church prayer community"
-                      : "Also send a separate request to Grace Church"}
-                  </strong>
-                  <small>
-                    {recipient === "grace"
-                      ? "Address the organization directly."
-                      : "Optional. This does not forward Maria’s conversation."}
-                  </small>
-                </span>
-              </label>
-            )}
+            {churchAllowed &&
+              (recipient === "grace" ||
+                (recipient === "maria" && offerGrace)) && (
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={church}
+                    onChange={(event) => setChurch(event.target.checked)}
+                  />
+                  <span>
+                    <strong>
+                      {recipient === "grace"
+                        ? "Grace Church prayer community"
+                        : "Also send a separate request to Grace Church"}
+                    </strong>
+                    <small>
+                      {recipient === "grace"
+                        ? "Address the organization directly."
+                        : "Optional. This does not forward Maria’s conversation."}
+                    </small>
+                  </span>
+                </label>
+              )}
           </fieldset>
-          {personal && (
+          {personal && personalAllowed && (
             <div className="audience-options">
               <h3>{names[personRecipient]} · personal delivery</h3>
               <label className="field">
@@ -519,7 +600,7 @@ export default function PrayerComposer({
               </label>
             </div>
           )}
-          {church && (
+          {church && churchAllowed && (
             <div className="audience-options sage-wash">
               <h3>Grace Church · separate delivery</h3>
               <label className="field">
@@ -662,7 +743,7 @@ export default function PrayerComposer({
             </button>
             <button
               className="button"
-              disabled={!signedIn}
+              disabled={!signedIn || !destinations.length}
               onClick={() => submit()}
             >
               Simulate sending <Icon name="arrow" size={18} />

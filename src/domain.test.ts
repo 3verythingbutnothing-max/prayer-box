@@ -5,6 +5,7 @@ import {
   canViewRequest,
   getAudienceLabel,
   getEffectiveAudience,
+  isOwnPrayerBox,
   prayerBoxUrl,
   screenText,
   seedRequests,
@@ -20,6 +21,32 @@ const viewers: Viewer[] = [
   "guest",
   "operator",
 ];
+
+test("personal and organization owners cannot send to their own boxes, while approved members remain distinct", () => {
+  for (const [actor, box] of [
+    ["elena", "mine"],
+    ["maria", "maria"],
+    ["owner", "grace"],
+  ] as const) {
+    assert.equal(isOwnPrayerBox(actor, box), true);
+  }
+  for (const actor of [
+    "elena",
+    "maria",
+    "member",
+    "operator",
+    "guest",
+  ] as const) {
+    assert.equal(
+      isOwnPrayerBox(actor, "grace"),
+      false,
+      `${actor} is not the organization owner`,
+    );
+  }
+  assert.equal(isOwnPrayerBox("maria", "mine"), false);
+  assert.equal(isOwnPrayerBox("owner", "maria"), false);
+  assert.equal(isOwnPrayerBox("elena", "maria"), false);
+});
 
 test("shared box links preserve a GitHub Pages project path", () => {
   assert.equal(

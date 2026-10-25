@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   lordsPrayer,
-  scriptureEdition,
   scriptureEntries,
   scriptureThemes,
 } from "../data/scripture";
 import type { ScriptureQuotation } from "../data/scripture";
+import { biblePreference, nivReadingUrl } from "../localization";
 import "../about.css";
 
 type AboutPageProps = { onNavigate?: (route: string) => void };
@@ -36,43 +36,18 @@ function PassageText({
   return (
     <div className="about-passage-text">
       <p className="about-edition">
-        Bible quotation · {scriptureEdition.shortName}
+        Scripture reading · {biblePreference.name} ({biblePreference.id})
       </p>
       {quotation.segments.map((segment) => (
         <div className="about-scripture-segment" key={segment.reference}>
           {showSegmentLabels && (
             <p className="about-segment-label">{segment.reference}</p>
           )}
-          <blockquote>
-            {segment.verses.map(({ verse, text }) => (
-              <p key={verse}>
-                <sup
-                  className="about-verse-number"
-                  aria-label={`Verse ${verse}`}
-                >
-                  {verse}
-                </sup>{" "}
-                {text}
-              </p>
-            ))}
-          </blockquote>
+          <SourceLink href={nivReadingUrl(segment.reference)}>
+            Read {segment.reference} in NIV
+          </SourceLink>
         </div>
       ))}
-      {quotation.notes.length > 0 && (
-        <div
-          className="about-textual-notes"
-          aria-label="Publisher textual notes"
-        >
-          {quotation.notes.map((note, index) => (
-            <p key={`${note.verse}-${index}`}>
-              <strong>Publisher note, verse {note.verse}:</strong> {note.text}
-            </p>
-          ))}
-        </div>
-      )}
-      <SourceLink href={quotation.sourceUrl}>
-        Read the publisher’s chapter for context
-      </SourceLink>
     </div>
   );
 }
@@ -195,8 +170,9 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
       <div className="about-review-note">
         <span className="chip">Copy for review</span>
         <p>
-          The Trinitarian foundation is confirmed. This prototype’s exact
-          wording and Bible edition remain proposed for founder approval.
+          The Trinitarian foundation and NIV selection are confirmed. Exact
+          editorial wording remains for review. NIV readings open on Bible
+          Gateway; permission to quote NIV text here has not been obtained.
         </p>
       </div>
 
@@ -266,27 +242,24 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
         </p>
         <p className="about-context">
           Scripture context:{" "}
-          <SourceLink href="https://ebible.org/engwebp/EPH02.htm#V18">
+          <SourceLink href={nivReadingUrl("Ephesians 2:18")}>
             Ephesians 2:18
           </SourceLink>
           ,{" "}
-          <SourceLink href="https://ebible.org/engwebp/JHN14.htm#V13">
+          <SourceLink href={nivReadingUrl("John 14:13–14")}>
             John 14:13–14
           </SourceLink>
+          , <SourceLink href={nivReadingUrl("John 15:7")}>John 15:7</SourceLink>
           ,{" "}
-          <SourceLink href="https://ebible.org/engwebp/JHN15.htm#V7">
-            John 15:7
-          </SourceLink>
-          ,{" "}
-          <SourceLink href="https://ebible.org/engwebp/JHN16.htm#V23">
+          <SourceLink href={nivReadingUrl("John 16:23–27")}>
             John 16:23–27
           </SourceLink>
           ,{" "}
-          <SourceLink href="https://ebible.org/engwebp/1JN05.htm#V14">
+          <SourceLink href={nivReadingUrl("1 John 5:14–15")}>
             1 John 5:14–15
           </SourceLink>
           , and{" "}
-          <SourceLink href="https://ebible.org/engwebp/ACT07.htm#V59">
+          <SourceLink href={nivReadingUrl("Acts 7:59–60")}>
             Acts 7:59–60
           </SourceLink>
           .
@@ -315,15 +288,15 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
           </p>
           <p className="about-context">
             Scripture context:{" "}
-            <SourceLink href="https://ebible.org/engwebp/MAT06.htm#V6">
+            <SourceLink href={nivReadingUrl("Matthew 6:6–13")}>
               Matthew 6:6–13
             </SourceLink>
             ,{" "}
-            <SourceLink href="https://ebible.org/engwebp/EPH02.htm#V18">
+            <SourceLink href={nivReadingUrl("Ephesians 2:18")}>
               Ephesians 2:18
             </SourceLink>
             , and{" "}
-            <SourceLink href="https://ebible.org/engwebp/ROM08.htm#V26">
+            <SourceLink href={nivReadingUrl("Romans 8:26–27")}>
               Romans 8:26–27
             </SourceLink>
             .
@@ -348,19 +321,15 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
             require stopping medical care.
           </p>
           <p className="about-context">
-            <SourceLink href="https://ebible.org/engwebp/LUK04.htm#V40">
-              Luke 4:40
-            </SourceLink>{" "}
+            <SourceLink href={nivReadingUrl("Luke 4:40")}>Luke 4:40</SourceLink>{" "}
             describes Jesus laying hands on sick people;{" "}
-            <SourceLink href="https://ebible.org/engwebp/ACT28.htm#V8">
-              Acts 28:8
-            </SourceLink>{" "}
+            <SourceLink href={nivReadingUrl("Acts 28:8")}>Acts 28:8</SourceLink>{" "}
             describes Paul praying and laying hands on Publius’s father.{" "}
-            <SourceLink href="https://ebible.org/engwebp/JAS05.htm#V13">
+            <SourceLink href={nivReadingUrl("James 5:13–16")}>
               James 5:13–16
             </SourceLink>{" "}
             describes prayer, elders, and anointing.{" "}
-            <SourceLink href="https://ebible.org/engwebp/HEB10.htm#V24">
+            <SourceLink href={nivReadingUrl("Hebrews 10:24–25")}>
               Hebrews 10:24–25
             </SourceLink>{" "}
             encourages gathering. Asking permission is our care practice, not a
@@ -393,7 +362,10 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
           <div className="about-editorial-guide">
             <p className="eyebrow">Editorial guide · proposed site copy</p>
             <h3>Six movements to reflect on</h3>
-            <p>The explanations below are separate from the Bible quotation.</p>
+            <p>
+              The explanations below are editorial guidance, separate from the
+              linked Scripture reading.
+            </p>
             <ol className="about-movements">
               {prayerMovements.map(([title, explanation]) => (
                 <li key={title}>
@@ -412,11 +384,11 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
               Seeking God’s kingdom includes his will in everyday life now,
               alongside hope for Christ’s return and the promised new creation.
               See{" "}
-              <SourceLink href="https://ebible.org/engwebp/2PE03.htm#V10">
+              <SourceLink href={nivReadingUrl("2 Peter 3:10–13")}>
                 2 Peter 3:10–13
               </SourceLink>{" "}
               and{" "}
-              <SourceLink href="https://ebible.org/engwebp/REV21.htm#V1">
+              <SourceLink href={nivReadingUrl("Revelation 21:1–5")}>
                 Revelation 21:1–5
               </SourceLink>
               . This guide sets no end-times timetable.
@@ -424,7 +396,7 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
             <p>
               Asking for protection from temptation does not mean God entices
               people to sin;{" "}
-              <SourceLink href="https://ebible.org/engwebp/JAS01.htm#V13">
+              <SourceLink href={nivReadingUrl("James 1:13")}>
                 James 1:13
               </SourceLink>{" "}
               makes that distinction.
@@ -438,9 +410,9 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
               </small>
             </div>
             <p className="about-context">
-              The proposed WEB edition includes the concluding praise and the
-              publisher’s note that NU omits it. Another Trinitarian tradition’s
-              customary recitation may omit that ending.
+              Read the NIV publisher’s footnote alongside Matthew 6:13 for the
+              concluding praise. Christian traditions may recite that ending
+              differently; this guide does not insert it into the passage.
             </p>
           </div>
         </div>
@@ -460,15 +432,15 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
         </p>
         <p className="about-context">
           Read{" "}
-          <SourceLink href="https://ebible.org/engwebp/ROM08.htm#V26">
+          <SourceLink href={nivReadingUrl("Romans 8:26–27")}>
             Romans 8:26–27
           </SourceLink>
           ,{" "}
-          <SourceLink href="https://ebible.org/engwebp/LUK22.htm#V39">
+          <SourceLink href={nivReadingUrl("Luke 22:39–46")}>
             Luke 22:39–46
           </SourceLink>
           , and{" "}
-          <SourceLink href="https://ebible.org/engwebp/2CO12.htm#V7">
+          <SourceLink href={nivReadingUrl("2 Corinthians 12:7–10")}>
             2 Corinthians 12:7–10
           </SourceLink>{" "}
           alongside the promises about prayer.
@@ -485,15 +457,15 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
           Scripture for prayer and encouragement
         </h2>
         <p className="about-collection-intro">
-          Explore the six themes at your own pace. Each passage keeps its Bible
-          text and a little context separate.
+          Explore the six themes at your own pace. Each passage has a NIV
+          reading link and separately labeled editorial context.
         </p>
         <div className="about-edition-notice">
-          <span className="chip">{scriptureEdition.status}</span>
+          <span className="chip">NIV selected</span>
           <p>
-            {scriptureEdition.name}. Final edition and reflections await
-            approval. Selected texts were checked against the publisher on{" "}
-            {scriptureEdition.checkedAt}.
+            {biblePreference.name}. Read on Bible Gateway; permission is
+            required before NIV quotations can appear in this app. Editorial
+            reflections remain for review.
           </p>
         </div>
         <div className="about-theme-list">
@@ -552,10 +524,10 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
           ))}
         </div>
         <p className="about-context about-reuse-note">
-          The World English Bible is dedicated to the public domain. Its name
-          identifies the publisher’s faithful text.{" "}
-          <SourceLink href={scriptureEdition.reuseUrl}>
-            Publisher’s reuse statement
+          NIV is selected for the app. This preview links to the reading rather
+          than bundling unlicensed NIV quotations.{" "}
+          <SourceLink href={biblePreference.permissionsUrl}>
+            Biblica’s permissions guidance
           </SourceLink>
           .
         </p>

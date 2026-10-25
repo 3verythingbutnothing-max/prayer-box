@@ -1,5 +1,15 @@
 # Prayer Box prototype: Scripture source and edition notes
 
+## Current display — October 25, 2026
+
+The founder selected **English and the New International Version (NIV)**. The app now uses NIV reading links in About and the widget previews. It does not bundle NIV quotations or relabel WEB wording. [Biblica’s permissions policy](https://www.biblica.com/permissions/) requires app/site permission; this prototype has no license or connected Scripture provider. Widget encouragement is original editorial copy, labeled separately from Scripture.
+
+The five widget reading references were checked individually on Bible Gateway in NIV: Colossians 4:2; Philippians 4:6–7; 1 Thessalonians 5:16–18; Matthew 6:6; Ephesians 6:18. Publisher pages were available on this date; links are not a reuse license. No prayer content is sent in those links.
+
+The following records the **historical October 24 WEB source audit**. WEB source data remains preserved for provenance; it is not presented as NIV and is no longer the current displayed edition. Historical approval statements below describe that earlier build.
+
+## Historical WEB source audit
+
 Checked: October 24, 2026.
 
 ## Review status

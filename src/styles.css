@@ -693,6 +693,18 @@ main:focus {
   gap: 11px;
   margin-top: 20px;
 }
+.own-box-guidance {
+  color: #536b80;
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 420px;
+  margin-top: 16px;
+}
+.own-destination-title {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
 .hero-actions .button {
   font-size: 13px;
   min-height: 46px;
@@ -1133,7 +1145,7 @@ main:focus {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   margin-top: 25px;
   flex-wrap: wrap;

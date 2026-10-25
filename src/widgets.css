@@ -1,0 +1,312 @@
+.prayer-widgets-section {
+  margin-top: 56px;
+  scroll-margin-top: 110px;
+  outline: none;
+}
+.prayer-widgets-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px 32px;
+  align-items: start;
+}
+.widget-native-notice {
+  display: flex;
+  gap: 10px;
+  padding: 16px 19px;
+  margin: 23px 0;
+  border: 1px solid #cad9e3;
+  border-radius: 15px;
+  background: #edf4f8;
+  color: #415a70;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.widget-native-notice > svg,
+.widget-private-note > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.widget-controls.panel {
+  padding: 27px;
+  grid-column: 1;
+  grid-row: 2;
+}
+.widget-size-panel.panel {
+  padding: 27px;
+  grid-column: 1;
+  grid-row: 1;
+}
+.widget-mode-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.widget-mode-fieldset legend {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.widget-mode-options {
+  display: grid;
+  gap: 9px;
+}
+.widget-mode-options > label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #d7dfe5;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #fffbf5;
+}
+.widget-mode-options > label.is-selected {
+  background: #e6f0f8;
+  border-color: #819eb7;
+}
+.widget-mode-options input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--navy);
+}
+.widget-mode-options span {
+  display: grid;
+  gap: 3px;
+}
+.widget-mode-options strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.widget-mode-options small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.widget-control-help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: -3px 0 19px;
+}
+.widget-edition {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--navy);
+  padding: 14px 0 22px;
+}
+.widget-edition > svg {
+  flex-shrink: 0;
+}
+.widget-edition p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.widget-edition strong {
+  font-weight: 500;
+}
+.widget-edition span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.widget-controls > .button {
+  width: 100%;
+}
+.widget-preview-stage {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 25px 15px;
+  background: #eeeae43d;
+  border: 1px dashed #d6d6d4;
+  border-radius: 23px;
+  min-width: 0;
+}
+.widget-preview-stage > .eyebrow {
+  margin: 0;
+  text-align: center;
+}
+.prayer-widget {
+  scroll-margin-block: 100px;
+  width: min(100%, 360px);
+  padding: 23px;
+  background: linear-gradient(145deg, #e5f1fb, #f5f8fb 70%);
+  color: #2c4963;
+  border: 1px solid #b6cbdb;
+  border-radius: 28px;
+  box-shadow:
+    0 4px 0 #b8cddd70,
+    0 12px 22px #27445e0e;
+}
+.widget-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.widget-brand > svg {
+  flex-shrink: 0;
+}
+.widget-little-star {
+  margin-left: auto;
+  color: #8f792e;
+}
+.widget-today {
+  font-size: 11px;
+  color: #5a6d7e;
+  margin: 18px 0 7px;
+}
+.prayer-widget h3 {
+  font-size: 25px;
+  line-height: 1.28;
+  font-weight: 550;
+  letter-spacing: -0.65px;
+  margin: 0 0 11px;
+}
+.widget-reading-theme {
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 0 0 7px;
+  color: #536b7f;
+}
+.widget-reading-link {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  color: #365773;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+.widget-open-prayers {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #b7ccda;
+  background: #fffbf5bd;
+  color: #2c4b65;
+  border-radius: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin-top: 13px;
+  cursor: pointer;
+}
+.prayer-widget-small {
+  max-width: 225px;
+  padding: 19px;
+  border-radius: 25px;
+}
+.prayer-widget-small h3 {
+  font-size: 22px;
+}
+.prayer-widget-small .widget-reading-theme {
+  display: none;
+}
+.prayer-widget-small .widget-brand {
+  font-size: 11px;
+  gap: 5px;
+}
+.prayer-widget-small .widget-today {
+  margin-top: 16px;
+}
+.prayer-widget-large {
+  min-height: 350px;
+  background: linear-gradient(145deg, #e9e6f5, #f7f6fb 75%);
+  border-color: #c7bfdc;
+}
+.widget-encouragement {
+  border-top: 1px solid #cec9df;
+  margin-top: 10px;
+  padding-top: 13px;
+}
+.widget-encouragement p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0 0 8px;
+}
+.widget-encouragement small {
+  color: #6d667a;
+  font-size: 10px;
+  line-height: 1.6;
+  display: block;
+}
+.widget-private-note {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  max-width: 330px;
+  margin: 0;
+}
+.widget-error {
+  color: #8b493d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .prayer-widgets-layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .widget-preview-stage {
+    grid-column: 1;
+    grid-row: 2;
+    padding-inline: 17px;
+  }
+  .widget-controls.panel {
+    padding: 23px;
+    grid-row: 3;
+  }
+  .widget-size-panel.panel {
+    padding: 19px;
+  }
+  .widget-mode-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .widget-mode-options > label {
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 5px;
+    min-width: 0;
+    text-align: center;
+  }
+  .widget-mode-options strong {
+    font-size: 12px;
+  }
+  .widget-mode-options small {
+    display: none;
+  }
+  .prayer-widgets-section {
+    margin-top: 38px;
+  }
+}
+@media (max-width: 370px) {
+  .prayer-widget {
+    padding: 19px;
+  }
+  .prayer-widget h3 {
+    font-size: 22px;
+  }
+  .widget-controls.panel {
+    padding: 19px;
+  }
+  .widget-preview-stage {
+    padding-inline: 12px;
+  }
+}

@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import { Icon, Modal } from "../ui";
 import { normalizeOrganizationWebsite } from "../organization";
 import { useActionFeedback } from "../action-feedback";
+import {
+  biblePreference,
+  resolveUiLanguage,
+  supportedLanguages,
+  uiText,
+} from "../localization";
+import type { UiLanguage } from "../localization";
 import "../community.css";
 
 type MembershipStatus = "none" | "pending" | "invited" | "approved";
@@ -29,6 +36,8 @@ interface CommunityPagesProps {
   officialReplyAllowed: boolean;
   onOfficialReplyChange: (allowed: boolean) => void;
   onCreateOrganization?: (website: string) => void;
+  language: UiLanguage;
+  onLanguageChange: (language: UiLanguage) => void;
 }
 
 const people = [
@@ -814,6 +823,18 @@ function SignupPage(props: CommunityPagesProps) {
   const [showCodes, setShowCodes] = useState(false);
   const [website, setWebsite] = useState("");
   const [websiteError, setWebsiteError] = useState("");
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const detailsForm = useRef<HTMLFormElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    if (step === "review") reviewHeading.current?.focus();
+    else
+      detailsForm.current
+        ?.querySelector<HTMLInputElement>('input[name="account-type"]:checked')
+        ?.focus();
+  }, [step]);
   const complete = () => {
     feedback.prepare();
     if (kind === "ministry") props.onCreateOrganization?.(website);
@@ -849,6 +870,7 @@ function SignupPage(props: CommunityPagesProps) {
         <section className="panel community-signup-form">
           {step === "details" ? (
             <form
+              ref={detailsForm}
               onSubmit={(event) => {
                 event.preventDefault();
                 feedback.prepare();
@@ -949,6 +971,44 @@ function SignupPage(props: CommunityPagesProps) {
                 Production signup will use an approved username-only
                 authentication and recovery system. This prototype creates
                 neither.
+              </p>
+              <div className="community-field-grid">
+                <label className="field">
+                  {uiText("languageLabel", props.language)}
+                  <select
+                    value={props.language}
+                    onChange={(event) =>
+                      props.onLanguageChange(
+                        resolveUiLanguage(event.target.value),
+                      )
+                    }
+                    aria-describedby="signup-language-help"
+                  >
+                    {supportedLanguages.map((language) => (
+                      <option value={language.code} key={language.code}>
+                        {language.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  {uiText("editionLabel", props.language)}
+                  <select
+                    value={biblePreference.id}
+                    onChange={() => {}}
+                    aria-describedby="signup-bible-help"
+                  >
+                    <option value={biblePreference.id}>
+                      {biblePreference.name} ({biblePreference.id})
+                    </option>
+                  </select>
+                </label>
+              </div>
+              <p className="community-field-help" id="signup-language-help">
+                {uiText("languageHelp", props.language)}
+              </p>
+              <p className="community-field-help" id="signup-bible-help">
+                {uiText("editionHelp", props.language)}
               </p>
               {kind === "ministry" && (
                 <div className="community-ministry-fields">
@@ -1097,7 +1157,7 @@ function SignupPage(props: CommunityPagesProps) {
               <span className="community-soft-icon">
                 <Icon name="heart" size={25} />
               </span>
-              <h2>
+              <h2 ref={reviewHeading} tabIndex={-1}>
                 {kind === "individual"
                   ? "A personal box for Elena"
                   : "A community box with its owner"}
@@ -1140,6 +1200,14 @@ function SignupPage(props: CommunityPagesProps) {
                 <div>
                   <dt>External alerts</dt>
                   <dd>Off</dd>
+                </div>
+                <div>
+                  <dt>Interface language</dt>
+                  <dd>English</dd>
+                </div>
+                <div>
+                  <dt>Bible edition</dt>
+                  <dd>{biblePreference.id} · reading links</dd>
                 </div>
               </dl>
               <section className="community-recovery">

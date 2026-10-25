@@ -1,5 +1,8 @@
 import type { AppInstall } from "../app-install";
 import { Icon, PrayerBoxMark } from "../ui";
+import PrayerWidgets from "./PrayerWidgets";
+import type { WidgetPreferences } from "../widgets";
+import type { UiLanguage } from "../localization";
 import "./MobileAppPage.css";
 
 function PocketPreview() {
@@ -63,7 +66,19 @@ function PocketPreview() {
   );
 }
 
-export default function MobileAppPage({ app }: { app: AppInstall }) {
+export default function MobileAppPage({
+  app,
+  widgetPreferences,
+  onWidgetSave,
+  language,
+  onNavigate,
+}: {
+  app: AppInstall;
+  widgetPreferences: WidgetPreferences;
+  onWidgetSave: (preferences: WidgetPreferences) => void;
+  language: UiLanguage;
+  onNavigate: (route: string) => void;
+}) {
   return (
     <div className="mobile-app-page">
       <div className="breadcrumb">
@@ -123,6 +138,21 @@ export default function MobileAppPage({ app }: { app: AppInstall }) {
             <a className="text-link" href="#box/maria">
               Explore the example <Icon name="arrow" size={16} />
             </a>
+            <a
+              className="text-link"
+              href="#prayer-widgets"
+              onClick={(event) => {
+                event.preventDefault();
+                const widgets = document.getElementById("prayer-widgets");
+                widgets?.scrollIntoView({
+                  block: "start",
+                  behavior: "instant",
+                });
+                widgets?.focus({ preventScroll: true });
+              }}
+            >
+              Preview prayer widgets <Icon name="arrow" size={16} />
+            </a>
           </div>
           <p className="mobile-app-status" role="status" aria-live="polite">
             {app.message}
@@ -137,6 +167,13 @@ export default function MobileAppPage({ app }: { app: AppInstall }) {
         </div>
         <PocketPreview />
       </section>
+
+      <PrayerWidgets
+        preferences={widgetPreferences}
+        onSave={onWidgetSave}
+        language={language}
+        onNavigate={onNavigate}
+      />
 
       <section
         id="phone-install-steps"
