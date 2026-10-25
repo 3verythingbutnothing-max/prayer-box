@@ -2,11 +2,25 @@
 .donation-meter-art {
   position: relative;
 }
-.donation-meter .donation-meter-gold {
+.donation-meter .donation-meter-gold-edge,
+.donation-meter .donation-meter-gold,
+.donation-meter .donation-meter-gold-bevel,
+.donation-meter .donation-meter-gold-inner {
   fill: none;
-  stroke-width: 29px;
   stroke-linecap: round;
-  filter: drop-shadow(0 2px 1px #895c1b26);
+}
+.donation-meter .donation-meter-gold-edge {
+  stroke-width: 33px;
+  filter: drop-shadow(0 2px 1px #70460e40);
+}
+.donation-meter .donation-meter-gold {
+  stroke-width: 31px;
+}
+.donation-meter .donation-meter-gold-bevel {
+  stroke-width: 25px;
+}
+.donation-meter .donation-meter-gold-inner {
+  stroke-width: 23px;
 }
 .donation-meter .donation-meter-track {
   fill: none;
@@ -66,26 +80,6 @@
   50% {
     opacity: 1;
   }
-}
-.donation-meter-motion-control {
-  display: flex;
-  justify-content: center;
-  margin-top: 2px;
-}
-.donation-meter-motion-control .donation-motion-toggle {
-  min-height: 44px;
-  padding: 8px 12px;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--navy);
-  background: #fffdf6;
-  border-color: #c5b994;
-}
-.donation-motion-reduced {
-  display: none;
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
 }
 .account-page-donations .account-amounts {
   display: grid;
@@ -193,6 +187,20 @@
     gap: 12px;
   }
 }
+@media (max-width: 360px) {
+  .donation-meter .account-meter-center {
+    bottom: 0;
+  }
+  .donation-meter .account-meter-center strong {
+    font-size: 44px;
+  }
+  .donation-meter .account-meter-kicker {
+    font-size: 9px;
+  }
+  .donation-meter .account-meter-center > span:last-child {
+    font-size: 10px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .donation-meter .donation-meter-motion-layer {
     animation: none;
@@ -200,18 +208,9 @@
   .donation-meter .donation-meter-gold-glint {
     opacity: 0;
   }
-  .donation-meter-motion-control .donation-motion-toggle {
-    display: none;
-  }
-  .donation-motion-reduced {
-    display: inline;
-  }
 }
 @media print {
   .donation-meter .donation-meter-motion-layer {
     animation: none;
-  }
-  .donation-meter-motion-control {
-    display: none;
   }
 }

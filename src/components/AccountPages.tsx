@@ -107,9 +107,7 @@ function AccountIcon({
     | "check"
     | "close"
     | "note"
-    | "shield"
-    | "pause"
-    | "play";
+    | "shield";
   size?: number;
 }) {
   const paths: Record<string, ReactNode> = {
@@ -125,8 +123,6 @@ function AccountIcon({
     arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
     download: <path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" />,
     check: <path d="m5 12 4 4L19 6" />,
-    pause: <path d="M9 5v14M15 5v14" />,
-    play: <path d="m8 5 11 7-11 7Z" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
     note: (
       <>
@@ -212,11 +208,11 @@ function AccountDialog({
 function FundingMeter({ example }: { example: boolean }) {
   const gradientId = useId().replaceAll(":", "");
   const goldId = `${gradientId}-gold`;
+  const goldBevelId = `${gradientId}-gold-bevel`;
   const glintId = `${gradientId}-glint`;
   const rainbowMaskId = `${gradientId}-rainbow-mask`;
   const goldMaskId = `${gradientId}-gold-mask`;
   const meterRef = useRef<HTMLElement>(null);
-  const [motionPaused, setMotionPaused] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const [pageVisible, setPageVisible] = useState(() => !document.hidden);
   useEffect(() => {
@@ -241,9 +237,7 @@ function FundingMeter({ example }: { example: boolean }) {
     <figure
       ref={meterRef}
       className={`account-meter donation-meter${example ? "" : " account-meter-no-cost"}`}
-      data-motion={
-        onScreen && pageVisible && !motionPaused ? "running" : "paused"
-      }
+      data-motion={onScreen && pageVisible ? "running" : "paused"}
       aria-label={
         example
           ? "Fictional funding example: 60 dollars available toward 100 dollars of hosting need. 40 dollars remaining."
@@ -274,13 +268,41 @@ function FundingMeter({ example }: { example: boolean }) {
               <stop offset=".83" stopColor="#9057E8" />
               <stop offset="1" stopColor="#F23D5E" />
             </linearGradient>
-            <linearGradient id={goldId} x1="0" y1="0" x2="0.7" y2="1">
-              <stop stopColor="#9F620B" />
-              <stop offset=".24" stopColor="#FFE59A" />
-              <stop offset=".42" stopColor="#D4A021" />
-              <stop offset=".63" stopColor="#FFF2B7" />
-              <stop offset=".82" stopColor="#B97A10" />
-              <stop offset="1" stopColor="#F4CF65" />
+            <linearGradient
+              id={goldId}
+              x1="45"
+              y1="22"
+              x2="265"
+              y2="154"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop stopColor="#82500D" />
+              <stop offset=".12" stopColor="#E7B548" />
+              <stop offset=".2" stopColor="#FFEDA6" />
+              <stop offset=".225" stopColor="#FFFFEF" />
+              <stop offset=".255" stopColor="#E0AE36" />
+              <stop offset=".39" stopColor="#A46A13" />
+              <stop offset=".48" stopColor="#F8D772" />
+              <stop offset=".515" stopColor="#FFFEED" />
+              <stop offset=".55" stopColor="#F3CC5F" />
+              <stop offset=".7" stopColor="#A66C14" />
+              <stop offset=".84" stopColor="#FFF0AC" />
+              <stop offset="1" stopColor="#A36A12" />
+            </linearGradient>
+            <linearGradient
+              id={goldBevelId}
+              x1="0"
+              y1="10"
+              x2="0"
+              y2="168"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop stopColor="#FFF8D0" />
+              <stop offset=".18" stopColor="#B67A18" />
+              <stop offset=".38" stopColor="#FFF4BE" />
+              <stop offset=".5" stopColor="#976017" />
+              <stop offset=".72" stopColor="#FFF9D8" />
+              <stop offset="1" stopColor="#976017" />
             </linearGradient>
             <linearGradient id={glintId} x1="0" x2="1" y1="0" y2="0">
               <stop stopColor="#FFF8D9" stopOpacity="0" />
@@ -318,7 +340,7 @@ function FundingMeter({ example }: { example: boolean }) {
                 d="M35 150A125 125 0 0 1 285 150"
                 fill="none"
                 stroke="#fff"
-                strokeWidth="29"
+                strokeWidth="33"
                 strokeLinecap="round"
               />
               <path
@@ -332,7 +354,22 @@ function FundingMeter({ example }: { example: boolean }) {
           </defs>
           <path
             d="M35 150A125 125 0 0 1 285 150"
+            className="donation-meter-gold-edge"
+            stroke={`url(#${goldBevelId})`}
+          />
+          <path
+            d="M35 150A125 125 0 0 1 285 150"
             className="donation-meter-gold"
+            stroke={`url(#${goldId})`}
+          />
+          <path
+            d="M35 150A125 125 0 0 1 285 150"
+            className="donation-meter-gold-bevel"
+            stroke={`url(#${goldBevelId})`}
+          />
+          <path
+            d="M35 150A125 125 0 0 1 285 150"
+            className="donation-meter-gold-inner"
             stroke={`url(#${goldId})`}
           />
           <path
@@ -401,20 +438,6 @@ function FundingMeter({ example }: { example: boolean }) {
           </span>
         </div>
       </div>
-      <figcaption className="donation-meter-motion-control">
-        <button
-          type="button"
-          className="button secondary compact donation-motion-toggle"
-          aria-pressed={motionPaused}
-          onClick={() => setMotionPaused((paused) => !paused)}
-        >
-          <AccountIcon name={motionPaused ? "play" : "pause"} size={14} />
-          {motionPaused ? "Resume rainbow motion" : "Pause rainbow motion"}
-        </button>
-        <span className="donation-motion-reduced">
-          A little sparkle, with motion kept still.
-        </span>
-      </figcaption>
     </figure>
   );
 }
