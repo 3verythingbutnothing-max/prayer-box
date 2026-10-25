@@ -1,0 +1,68 @@
+.organization-website-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.organization-website-link > svg {
+  flex-shrink: 0;
+}
+.organization-website-link > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.organization-website-domain {
+  margin-left: 6px;
+  font-weight: 400;
+}
+.hero-content > .organization-website-link {
+  margin: -5px 0 12px;
+}
+.organization-website-edit {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 11px;
+}
+.organization-website-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+.organization-website-error {
+  color: #844553;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.organization-website-review {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.organization-website-preview {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--blue-line);
+  border-radius: 14px;
+  background: var(--blue-wash);
+}
+.organization-website-preview > span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .organization-website-link {
+    font-size: 12px;
+  }
+  .organization-website-settings input,
+  .community-ministry-fields input[inputmode="url"] {
+    font-size: 16px;
+  }
+}

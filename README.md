@@ -39,7 +39,7 @@ Only `dist/` is deployed. The public repository contains the frontend source, fi
 - My Requests: `/#requests` — author-only deliveries, independent conversations, held requests/appeals, multiple selected-delivery updates, and deletion from selected boxes or all owned deliveries.
 - My Prayers: `/#prayers` — accessible requests this viewer has added a human prayer or encouragement to. New author updates/testimonies return the affected delivery to its active box list. Automatic replies and merely opening a request do not move it.
 - My Church: `/#church` — Elena’s private accepted friends; friendship and organization membership remain separate.
-- Grace Church: `/#box/grace` — public box, membership application/invitation and group-access disclosure.
+- Grace Church: `/#box/grace` — public box, optional organization website link, membership application/invitation and group-access disclosure.
 - Shared inbox: `/#inbox` — approved members, assignment conflicts, owner reassignment and work states that do not narrow the audience.
 - Member controls: `/#members` — owner-only simulated approval, invitations, removal and official-reply permission.
 - About: `/#about` — proposed public copy, confirmed Trinitarian foundation, personal/in-person prayer, Lord’s Prayer guide and 40 fully populated Scripture selections.
@@ -70,6 +70,10 @@ An approved human prayer or encouragement moves that request into **My Prayers**
 From **My Requests → Delete request**, select particular box deliveries or all deliveries of that story. **Delete requests** in the page toolbar supports selecting all owned requests together. Nothing starts selected; a review lists exactly what will be removed. Deletion removes each selected delivery and its linked posts, conversation and support-note fixtures from this session. Unselected deliveries and other authors' requests remain. Direct links to deleted examples become unavailable until the prototype is reset or reloaded. This does not erase downloaded copies or establish production deletion/retention enforcement.
 
 ## Boundaries and proposed decisions
+
+Organizations can optionally add their own website during the fictional ministry signup. The owner can edit or remove it under **Settings → Organization website**, also reached through the organization box's owner-only edit button. The link appears on the public organization box and shared-inbox heading, opens in a new tab and includes the destination domain. It is independent of personal profiles, memberships and anonymous requester identity. The seeded organization uses `https://example.org/` as a fictional example, not a verified church website.
+
+The demo accepts ordinary HTTP/HTTPS addresses, adds HTTPS to a bare domain, and rejects executable schemes, credential-bearing/local addresses and known payment-solicitation examples. It does not fetch previews, import posts, verify site ownership or establish reliable live URL/content screening. A blank value removes the link. Changes remain in React memory and reset on reload.
 
 GitHub Pages serves the static frontend. There is no backend, database, real authentication, contact verification, working CAPTCHA, bot protection, media upload/recording/transcription, AI moderation, model training, email/SMS, payment processor or real financial transaction. Audio/video states and transcripts are UI simulations; no voice is recorded or played. Donation exports are fictional personal records, not tax receipts; entity status and deductibility are unverified.
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import { Icon, Modal } from "../ui";
+import { normalizeOrganizationWebsite } from "../organization";
 import "../community.css";
 
 type MembershipStatus = "none" | "pending" | "invited" | "approved";
@@ -26,6 +27,7 @@ interface CommunityPagesProps {
   onMemberActiveChange: (active: boolean) => void;
   officialReplyAllowed: boolean;
   onOfficialReplyChange: (allowed: boolean) => void;
+  onCreateOrganization?: (website: string) => void;
 }
 
 const people = [
@@ -712,7 +714,10 @@ function SignupPage(props: CommunityPagesProps) {
   const [step, setStep] = useState<"details" | "review">("details");
   const [challenge, setChallenge] = useState(false);
   const [showCodes, setShowCodes] = useState(false);
+  const [website, setWebsite] = useState("");
+  const [websiteError, setWebsiteError] = useState("");
   const complete = () => {
+    if (kind === "ministry") props.onCreateOrganization?.(website);
     props.onViewerChange(kind === "individual" ? "elena" : "owner");
     props.onNotice(
       kind === "individual"
@@ -741,6 +746,14 @@ function SignupPage(props: CommunityPagesProps) {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
+                if (kind === "ministry") {
+                  const result = normalizeOrganizationWebsite(website);
+                  if (!result.valid) {
+                    setWebsiteError(result.error);
+                    return;
+                  }
+                  setWebsite(result.url);
+                }
                 setStep("review");
               }}
             >
@@ -783,8 +796,8 @@ function SignupPage(props: CommunityPagesProps) {
               </fieldset>
               <p className="community-fixture-notice">
                 <Icon name="lock" size={16} />
-                Example details are read-only. Please do not enter real
-                information.
+                Identity details are read-only. Please use only fictional
+                information in this demo.
               </p>
               <div className="community-field-grid">
                 <label className="field">
@@ -830,6 +843,39 @@ function SignupPage(props: CommunityPagesProps) {
                     Organization link
                     <input readOnly value="/ministry/grace-church-demo" />
                   </label>
+                  <label className="field">
+                    Organization website{" "}
+                    <span className="community-optional">optional</span>
+                    <input
+                      type="text"
+                      inputMode="url"
+                      value={website}
+                      placeholder="https://example.org"
+                      maxLength={2048}
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={!!websiteError}
+                      aria-describedby="organization-signup-website-help"
+                      onChange={(event) => {
+                        setWebsite(event.target.value);
+                        setWebsiteError("");
+                      }}
+                    />
+                  </label>
+                  <p
+                    className="community-field-help"
+                    id="organization-signup-website-help"
+                  >
+                    Your website link will appear on your organization’s public
+                    prayer box. Leave it blank if you do not have one. Use
+                    example.org for a fictional preview.
+                  </p>
+                  {websiteError && (
+                    <p className="organization-website-error" role="alert">
+                      {websiteError}
+                    </p>
+                  )}
                   <p className="community-field-help">
                     You can start with the owner alone. Invitations are optional
                     and are never sent as part of this demo.
@@ -939,6 +985,14 @@ function SignupPage(props: CommunityPagesProps) {
                   : "A community box with its owner"}
               </h2>
               <dl>
+                {kind === "ministry" && (
+                  <div>
+                    <dt>Organization website</dt>
+                    <dd className="organization-website-review">
+                      {website || "Not added"}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt>Setup</dt>
                   <dd>

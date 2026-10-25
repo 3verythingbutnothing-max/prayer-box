@@ -18,6 +18,8 @@ import CommunityPages from "./components/CommunityPages";
 import CareResources from "./components/CareResources";
 import GetHelpPage from "./components/GetHelpPage";
 import DeleteRequests from "./components/DeleteRequests";
+import { OrganizationWebsiteLink } from "./components/OrganizationWebsite";
+import { normalizeOrganizationWebsite } from "./organization";
 import {
   formatStoryDate,
   getStoryPosts,
@@ -219,6 +221,9 @@ export default function App() {
   );
   const [viewer, setViewer] = useState<Viewer>("elena");
   const [requests, setRequests] = useState<PrayerRequest[]>(cloneFixtures);
+  const [organizationWebsite, setOrganizationWebsite] = useState(
+    "https://example.org/",
+  );
   const [membership, setMembership] = useState<Membership>("none");
   const [memberActive, setMemberActive] = useState(true);
   const [officialAllowed, setOfficialAllowed] = useState(false);
@@ -391,6 +396,23 @@ export default function App() {
       return;
     }
     setComposer({ recipient, initial });
+  }
+  function saveOrganizationWebsite(value: string) {
+    if (viewer !== "owner") {
+      notify("Only the organization owner can change its website.");
+      return;
+    }
+    const result = normalizeOrganizationWebsite(value);
+    if (!result.valid) {
+      notify(result.error);
+      return;
+    }
+    setOrganizationWebsite(result.url);
+    notify(
+      result.url
+        ? "Organization website saved in this demo. It is visible on Grace Church’s public prayer box."
+        : "Organization website removed from this demo’s public prayer box.",
+    );
   }
   function removeActor(actorId: string, reportReason?: string, evidence = "") {
     setBlocked((previous) => ({
@@ -641,6 +663,17 @@ export default function App() {
                   ? "There’s room for honest requests, kind encouragement, and stories still unfolding."
                   : "You don’t have to carry it all alone. Leave a request, pray for someone, or share a little hope."}
             </p>
+            {box === "grace" && (
+              <OrganizationWebsiteLink value={organizationWebsite} />
+            )}
+            {box === "grace" && viewer === "owner" && (
+              <button
+                className="text-link organization-website-edit"
+                onClick={() => navigate("settings")}
+              >
+                Edit organization website
+              </button>
+            )}
             {box === "maria" && offerGrace && (
               <button
                 className="association-chip"
@@ -1128,6 +1161,7 @@ export default function App() {
             All active approved members can read organization requests. Taking a
             request helps share the work; it never narrows who can see it.
           </p>
+          <OrganizationWebsiteLink value={organizationWebsite} />
         </header>
         <div className="inbox-toolbar">
           <span className="chip">
@@ -1406,6 +1440,11 @@ export default function App() {
             onMemberActiveChange={setMemberActive}
             officialReplyAllowed={officialAllowed}
             onOfficialReplyChange={setOfficialAllowed}
+            onCreateOrganization={(website) => {
+              if (page !== "signup") return;
+              const result = normalizeOrganizationWebsite(website);
+              if (result.valid) setOrganizationWebsite(result.url);
+            }}
           />
           {page === "review" && viewer === "operator" && (
             <CareReviewQueue
@@ -1803,6 +1842,8 @@ export default function App() {
             onNotice={notify}
             onPrivacyChange={setPrivacy}
             onRemindersChange={setReminders}
+            organizationWebsite={organizationWebsite}
+            onOrganizationWebsiteChange={saveOrganizationWebsite}
             onAutomaticChange={(enabled, scope, message) => {
               if (
                 viewer !== "elena" &&
@@ -2166,6 +2207,7 @@ export default function App() {
               className="text-link"
               onClick={() => {
                 setRequests(cloneFixtures());
+                setOrganizationWebsite("https://example.org/");
                 setBlocked({});
                 setBoxRemoved({});
                 setReports([]);

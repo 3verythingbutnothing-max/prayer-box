@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Viewer } from "../domain";
+import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
 
 type AccountPage = "donations" | "donation-history" | "settings";
 type Privacy = "public" | "friends" | "private";
@@ -36,6 +37,8 @@ type AccountPagesProps = {
   }) => void;
   associationVisibleValue?: boolean;
   onAssociationVisibleChange?: (show: boolean) => void;
+  organizationWebsite?: string;
+  onOrganizationWebsiteChange?: (website: string) => void;
 };
 
 const money = (amount: number) =>
@@ -393,6 +396,8 @@ export default function AccountPages({
   onCountryPreferenceChange,
   associationVisibleValue,
   onAssociationVisibleChange,
+  organizationWebsite = "",
+  onOrganizationWebsiteChange,
 }: AccountPagesProps) {
   const [example, setExample] = useState(false);
   const [frequency, setFrequency] = useState<"one-time" | "monthly">(
@@ -1062,6 +1067,13 @@ export default function AccountPages({
           </header>
           <div className="account-settings-layout">
             <div className="account-settings-main">
+              {viewer === "owner" && onOrganizationWebsiteChange && (
+                <OrganizationWebsiteEditor
+                  key={organizationWebsite}
+                  value={organizationWebsite}
+                  onSave={onOrganizationWebsiteChange}
+                />
+              )}
               <section className="account-settings-section panel">
                 <div className="account-section-top">
                   <h2>Your profile & privacy</h2>
