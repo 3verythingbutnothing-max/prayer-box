@@ -1,0 +1,53 @@
+/* The same three destinations, with room for a phone's edges and home indicator. */
+.demo-banner {
+  padding-top: max(7px, env(safe-area-inset-top));
+  padding-left: max(17px, env(safe-area-inset-left));
+  padding-right: max(17px, env(safe-area-inset-right));
+}
+.header-inner {
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
+.main-container {
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
+.account-menu {
+  max-height: calc(
+    100dvh - 175px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 650px) {
+  .header-inner,
+  .main-container {
+    padding-left: max(17px, env(safe-area-inset-left));
+    padding-right: max(17px, env(safe-area-inset-right));
+  }
+  .mobile-nav {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    box-shadow: 0 -3px 16px #2f4b6808;
+  }
+  .mobile-nav a {
+    font-size: 11px;
+    min-height: 54px;
+  }
+  .site-footer {
+    padding-bottom: calc(99px + env(safe-area-inset-bottom));
+    padding-left: max(17px, env(safe-area-inset-left));
+    padding-right: max(17px, env(safe-area-inset-right));
+  }
+  .toast {
+    bottom: calc(83px + env(safe-area-inset-bottom));
+  }
+  .account-menu {
+    width: min(
+      280px,
+      calc(
+        100vw - 34px - env(safe-area-inset-left) - env(safe-area-inset-right)
+      )
+    );
+  }
+}

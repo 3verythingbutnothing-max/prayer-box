@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "Prayer Box",
+  "short_name": "Prayer Box",
+  "description": "A little space for prayer, encouragement and hope. Fictional frontend prototype.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFFBF5",
+  "theme_color": "#FFFBF5",
+  "icons": [
+    {
+      "src": "app-icons/prayer-box-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icons/prayer-box-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icons/prayer-box-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

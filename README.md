@@ -17,10 +17,13 @@ Open `http://127.0.0.1:4173/`. This development server binds to this computer on
 
 ```sh
 npm test
+npm run test:stress
 npm run build
 ```
 
 The domain tests exercise fictional audience intersections, anonymous labels, independent deliveries, church approval/removal, friendship changes, actor blocks, limited screening examples and links under the hosted project path. They cannot prove server authorization or abuse protection. The founder's separate backend/stress-test plan has not been executed.
+
+`test:stress` runs two independently authored, deterministic local frontend-model harnesses. They check privacy tightening, revocations, blocks, selected-copy story operations, private acknowledgments/care notes, bounded Unicode input and independently decoded QR payloads. Their JSON evidence is written under the ignored `output/qa/mobile-swarm/` directory. These bounded assertions are not browser test counts, provider validation, API authorization or production load/security results. Both harnesses run in the static-site workflow before deployment.
 
 ## GitHub Pages
 
@@ -78,6 +81,14 @@ Open **Share box** on Maria’s, Elena’s or Grace Church’s page. Its QR code
 The encoder loads only when sharing is opened; copy-link access remains available if QR generation fails. No QR service, URL shortener, tracking, remote image generation, camera access or server is involved. Codes contain only the canonical box link, with page query parameters and earlier request routes removed. Sharing or scanning never grants additional request permissions. These three destinations are fictional prototype boxes; real account creation and server authorization remain unimplemented.
 
 The pinned [node-qrcode encoder](https://github.com/soldair/node-qrcode) uses high error correction. Independent tests rasterize and decode each personal/organization destination with [jsQR](https://github.com/cozmo/jsQR), including the hosted project path and URL privacy/rejection cases. The white margin follows [DENSO WAVE’s four-module quiet-zone guidance](https://www.qrcode.com/en/howto/code.html/index.html). Actual exported files are checked separately from these unit tests; projector, print-size and physical-phone testing remain device-specific.
+
+## Mobile app
+
+The responsive prototype can be added to a phone's home screen. Open [the mobile app guide](https://3verythingbutnothing-max.github.io/prayer-box/#app), also available in the account menu and footer. The same **My Box / My Requests / My Church** navigation stays at the bottom on narrow screens, with larger labels and safe-area spacing. Menus scroll within short screens, and composer review/checking/result transitions keep keyboard focus inside the dialog.
+
+The manifest declares standalone display, a project-relative identity/start/scope, cream theme/launch colors, normal 192/512px icons and a separate maskable 512px icon. A 180px Apple icon and editable SVG source use the existing open-box/heart logo on pastel blue. The optional browser install event is captured when available; only an explicit button click opens its prompt. Other browsers show readable manual instructions. The page reports installed status only from an actual browser install or standalone signal.
+
+Current instructions link to [Apple's home-screen guide](https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios) and [Google's Android web-app guide](https://support.google.com/chrome/answer/9658361?hl=en&co=GENIE.Platform%3DAndroid). Browser menu names vary. This is a mobile web app, with no app-store package or native wrapper. It needs an internet connection. No service worker, offline prayer cache, push subscription, device permission or persistent prayer data was added; demo changes still clear on reload. Physical iOS/Android installation, virtual keyboards and device performance remain separate device checks.
 
 ## Buttons and preference controls
 

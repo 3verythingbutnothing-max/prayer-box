@@ -1,0 +1,486 @@
+.mobile-app-page {
+  max-width: 1100px;
+  margin-inline: auto;
+}
+.mobile-app-hero.panel {
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  gap: 25px;
+  padding: 48px 50px 35px;
+  background-color: #eef5fa;
+  border-color: #c4d6e3;
+  overflow: hidden;
+}
+.mobile-app-intro {
+  align-self: center;
+  max-width: 530px;
+}
+.mobile-app-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--navy);
+  font-size: 11px;
+  background: #fffbf5a6;
+  border: 1px solid #cfdee9;
+  border-radius: 99px;
+  padding: 7px 12px;
+}
+.mobile-app-intro h1 {
+  font-size: clamp(34px, 4vw, 49px);
+  font-weight: 550;
+  color: var(--navy-hover);
+  line-height: 1.13;
+  letter-spacing: -1.8px;
+  margin: 23px 0 19px;
+}
+.mobile-app-intro > p:not(.mobile-app-demo):not(.mobile-app-status) {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #49617b;
+  max-width: 430px;
+}
+.mobile-app-actions {
+  display: flex;
+  gap: 15px 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.mobile-app-actions .button {
+  min-height: 48px;
+  text-decoration: none;
+}
+.mobile-app-actions .text-link {
+  min-height: 44px;
+}
+.mobile-app-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 15px;
+  background: #e3efea;
+  border: 1px solid #b8cfc7;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #365c50;
+}
+.mobile-app-status {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--navy);
+  margin: 10px 0;
+}
+.mobile-app-status:empty {
+  display: none;
+}
+.mobile-app-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #52667c;
+  font-size: 11px;
+  line-height: 1.7;
+  max-width: 405px;
+  margin: 23px 0 0;
+}
+.mobile-app-demo > svg {
+  flex: 0 0 17px;
+  margin-top: 2px;
+}
+.pocket-preview {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  padding: 9px 8px 0;
+}
+.pocket-phone {
+  position: relative;
+  width: 238px;
+  height: 421px;
+  padding: 30px 13px 71px;
+  background: #fffbf5;
+  border: 5px solid #334e69;
+  border-radius: 37px;
+  box-shadow:
+    5px 8px 0 #c5d6e6,
+    0 15px 29px #233d5614;
+  transform: rotate(4deg);
+}
+.pocket-island {
+  position: absolute;
+  left: calc(50% - 27px);
+  top: 9px;
+  width: 54px;
+  height: 10px;
+  border-radius: 99px;
+  background: #334e69;
+}
+.pocket-brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 550;
+  padding-bottom: 11px;
+}
+.pocket-brand > span {
+  font-size: 9px;
+  margin-left: auto;
+  margin-right: 5px;
+}
+.pocket-hero {
+  position: relative;
+  min-height: 127px;
+  padding: 16px 12px;
+  background: #e4eff7;
+  border: 1px solid #c9dbe9;
+  border-radius: 15px;
+}
+.pocket-eyebrow {
+  display: block;
+  font-size: 6px;
+  letter-spacing: 0.8px;
+  color: #52708b;
+  margin-bottom: 11px;
+}
+.pocket-hero > strong {
+  color: var(--navy);
+  font-size: 19px;
+  line-height: 1.27;
+  letter-spacing: -0.5px;
+  font-weight: 550;
+}
+.pocket-hero > svg {
+  position: absolute;
+  right: 4px;
+  bottom: -4px;
+  opacity: 0.85;
+}
+.pocket-card {
+  margin-top: 14px;
+  border: 1px solid #c8bdd8;
+  border-radius: 13px;
+  background-color: #f1ebfa;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 5px,
+    #74638705 5px 6px
+  );
+  padding: 12px;
+  box-shadow: 0 3px 0 #dfd4ec60;
+}
+.pocket-card > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #756385;
+}
+.pocket-card > strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #514568;
+  margin: 9px 0 11px;
+}
+.pocket-line {
+  height: 4px;
+  border-radius: 9px;
+  background: #cfc3de;
+  width: 95%;
+  margin-bottom: 6px;
+}
+.pocket-line.short {
+  width: 71%;
+}
+.pocket-pray {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 10px;
+  color: #59447e;
+  font-size: 8px;
+}
+.pocket-bottom {
+  position: absolute;
+  bottom: 13px;
+  left: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  border-top: 1px solid #d9e2e9;
+  padding-top: 7px;
+}
+.pocket-bottom > span {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: #60778e;
+  font-size: 6.7px;
+  padding: 6px 0;
+  border-radius: 10px;
+}
+.pocket-bottom .selected {
+  background: #dfecf7;
+  color: #2f4b68;
+}
+.pocket-spark {
+  position: absolute;
+  color: #98a8c5;
+  font-size: 27px;
+}
+.pocket-spark-one {
+  left: 8px;
+  top: 67px;
+  transform: rotate(-10deg);
+}
+.pocket-spark-two {
+  right: 8px;
+  bottom: 81px;
+  color: #a18cb9;
+  font-size: 36px;
+}
+.pocket-caption {
+  color: #5b7189;
+  font-size: 10px;
+  margin-top: 20px;
+}
+.phone-install-section {
+  padding-top: 46px;
+  scroll-margin-top: 24px;
+}
+.mobile-app-section-heading {
+  margin-bottom: 23px;
+}
+.mobile-app-section-heading h2 {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.6px;
+  margin: 8px 0;
+  color: var(--navy);
+}
+.mobile-app-section-heading > p:last-child {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.phone-install-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.phone-install-card.panel {
+  padding: 26px;
+  background-color: #f7f3fc;
+  border-color: #d0c6dd;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.phone-install-card.panel:last-child {
+  background-color: #f0f5fa;
+  border-color: #c7d7e5;
+}
+.phone-install-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.phone-install-icon {
+  width: 45px;
+  height: 45px;
+  background: #eae2f5;
+  border: 1px solid #d5c7e7;
+  border-radius: 14px;
+  display: grid;
+  place-content: center;
+  color: #685582;
+}
+.phone-install-icon.blue {
+  color: var(--navy);
+  background: #dfebf6;
+  border-color: #c4d8e8;
+}
+.phone-install-heading .eyebrow {
+  font-size: 9px;
+}
+.phone-install-heading h3 {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 4px 0 0;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+}
+.phone-install-card ol {
+  padding: 0;
+  list-style: none;
+  margin: 24px 0;
+}
+.phone-install-card li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.phone-install-card li + li {
+  margin-top: 17px;
+}
+.phone-install-card li > span {
+  display: grid;
+  place-content: center;
+  flex: 0 0 24px;
+  height: 24px;
+  font-size: 10px;
+  border: 1px solid #cfbedf;
+  border-radius: 50%;
+  color: #66517e;
+  background: #ffffff80;
+  margin-top: 1px;
+}
+.phone-install-card:last-child li > span {
+  border-color: #c3d5e4;
+  color: var(--navy);
+}
+.phone-install-card li p {
+  margin: 0;
+  line-height: 1.75;
+  font-size: 13px;
+  color: #53657a;
+}
+.phone-install-card li strong {
+  font-weight: 500;
+  color: #354d67;
+}
+.phone-install-card .text-link {
+  margin-top: auto;
+  min-height: 44px;
+  font-size: 12px;
+}
+.phone-install-note {
+  max-width: 710px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 18px 0 0;
+}
+.mobile-app-reassurance.panel {
+  margin-top: 37px;
+  padding: 24px 27px;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  background-color: #fffbf5;
+  border-color: #d5d9df;
+}
+.mobile-app-reassurance > svg {
+  flex: 0 0 43px;
+}
+.mobile-app-reassurance h2 {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--navy);
+  margin: 0 0 7px;
+}
+.mobile-app-reassurance p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 0;
+  max-width: 650px;
+}
+.mobile-app-reassurance .text-link {
+  white-space: nowrap;
+  min-height: 44px;
+  margin-left: auto;
+}
+@media (max-width: 950px) {
+  .mobile-app-hero.panel {
+    padding: 34px 29px;
+    gap: 20px;
+  }
+  .pocket-phone {
+    width: 221px;
+    height: 410px;
+  }
+  .pocket-spark-one {
+    left: -8px;
+  }
+  .pocket-spark-two {
+    right: -8px;
+  }
+}
+@media (max-width: 650px) {
+  .mobile-app-hero.panel {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 26px 21px;
+    gap: 24px;
+  }
+  .mobile-app-intro h1 {
+    font-size: clamp(30px, 8.5vw, 40px);
+    letter-spacing: -1.2px;
+    margin-top: 20px;
+  }
+  .mobile-app-intro > p:not(.mobile-app-demo):not(.mobile-app-status) {
+    font-size: 14px;
+  }
+  .mobile-app-tag {
+    font-size: 10px;
+  }
+  .mobile-app-actions {
+    gap: 6px 17px;
+    margin-top: 20px;
+  }
+  .mobile-app-actions .button {
+    font-size: 12px;
+  }
+  .mobile-app-demo {
+    margin-top: 15px;
+  }
+  .pocket-preview {
+    padding-top: 10px;
+    padding-bottom: 3px;
+  }
+  .pocket-phone {
+    width: 219px;
+    height: 408px;
+    transform: rotate(3deg);
+  }
+  .pocket-spark-one {
+    left: 0;
+  }
+  .pocket-spark-two {
+    right: -4px;
+  }
+  .pocket-caption {
+    font-size: 9px;
+  }
+  .phone-install-section {
+    padding-top: 33px;
+  }
+  .mobile-app-section-heading h2 {
+    font-size: 25px;
+  }
+  .phone-install-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .phone-install-card.panel {
+    padding: 23px;
+  }
+  .mobile-app-reassurance.panel {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 22px;
+    gap: 12px;
+    margin-top: 26px;
+  }
+  .mobile-app-reassurance > div {
+    flex: 1 1 170px;
+  }
+  .mobile-app-reassurance .text-link {
+    margin-left: 0;
+  }
+}

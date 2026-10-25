@@ -87,7 +87,19 @@ export default function PrayerComposer({
   const [acknowledgments, setAcknowledgments] = useState<PrayerRequest[]>([]);
   const [supportShownFor, setSupportShownFor] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const draftField = useRef<HTMLTextAreaElement>(null);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
   useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    // Replacing a step removes its focused action. Keep keyboard/screen-reader
+    // focus in the dialog instead of letting it fall back to the page body.
+    // Initial opening and the separate support dialog keep Modal's native focus.
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    if (step === "write") draftField.current?.focus();
+    else stepHeading.current?.focus();
+  }, [step]);
   const personRecipient = recipient === "grace" ? "maria" : recipient;
   const destinations: BoxId[] = [
     ...(personal ? [personRecipient] : []),
@@ -335,6 +347,7 @@ export default function PrayerComposer({
               Use invented text only in this prototype.
             </span>
             <textarea
+              ref={draftField}
               rows={5}
               maxLength={5000}
               value={text}
@@ -538,7 +551,9 @@ export default function PrayerComposer({
       {step === "preview" && (
         <>
           <p className="eyebrow">A moment to check</p>
-          <h3 className="review-title">A separate delivery to each box.</h3>
+          <h3 className="review-title" ref={stepHeading} tabIndex={-1}>
+            A separate delivery to each box.
+          </h3>
           <blockquote className="draft-quote">{text}</blockquote>
           <div className="preview-destinations">
             {destinations.map(destinationPreview)}
@@ -609,7 +624,9 @@ export default function PrayerComposer({
           <span className="status-orbit">
             <Icon name="shield" size={30} />
           </span>
-          <h3>Trying the review flow…</h3>
+          <h3 ref={stepHeading} tabIndex={-1}>
+            Trying the review flow…
+          </h3>
           <p>Text and media have separate review states.</p>
           <p className="quiet-copy">
             Limited demo rules only. Automated screening and bot protection are
@@ -623,7 +640,7 @@ export default function PrayerComposer({
             <span className={`confirmation-icon ${allSent ? "success" : ""}`}>
               <Icon name={allSent ? "check" : "info"} size={28} />
             </span>
-            <h3>
+            <h3 ref={stepHeading} tabIndex={-1}>
               {allSent
                 ? "Your prayer request has been sent."
                 : outcomes.some((o) => o.status === "sent")

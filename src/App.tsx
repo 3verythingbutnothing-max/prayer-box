@@ -20,6 +20,7 @@ import DeleteRequests from "./components/DeleteRequests";
 import { OrganizationWebsiteLink } from "./components/OrganizationWebsite";
 import { normalizeOrganizationWebsite } from "./organization";
 import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
+import { useAppInstall } from "./app-install";
 import {
   formatStoryDate,
   getStoryPosts,
@@ -58,6 +59,21 @@ function FeedbackUnavailable() {
 const FeedbackPage = lazy(() =>
   import("./components/FeedbackPage").catch(() => ({
     default: FeedbackUnavailable,
+  })),
+);
+const MobileAppPage = lazy(() =>
+  import("./components/MobileAppPage").catch(() => ({
+    default: () => (
+      <section className="empty-state">
+        <h1>Prayer Box on your home screen</h1>
+        <p>
+          The app guide couldn’t load. Please reload the page and try again.
+        </p>
+        <button className="button" onClick={() => window.location.reload()}>
+          Reload page
+        </button>
+      </section>
+    ),
   })),
 );
 
@@ -235,6 +251,7 @@ function EmptyState({
 }
 
 export default function App() {
+  const appInstall = useAppInstall();
   const [route, setRoute] = useState(
     () => window.location.hash.slice(1) || "box/maria",
   );
@@ -277,6 +294,7 @@ export default function App() {
   );
   const [readSupportNotes, setReadSupportNotes] = useState<string[]>([]);
   const [heldStories, setHeldStories] = useState<HeldStory[]>([]);
+  const storyAppealFocusFor = useRef<string | null>(null);
   const [restricted, setRestricted] = useState<string[]>([]);
   const [composer, setComposer] = useState<{
     recipient: BoxId;
@@ -398,7 +416,7 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: "instant" });
       mainRef.current?.focus({ preventScroll: true });
     }
-    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "feedback" ? "Report a bug" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
+    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "feedback" ? "Report a bug" : page === "app" ? "Mobile app" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
   }, [route]);
   useEffect(() => {
     setMenuOpen(false);
@@ -406,6 +424,18 @@ export default function App() {
     setDeleteStory(null);
     setUpdateStory(null);
   }, [viewer]);
+  useEffect(() => {
+    const id = storyAppealFocusFor.current;
+    if (!id) return;
+    storyAppealFocusFor.current = null;
+    const story = heldStories.find((item) => item.id === id);
+    if (
+      page === "requests" &&
+      story?.authorId === viewer &&
+      story.state === "appeal"
+    )
+      document.getElementById(`held-story-status-${id}`)?.focus();
+  }, [heldStories, page, viewer]);
 
   function openComposer(recipient: BoxId, initial?: PrayerRequest) {
     if (restricted.includes(viewer)) {
@@ -1413,6 +1443,18 @@ export default function App() {
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
     if (page === "prayers") return renderMyPrayers();
+    if (page === "app")
+      return (
+        <Suspense
+          fallback={
+            <p className="quiet-copy" role="status">
+              Opening the mobile app guide…
+            </p>
+          }
+        >
+          <MobileAppPage app={appInstall} />
+        </Suspense>
+      );
     if (page === "feedback")
       return (
         <Suspense
@@ -1720,6 +1762,7 @@ export default function App() {
             <div className="account-menu-wrap">
               <button
                 className="account-trigger"
+                aria-label={`${viewerNames[viewer]} account menu`}
                 aria-expanded={menuOpen}
                 aria-controls="account-menu"
                 onClick={() => setMenuOpen((v) => !v)}
@@ -1780,6 +1823,9 @@ export default function App() {
                     </a>
                     <a href="#feedback" onClick={() => setMenuOpen(false)}>
                       Report a bug
+                    </a>
+                    <a href="#app" onClick={() => setMenuOpen(false)}>
+                      Get the mobile app
                     </a>
                     <button
                       onClick={() => {
@@ -1914,7 +1960,11 @@ export default function App() {
                 .filter((story) => story.authorId === viewer)
                 .map((story) => (
                   <article className="report-case" key={story.id}>
-                    <span className="chip">
+                    <span
+                      className="chip"
+                      id={`held-story-status-${story.id}`}
+                      tabIndex={-1}
+                    >
                       {story.state === "appeal"
                         ? "Appeal awaiting a person"
                         : story.state === "changes"
@@ -1929,15 +1979,16 @@ export default function App() {
                     {story.state !== "appeal" && (
                       <button
                         className="text-link"
-                        onClick={() =>
+                        onClick={() => {
+                          storyAppealFocusFor.current = story.id;
                           setHeldStories((previous) =>
                             previous.map((item) =>
                               item.id === story.id
                                 ? { ...item, state: "appeal" }
                                 : item,
                             ),
-                          )
-                        }
+                          );
+                        }}
                       >
                         Appeal for human review
                       </button>
@@ -2057,6 +2108,7 @@ export default function App() {
           <a href="#donations">Donations</a>
           <a href="#help">Get Help</a>
           <a href="#feedback">Report a bug</a>
+          <a href="#app">Mobile app</a>
           <button onClick={() => setDialog("support")}>
             Support resources
           </button>

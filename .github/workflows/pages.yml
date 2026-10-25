@@ -27,6 +27,8 @@ jobs:
         run: npm ci
       - name: Test prototype rules and hosted links
         run: npm test
+      - name: Check bounded frontend privacy and story invariants
+        run: npm run test:stress
       - name: Build for the GitHub Pages project path
         run: npm run build:pages
       - name: Configure Pages

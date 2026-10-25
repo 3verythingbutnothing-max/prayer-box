@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
@@ -68,6 +68,20 @@ export default function PrayerDetail({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [replyPostId, setReplyPostId] = useState("original");
+  const appealStatus = useRef<HTMLElement>(null);
+  const appealFocusFor = useRef<string | null>(null);
+  useEffect(() => {
+    // The successful appeal removes its own button. Focus the updated status,
+    // and only for the author's action on this delivery, rather than on load.
+    if (appealFocusFor.current !== request.id) {
+      appealFocusFor.current = null;
+      return;
+    }
+    if (request.moderation === "appeal") {
+      appealFocusFor.current = null;
+      appealStatus.current?.focus();
+    }
+  }, [request.id, request.moderation]);
   useEffect(() => {
     if (recording !== "recording") return;
     const timer = setInterval(
@@ -299,7 +313,7 @@ export default function PrayerDetail({
               <div className="notice butter">
                 <Icon name="shield" />
                 <div>
-                  <strong>
+                  <strong ref={appealStatus} tabIndex={-1}>
                     {request.moderation === "appeal"
                       ? "Appeal awaiting a person"
                       : request.moderation === "changes"
@@ -318,6 +332,7 @@ export default function PrayerDetail({
                       <button
                         className="button secondary compact"
                         onClick={() => {
+                          appealFocusFor.current = request.id;
                           onUpdate((row) => ({
                             ...row,
                             moderation: "appeal",
