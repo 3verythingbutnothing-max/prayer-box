@@ -18,7 +18,7 @@
   border-radius: 15px;
   background: #edf4f8;
   color: #415a70;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.75;
 }
 .widget-native-notice > svg,
@@ -43,7 +43,7 @@
   min-width: 0;
 }
 .widget-mode-fieldset legend {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 12px;
 }
@@ -76,16 +76,16 @@
   gap: 3px;
 }
 .widget-mode-options strong {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 .widget-mode-options small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .widget-control-help {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   margin: -3px 0 19px;
 }
@@ -103,14 +103,14 @@
   display: grid;
   gap: 5px;
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.6;
 }
 .widget-edition strong {
   font-weight: 500;
 }
 .widget-edition span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .widget-controls > .button {
@@ -148,7 +148,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .widget-brand > svg {
@@ -159,19 +159,19 @@
   color: #8f792e;
 }
 .widget-today {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #5a6d7e;
   margin: 18px 0 7px;
 }
 .prayer-widget h3 {
-  font-size: 25px;
+  font-size: 1.5625rem;
   line-height: 1.28;
   font-weight: 550;
   letter-spacing: -0.65px;
   margin: 0 0 11px;
 }
 .widget-reading-theme {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.65;
   margin: 0 0 7px;
   color: #536b7f;
@@ -182,7 +182,7 @@
   align-items: center;
   min-height: 44px;
   color: #365773;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -200,7 +200,7 @@
   min-height: 44px;
   width: 100%;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-top: 13px;
   cursor: pointer;
 }
@@ -210,13 +210,13 @@
   border-radius: 25px;
 }
 .prayer-widget-small h3 {
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 .prayer-widget-small .widget-reading-theme {
   display: none;
 }
 .prayer-widget-small .widget-brand {
-  font-size: 11px;
+  font-size: 0.6875rem;
   gap: 5px;
 }
 .prayer-widget-small .widget-today {
@@ -233,13 +233,13 @@
   padding-top: 13px;
 }
 .widget-encouragement p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.8;
   margin: 0 0 8px;
 }
 .widget-encouragement small {
   color: #6d667a;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.6;
   display: block;
 }
@@ -247,14 +247,14 @@
   display: flex;
   gap: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.8;
   max-width: 330px;
   margin: 0;
 }
 .widget-error {
   color: #8b493d;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 @media (max-width: 760px) {
@@ -287,7 +287,7 @@
     text-align: center;
   }
   .widget-mode-options strong {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .widget-mode-options small {
     display: none;
@@ -301,7 +301,7 @@
     padding: 19px;
   }
   .prayer-widget h3 {
-    font-size: 22px;
+    font-size: 1.375rem;
   }
   .widget-controls.panel {
     padding: 19px;

@@ -6,6 +6,8 @@
   font-display: swap;
 }
 :root {
+  /* A gentle 12.5% reading-size increase, relative to browser font preferences. */
+  font-size: 112.5%;
   font-family: Rubik, ui-rounded, system-ui, sans-serif;
   font-weight: 400;
   color: var(--ink);
@@ -36,7 +38,7 @@
 }
 body {
   margin: 0;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.6;
 }
 button,
@@ -95,10 +97,10 @@ p {
   margin-bottom: 16px;
 }
 h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 button:focus-visible,
 a:focus-visible,
@@ -162,7 +164,7 @@ main:focus {
   border: 1px solid var(--navy);
   border-radius: 12px;
   padding: 12px 19px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
   text-align: center;
@@ -180,7 +182,7 @@ main:focus {
 .button.compact {
   min-height: 44px;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .button.is-selected {
   background: var(--lavender);
@@ -195,7 +197,7 @@ main:focus {
   min-height: 44px;
   padding: 6px 0;
   color: var(--plum);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.5;
   text-align: left;
@@ -222,7 +224,7 @@ main:focus {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.5;
@@ -236,7 +238,7 @@ main:focus {
   align-items: center;
   gap: 7px;
   color: var(--plum);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.065em;
   text-transform: uppercase;
@@ -244,14 +246,14 @@ main:focus {
   margin-bottom: 12px;
 }
 .page-title {
-  font-size: clamp(30px, 3vw, 42px);
+  font-size: clamp(1.875rem, 3.375vw, 2.625rem);
   letter-spacing: -0.055em;
   line-height: 1.2;
   margin-bottom: 16px;
   font-weight: 500;
 }
 .page-intro {
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.7;
   max-width: 660px;
   color: var(--muted);
@@ -263,7 +265,7 @@ main:focus {
   margin-bottom: 13px;
 }
 .quiet-copy {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.65;
 }
@@ -281,7 +283,7 @@ main:focus {
   flex-direction: column;
   gap: 8px;
   margin: 0 0 20px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   min-width: 0;
 }
@@ -297,7 +299,7 @@ main:focus {
   background: #fffdfa;
   color: var(--ink);
   font-weight: 400;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.5;
 }
 .field textarea {
@@ -309,7 +311,7 @@ main:focus {
 }
 .field .field-hint,
 .field small {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.6;
   font-weight: 400;
   color: var(--muted);
@@ -320,7 +322,7 @@ main:focus {
   gap: 11px;
   min-height: 48px;
   padding: 12px 0;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 .check-row input {
@@ -335,7 +337,7 @@ main:focus {
 }
 .check-row small {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.6;
   color: var(--muted);
   margin-top: 5px;
@@ -356,7 +358,7 @@ main:focus {
   padding: 17px 18px;
   border-radius: 12px;
   background: #f1ebf9;
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin: 18px 0;
 }
 .notice.butter {
@@ -398,7 +400,7 @@ main:focus {
   border-radius: 50%;
   background: #e9ddf7;
   color: var(--plum);
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 500;
   flex-shrink: 0;
   border: 1px solid #d9c9e8;
@@ -406,7 +408,7 @@ main:focus {
 .avatar-small {
   width: 30px;
   height: 30px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .avatar.anonymous {
   background: #f5edde;
@@ -440,7 +442,7 @@ main:focus {
   gap: 12px;
   background: var(--blue);
   color: var(--navy);
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.4;
 }
 .demo-banner > span {
@@ -453,7 +455,7 @@ main:focus {
   align-items: center;
   gap: 7px;
   padding: 2px 0;
-  font-size: 10px;
+  font-size: 0.625rem;
   min-height: 22px;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -483,14 +485,14 @@ main:focus {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 23px;
+  font-size: 1.4375rem;
   font-weight: 550;
   letter-spacing: -1px;
   white-space: nowrap;
   color: var(--navy);
 }
 .brand > span {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #6485a2;
   margin-left: 1px;
   align-self: flex-start;
@@ -513,7 +515,7 @@ main:focus {
   gap: 8px;
   min-height: 46px;
   padding: 10px 15px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   border-radius: 11px;
 }
@@ -545,13 +547,13 @@ main:focus {
   align-items: center;
   gap: 9px;
   min-height: 48px;
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 3px 0 3px 7px;
 }
 .header-avatar {
   width: 32px;
   height: 32px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: #ffe7d9;
   border-color: #ead1c0;
 }
@@ -571,7 +573,7 @@ main:focus {
   box-shadow: 0 12px 40px #3120391a;
 }
 .account-menu p {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   padding: 7px 10px;
   margin: 0;
@@ -583,7 +585,7 @@ main:focus {
   width: 100%;
   padding: 11px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-height: 44px;
 }
 .menu-dismiss {
@@ -606,7 +608,7 @@ main:focus {
   gap: 8px;
   align-items: center;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   min-height: 25px;
   margin-bottom: 19px;
 }
@@ -642,23 +644,23 @@ main:focus {
   width: 44px;
   height: 44px;
   background: #fff8f1;
-  font-size: 20px;
+  font-size: 1.25rem;
   border-color: #d5c2e4;
 }
 .profile-name {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 .profile-heading p {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin: 3px 0 0;
 }
 .box-hero h1 {
-  font-size: clamp(29px, 3.2vw, 40px);
+  font-size: clamp(1.8125rem, 3.6vw, 2.5rem);
   font-weight: 500;
   letter-spacing: -0.055em;
   margin: 0 0 12px;
@@ -669,7 +671,7 @@ main:focus {
 }
 .hero-intro {
   max-width: 570px;
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.7;
   color: var(--muted);
   margin-bottom: 12px;
@@ -678,7 +680,7 @@ main:focus {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--plum);
   padding: 6px 9px;
   border: 1px solid #cdbbdf;
@@ -695,18 +697,18 @@ main:focus {
 }
 .own-box-guidance {
   color: #536b80;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   max-width: 420px;
   margin-top: 16px;
 }
 .own-destination-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.6;
   margin: 0;
 }
 .hero-actions .button {
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-height: 46px;
   padding: 12px 16px;
 }
@@ -730,7 +732,7 @@ main:focus {
 .hero-art > span {
   display: block;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--navy);
   line-height: 1.5;
   margin-top: -8px;
@@ -764,7 +766,7 @@ main:focus {
   margin-bottom: 9px;
 }
 .list-toolbar h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 500;
   margin: 0;
   letter-spacing: -0.04em;
@@ -783,7 +785,7 @@ main:focus {
   min-height: 47px;
   padding: 10px 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   position: relative;
   border-radius: 0;
 }
@@ -823,7 +825,7 @@ main:focus {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -832,12 +834,12 @@ main:focus {
   font-weight: 500;
 }
 .card-date {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
 }
 .prayer-card h3 {
   margin: 0 0 10px;
-  font-size: 19px;
+  font-size: 1.1875rem;
   letter-spacing: -0.04em;
 }
 .prayer-card h3 button {
@@ -848,7 +850,7 @@ main:focus {
   min-height: 30px;
 }
 .card-prayer-text {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.8;
   margin: 0 0 14px;
   max-width: 66ch;
@@ -866,12 +868,12 @@ main:focus {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   line-height: 1.5;
 }
 .card-bottom .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .card-linked-update {
   display: flex;
@@ -880,7 +882,7 @@ main:focus {
   min-height: 40px;
   width: 100%;
   text-align: left;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--plum);
   padding: 5px 0 0;
 }
@@ -891,7 +893,7 @@ main:focus {
   display: flex;
   gap: 6px;
   align-items: center;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin: 5px 0 0;
 }
@@ -900,7 +902,7 @@ main:focus {
   border-color: #e7d7c8;
 }
 .testimony-card > .eyebrow {
-  font-size: 10px;
+  font-size: 0.625rem;
   margin: 0 0 13px;
 }
 .list-end {
@@ -909,7 +911,7 @@ main:focus {
   justify-content: center;
   gap: 8px;
   color: #74677c;
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin: 24px 0 10px;
 }
 .box-sidebar {
@@ -921,20 +923,20 @@ main:focus {
   margin-bottom: 22px;
 }
 .side-note h2 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 500;
   line-height: 1.35;
   letter-spacing: -0.035em;
   margin: 13px 0 13px;
 }
 .side-note p {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.8;
   color: var(--muted);
   margin-bottom: 13px;
 }
 .side-note .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .side-icon {
   width: 37px;
@@ -952,11 +954,11 @@ main:focus {
   background: var(--blue);
 }
 .faith-note > .eyebrow {
-  font-size: 9px;
+  font-size: 0.5625rem;
   margin: 0 0 11px;
 }
 .faith-note h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.42;
   margin: 0 0 14px;
   color: var(--navy);
@@ -969,7 +971,7 @@ main:focus {
   color: var(--muted);
 }
 .box-link-note p {
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.75;
   margin: 0;
 }
@@ -997,7 +999,7 @@ main:focus {
 }
 .membership-strip p {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   color: #596852;
 }
@@ -1016,7 +1018,7 @@ main:focus {
   flex-wrap: wrap;
 }
 .footer-brand {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 550;
   letter-spacing: -0.7px;
   color: var(--navy);
@@ -1025,7 +1027,7 @@ main:focus {
   align-items: center;
 }
 .site-footer p {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin: 0;
 }
@@ -1037,7 +1039,7 @@ main:focus {
 }
 .site-footer nav a,
 .site-footer nav button {
-  font-size: 11px;
+  font-size: 0.6875rem;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -1046,7 +1048,7 @@ main:focus {
 }
 .site-footer .footer-foundation {
   width: 100%;
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--muted);
   margin-top: 2px;
 }
@@ -1070,7 +1072,7 @@ main:focus {
   border: 1px solid #6f8ba5;
   box-shadow: 0 6px 30px #29445f25;
   border-radius: 14px;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.65;
 }
 .toast > .icon-button {
@@ -1114,7 +1116,7 @@ main:focus {
   border-bottom: 1px solid var(--line);
 }
 .modal-header h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   margin: 0;
   font-weight: 500;
   letter-spacing: -0.045em;
@@ -1123,13 +1125,13 @@ main:focus {
   padding: 20px 26px 26px;
 }
 .modal-body > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .modal-body > .prototype-note {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   line-height: 1.7;
   margin-bottom: 23px;
@@ -1138,7 +1140,7 @@ main:focus {
   margin-top: 1px;
 }
 .form-intro {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.75;
   color: var(--muted);
 }
@@ -1151,7 +1153,7 @@ main:focus {
   flex-wrap: wrap;
 }
 .modal-actions .button {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .media-tools {
   display: flex;
@@ -1160,7 +1162,7 @@ main:focus {
   margin: -2px 0 18px;
 }
 .media-tools .button {
-  font-size: 11px;
+  font-size: 0.6875rem;
   padding: 10px 11px;
 }
 .destination-fieldset {
@@ -1171,7 +1173,7 @@ main:focus {
   min-width: 0;
 }
 .destination-fieldset legend {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   padding-right: 12px;
 }
@@ -1182,11 +1184,11 @@ main:focus {
   margin: 18px 0;
 }
 .audience-options h3 {
-  font-size: 15px;
+  font-size: 0.9375rem;
   margin-bottom: 20px;
 }
 .audience-options .field {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-bottom: 15px;
 }
 .audience-options > .field:last-child {
@@ -1196,7 +1198,7 @@ main:focus {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.75;
   background: #e0edda;
   border-radius: 10px;
@@ -1210,12 +1212,12 @@ main:focus {
   margin-bottom: 0;
 }
 .review-title {
-  font-size: 23px;
+  font-size: 1.4375rem;
   line-height: 1.4;
   margin-bottom: 20px;
 }
 .draft-quote {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.8;
   padding: 18px 20px;
   background: #f1eafa;
@@ -1238,11 +1240,11 @@ main:focus {
   border-radius: 12px;
 }
 .delivery-preview strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .delivery-preview p {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: 7px 0 0;
 }
@@ -1259,17 +1261,17 @@ main:focus {
   background: #f1ebf7;
   padding: 13px;
   border-radius: 11px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .demo-choice small {
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 .checking-state {
   text-align: center;
   padding: 45px 20px;
 }
 .checking-state p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .status-orbit {
@@ -1283,7 +1285,7 @@ main:focus {
   margin-bottom: 20px;
 }
 .checking-state h3 {
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 .confirmation {
   text-align: center;
@@ -1305,13 +1307,13 @@ main:focus {
   color: #46694e;
 }
 .confirmation h3 {
-  font-size: 26px;
+  font-size: 1.625rem;
   letter-spacing: -0.05em;
   max-width: 420px;
   margin: 0 auto 10px;
 }
 .simulation-label {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin: 10px 0 0;
 }
@@ -1323,13 +1325,13 @@ main:focus {
   border-radius: 13px;
   padding: 18px;
   margin: 13px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .result-row > svg {
   margin-top: 3px;
 }
 .result-row p {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   color: var(--muted);
   margin: 8px 0 0;
@@ -1348,13 +1350,13 @@ main:focus {
   border-color: #e0d3ac;
 }
 .devotional-note {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.85;
   color: var(--muted);
   margin: 25px 0 8px;
 }
 .guide-link {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .prototype-boundary {
   display: flex;
@@ -1366,7 +1368,7 @@ main:focus {
   margin: 22px 0;
 }
 .prototype-boundary p {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   margin: 0;
   color: var(--muted);
@@ -1388,12 +1390,12 @@ main:focus {
   margin: 20px 0;
 }
 .notification-item strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   display: block;
 }
 .notification-item small {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   display: block;
   margin-top: 7px;
@@ -1408,11 +1410,11 @@ main:focus {
   gap: 15px;
   border-bottom: 1px solid var(--line);
   padding: 15px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .blocked-row small {
   display: block;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
 }
 .detail-page > .back-link {
@@ -1438,7 +1440,7 @@ main:focus {
   margin: 0;
 }
 .prayer-sheet h1 {
-  font-size: 34px;
+  font-size: 2.125rem;
   line-height: 1.25;
   margin: 7px 0 20px;
 }
@@ -1449,7 +1451,7 @@ main:focus {
   margin-bottom: 24px;
 }
 .prayer-text {
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.9;
   white-space: pre-wrap;
   margin-bottom: 24px;
@@ -1480,12 +1482,12 @@ main:focus {
   color: var(--plum);
 }
 .media-state strong {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .media-state p,
 .media-state summary {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: 6px 0 0;
   line-height: 1.7;
@@ -1506,13 +1508,13 @@ main:focus {
   text-align: left;
 }
 .testimony-link strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   display: block;
   font-weight: 500;
 }
 .testimony-link small {
   display: block;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -1531,7 +1533,7 @@ main:focus {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.7;
   color: var(--muted);
   margin: 23px 0 0;
@@ -1552,20 +1554,20 @@ main:focus {
   top: 7px;
 }
 .friend-reminder > .eyebrow {
-  font-size: 9px;
+  font-size: 0.5625rem;
   margin-right: 25px;
 }
 .friend-reminder h2 {
-  font-size: 19px;
+  font-size: 1.1875rem;
   max-width: 420px;
 }
 .friend-reminder p {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.8;
   color: #5e6c59;
 }
 .friend-reminder .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .detail-sidebar .side-note {
   border: 1px solid #ded9d8;
@@ -1573,7 +1575,7 @@ main:focus {
   margin-bottom: 20px;
 }
 .detail-sidebar .side-note h2 {
-  font-size: 19px;
+  font-size: 1.1875rem;
 }
 .detail-sidebar .sage-wash {
   border-color: #d6e2ce;
@@ -1586,7 +1588,7 @@ main:focus {
   margin-bottom: 12px;
 }
 .conversation > .section-heading h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .replies {
   display: flex;
@@ -1612,11 +1614,11 @@ main:focus {
   margin-bottom: 10px;
 }
 .reply-heading > strong {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .reply-heading .chip {
-  font-size: 9px;
+  font-size: 0.5625rem;
   background: #e5e0d5;
   color: #635a4c;
 }
@@ -1626,14 +1628,14 @@ main:focus {
   margin: -7px -7px -7px auto;
 }
 .reply-note p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.8;
   margin-bottom: 0;
 }
 .reply-note > small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.7;
   margin-top: 12px;
 }
@@ -1643,7 +1645,7 @@ main:focus {
   padding-top: 24px;
 }
 .reply-composer > .field {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .reply-kind {
   display: flex;
@@ -1665,18 +1667,18 @@ main:focus {
   color: var(--plum);
 }
 .recording-demo strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .recording-demo p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.8;
   margin-top: 10px;
 }
 .recording-demo details {
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
   background: #fffaf4;
   padding: 12px;
   border-radius: 9px;
@@ -1686,7 +1688,7 @@ main:focus {
   min-height: 30px;
 }
 .recording-demo .text-link {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .guest-reply {
   background: #f5f0f8;
@@ -1695,7 +1697,7 @@ main:focus {
   text-align: center;
 }
 .guest-reply p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin-top: 12px;
   color: var(--muted);
 }
@@ -1719,7 +1721,7 @@ main:focus {
   padding: 24px 25px;
 }
 .own-request h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .own-request > .section-heading {
   align-items: flex-start;
@@ -1728,10 +1730,10 @@ main:focus {
   gap: 10px;
 }
 .own-request > .section-heading > .chip {
-  font-size: 9px;
+  font-size: 0.5625rem;
 }
 .own-request > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.85;
   color: var(--muted);
 }
@@ -1751,25 +1753,25 @@ main:focus {
   flex: 1;
 }
 .delivery-list-row strong {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .delivery-list-row > div > span {
   display: block;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   line-height: 1.7;
   margin-top: 4px;
 }
 .delivery-list-row .status-label {
   color: #4b6a49;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 .delivery-list-row .status-label.held {
   color: #80613b;
 }
 .delivery-list-row > .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .own-actions {
   display: flex;
@@ -1780,7 +1782,7 @@ main:focus {
   margin-top: 20px;
 }
 .own-actions .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .empty-state {
   text-align: center;
@@ -1793,19 +1795,19 @@ main:focus {
   margin: 0 auto 18px;
 }
 .empty-state h2 {
-  font-size: 23px;
+  font-size: 1.4375rem;
   font-weight: 500;
   margin-bottom: 12px;
 }
 .empty-state p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.85;
   color: var(--muted);
   max-width: 430px;
   margin: 0 auto 24px;
 }
 .empty-state .button {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .is-loading .box-art {
   opacity: 0.65;
@@ -1830,7 +1832,7 @@ main:focus {
   gap: 30px;
 }
 .inbox-card h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   margin: 14px 0 13px;
 }
 .inbox-card h2 button {
@@ -1839,12 +1841,12 @@ main:focus {
   font-weight: 500;
 }
 .inbox-card-main > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.8;
   max-width: 690px;
 }
 .inbox-card-main > .quiet-copy {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .inbox-card .section-heading {
   align-items: center;
@@ -1852,7 +1854,7 @@ main:focus {
 }
 .inbox-card .section-heading .eyebrow {
   margin: 0;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 .inbox-actions {
   display: flex;
@@ -1863,19 +1865,19 @@ main:focus {
   border-radius: 12px;
 }
 .inbox-actions > .field {
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin: 0;
 }
 .inbox-actions select {
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-height: 42px;
   padding: 9px;
 }
 .inbox-actions > .button {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .inbox-actions > .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
   min-height: 38px;
 }
 .validated-reports {
@@ -1883,7 +1885,7 @@ main:focus {
   margin-top: 28px;
 }
 .validated-reports > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .report-case {
@@ -1897,7 +1899,7 @@ main:focus {
   margin: 14px 0;
   padding: 16px;
   background: #f4edf8;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border-radius: 10px;
 }
 .report-case .text-link:disabled {
@@ -1917,11 +1919,11 @@ main:focus {
   display: flex;
   gap: 9px;
   align-items: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 0;
 }
 .session-settings-bar > .text-link {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .welcome-page {
   max-width: 760px;
@@ -1936,7 +1938,7 @@ main:focus {
   justify-content: center;
 }
 .welcome-page .page-title {
-  font-size: 44px;
+  font-size: 2.75rem;
 }
 .welcome-page .page-intro {
   margin: 0 auto 26px;
@@ -1950,7 +1952,7 @@ main:focus {
   text-align: left;
 }
 .known-boxes h2 {
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 .known-box {
   display: flex;
@@ -1960,14 +1962,14 @@ main:focus {
   border-bottom: 1px solid var(--line);
   width: 100%;
   text-align: left;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .known-box > span:nth-child(2) {
   flex: 1;
 }
 .known-box small {
   display: block;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -2022,11 +2024,11 @@ main:focus {
     margin-left: 0;
   }
   .desktop-nav a {
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 10px 12px;
   }
   .brand {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .header-name {
     display: none;
@@ -2068,14 +2070,14 @@ main:focus {
   }
   .desktop-nav a {
     padding-inline: 10px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     gap: 6px;
   }
   .desktop-nav a svg {
     width: 16px;
   }
   .brand {
-    font-size: 20px;
+    font-size: 1.25rem;
     gap: 7px;
   }
   .brand > span {
@@ -2101,23 +2103,23 @@ main:focus {
     width: 170px;
   }
   .hero-intro {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .box-hero h1 {
-    font-size: 32px;
+    font-size: 2rem;
   }
   .hero-actions .button {
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 11px 13px;
   }
   .side-note {
     padding: 21px 17px;
   }
   .side-note h2 {
-    font-size: 17px;
+    font-size: 1.0625rem;
   }
   .side-note p {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .prayer-card {
     padding: 20px;
@@ -2126,19 +2128,19 @@ main:focus {
     gap: 8px;
   }
   .card-bottom > .text-link {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .card-date {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .list-toolbar h2 {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .tabs {
     gap: 14px;
   }
   .tabs .tab {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .membership-strip {
     flex-direction: column;
@@ -2175,11 +2177,11 @@ main:focus {
 }
 @media (max-width: 650px) {
   body {
-    font-size: 14px;
+    font-size: 0.875rem;
   }
   .demo-banner {
     padding: 7px 17px;
-    font-size: 9px;
+    font-size: 0.5625rem;
     min-height: 34px;
     gap: 6px;
   }
@@ -2190,7 +2192,7 @@ main:focus {
     display: none;
   }
   .demo-banner button {
-    font-size: 9px;
+    font-size: 0.5625rem;
     min-height: 24px;
   }
   .header-inner {
@@ -2198,7 +2200,7 @@ main:focus {
     padding-inline: 17px;
   }
   .brand {
-    font-size: 23px;
+    font-size: 1.4375rem;
     gap: 9px;
   }
   .brand > span {
@@ -2232,12 +2234,12 @@ main:focus {
     padding: 22px 17px 39px;
   }
   .breadcrumb {
-    font-size: 10px;
+    font-size: 0.625rem;
     margin-bottom: 16px;
     gap: 6px;
   }
   .breadcrumb .chip {
-    font-size: 9px;
+    font-size: 0.5625rem;
     padding: 4px 7px;
   }
   .box-hero {
@@ -2248,13 +2250,13 @@ main:focus {
     min-height: 324px;
   }
   .box-hero h1 {
-    font-size: 32px;
+    font-size: 2rem;
     max-width: 275px;
     line-height: 1.17;
     margin-bottom: 13px;
   }
   .hero-intro {
-    font-size: 13px;
+    font-size: 0.8125rem;
     max-width: calc(100% - 8px);
     line-height: 1.75;
     margin-bottom: 10px;
@@ -2264,15 +2266,15 @@ main:focus {
     max-width: calc(100% - 70px);
   }
   .profile-heading p {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .profile-name {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .profile-avatar {
     width: 38px;
     height: 38px;
-    font-size: 17px;
+    font-size: 1.0625rem;
   }
   .hero-art {
     position: absolute;
@@ -2291,7 +2293,7 @@ main:focus {
     display: none;
   }
   .association-chip {
-    font-size: 9px;
+    font-size: 0.5625rem;
     margin-top: 15px;
     margin-bottom: 14px;
   }
@@ -2300,12 +2302,12 @@ main:focus {
     margin-top: 20px;
   }
   .hero-actions .button {
-    font-size: 12px;
+    font-size: 0.75rem;
     min-height: 47px;
     padding: 12px 13px;
   }
   .hero-actions .secondary {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .box-layout {
     grid-template-columns: 1fr;
@@ -2321,40 +2323,40 @@ main:focus {
     padding: 23px;
   }
   .side-note h2 {
-    font-size: 20px;
+    font-size: 1.25rem;
     max-width: 250px;
   }
   .side-note p {
-    font-size: 13px;
+    font-size: 0.8125rem;
     max-width: 44ch;
   }
   .side-note .text-link {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .faith-note h2 {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .side-note .eyebrow {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .box-link-note {
     padding: 0 12px;
   }
   .box-link-note p {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .list-toolbar {
     margin-bottom: 8px;
   }
   .list-toolbar h2 {
-    font-size: 19px;
+    font-size: 1.1875rem;
   }
   .tabs {
     gap: 20px;
     margin-bottom: 18px;
   }
   .tabs .tab {
-    font-size: 11px;
+    font-size: 0.6875rem;
     min-height: 47px;
   }
   .prayer-card {
@@ -2364,24 +2366,24 @@ main:focus {
     margin-bottom: 15px;
   }
   .card-date {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .prayer-card h3 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
   .card-prayer-text {
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.85;
     margin-bottom: 14px;
   }
   .card-bottom > .text-link {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .audience-line {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .card-linked-update {
-    font-size: 10px;
+    font-size: 0.625rem;
     min-height: 44px;
   }
   .request-list {
@@ -2392,7 +2394,7 @@ main:focus {
     padding: 17px;
   }
   .membership-strip p {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .mobile-nav {
     display: grid;
@@ -2414,7 +2416,7 @@ main:focus {
     justify-content: center;
     gap: 4px;
     min-height: 54px;
-    font-size: 9px;
+    font-size: 0.5625rem;
     color: var(--muted);
     border-radius: 10px;
   }
@@ -2435,15 +2437,15 @@ main:focus {
   }
   .site-footer nav a,
   .site-footer nav button {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .site-footer .footer-foundation {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .toast {
     bottom: 83px;
     max-width: calc(100vw - 28px);
-    font-size: 11px;
+    font-size: 0.6875rem;
     gap: 9px;
     padding-left: 13px;
     border-radius: 12px;
@@ -2465,7 +2467,7 @@ main:focus {
     gap: 10px;
   }
   .modal-header h2 {
-    font-size: 19px;
+    font-size: 1.1875rem;
   }
   .modal-header .icon-button {
     margin-right: -5px;
@@ -2479,17 +2481,17 @@ main:focus {
   }
   .modal-actions > .button {
     flex: 1;
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 12px 13px;
   }
   .modal-body .field {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .media-tools {
     gap: 7px;
   }
   .media-tools .button {
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 10px;
     gap: 6px;
     flex: 1;
@@ -2501,14 +2503,14 @@ main:focus {
     padding: 16px;
   }
   .check-row {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .check-row small {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .draft-quote {
     padding: 16px;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .delivery-preview {
     padding: 15px;
@@ -2520,60 +2522,62 @@ main:focus {
     border-radius: 10px;
   }
   .delivery-preview strong {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .delivery-preview p {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .confirmation h3 {
-    font-size: 25px;
+    font-size: 1.5625rem;
   }
   .result-row {
     padding: 16px;
     gap: 10px;
   }
   .result-row strong {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .result-row p {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .modal-body > .prototype-note {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .notice {
     padding: 15px;
-    font-size: 12px;
+    font-size: 0.75rem;
     gap: 9px;
   }
   .notice .button {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .page-title {
-    font-size: 33px;
+    font-size: 2.0625rem;
   }
   .page-heading {
     margin: 8px 0 24px;
   }
   .page-intro {
-    font-size: 14px;
+    font-size: 0.875rem;
   }
   .page-toolbar {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
   .page-toolbar > .quiet-copy {
-    margin-top: 15px;
-    font-size: 11px;
+    margin-top: 3px;
+    font-size: 0.6875rem;
     max-width: none;
   }
   .own-request {
     padding: 22px;
   }
   .own-request h2 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
   .own-request > p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .own-actions {
     display: block;
@@ -2589,33 +2593,33 @@ main:focus {
     height: 33px;
   }
   .delivery-list-row .text-link {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .delivery-list-row > div > span {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .detail-page > .back-link {
-    font-size: 11px;
+    font-size: 0.6875rem;
     margin-bottom: 17px;
   }
   .prayer-sheet {
     padding: 23px;
   }
   .prayer-sheet h1 {
-    font-size: 30px;
+    font-size: 1.875rem;
     margin-top: 9px;
     margin-bottom: 19px;
   }
   .prayer-sheet > .audience-line {
-    font-size: 10px;
+    font-size: 0.625rem;
     margin-bottom: 20px;
   }
   .prayer-text {
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.9;
   }
   .detail-topline .eyebrow {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .detail-sidebar {
     grid-template-columns: 1fr;
@@ -2623,10 +2627,10 @@ main:focus {
   }
   .detail-sidebar .side-note h2 {
     max-width: none;
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .detail-sidebar .side-note p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .detail-layout {
     gap: 6px;
@@ -2635,41 +2639,41 @@ main:focus {
     padding: 23px 21px;
   }
   .conversation > .section-heading h2 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
   .conversation > .quiet-copy {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .reply-note {
     padding: 17px;
   }
   .reply-heading > strong {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .reply-note p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .reply-note > small {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .friend-reminder {
     padding: 23px;
   }
   .friend-reminder h2 {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .friend-reminder p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .testimony-link {
     padding: 16px;
     gap: 10px;
   }
   .testimony-link strong {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .testimony-link small {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .media-state {
     padding: 15px;
@@ -2697,14 +2701,14 @@ main:focus {
   }
   .inbox-actions > .button {
     align-self: end;
-    font-size: 11px;
+    font-size: 0.6875rem;
     min-height: 45px;
   }
   .inbox-card h2 {
-    font-size: 22px;
+    font-size: 1.375rem;
   }
   .inbox-card-main > p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .inbox-toolbar {
     align-items: flex-start;
@@ -2712,7 +2716,7 @@ main:focus {
     flex-wrap: wrap;
   }
   .inbox-toolbar > .chip {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .session-settings-bar {
     display: block;
@@ -2720,14 +2724,14 @@ main:focus {
     margin-bottom: 24px;
   }
   .session-settings-bar p {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .session-settings-bar .text-link {
-    font-size: 11px;
+    font-size: 0.6875rem;
     margin-top: 4px;
   }
   .welcome-page .page-title {
-    font-size: 36px;
+    font-size: 2.25rem;
   }
   .welcome-page > .inline-actions {
     display: flex;
@@ -2738,32 +2742,32 @@ main:focus {
     text-align: left;
   }
   .known-box {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .empty-state {
     padding: 30px 23px;
     min-height: 310px;
   }
   .empty-state h2 {
-    font-size: 23px;
+    font-size: 1.4375rem;
   }
   .empty-state p {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .page-heading .eyebrow {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .validated-reports {
     padding: 22px;
   }
   .validated-reports > h2 {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .report-case blockquote {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .report-case .button {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 }
 @media (max-width: 360px) {
@@ -2774,7 +2778,7 @@ main:focus {
     padding-inline: 14px;
   }
   .brand {
-    font-size: 22px;
+    font-size: 1.375rem;
   }
   .brand > span {
     display: none;
@@ -2792,10 +2796,10 @@ main:focus {
     padding: 22px;
   }
   .box-hero h1 {
-    font-size: 29px;
+    font-size: 1.8125rem;
   }
   .hero-intro {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .profile-heading {
     max-width: calc(100% - 50px);
@@ -2823,19 +2827,19 @@ main:focus {
     gap: 14px;
   }
   .tabs .tab {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .list-toolbar h2 {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .modal-body {
     padding: 17px;
   }
   .modal-header h2 {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .modal-actions .button {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .inbox-actions {
     display: flex;
@@ -2872,15 +2876,15 @@ main:focus {
   }
 }
 .held-stories > h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 .held-stories .report-case > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.8;
   margin-top: 15px;
 }
 .held-stories .report-case > .quiet-copy {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 @media (min-width: 901px) {
   .box-hero {
@@ -2892,15 +2896,15 @@ main:focus {
   .box-hero .profile-avatar {
     width: 39px;
     height: 39px;
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .box-hero h1 {
-    font-size: 36px;
+    font-size: 2.25rem;
     margin-bottom: 10px;
   }
   .box-hero .hero-intro {
     max-width: 650px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     margin-bottom: 7px;
   }
   .box-hero .association-chip {
@@ -2920,7 +2924,7 @@ main:focus {
     width: 200px;
   }
   .box-hero .hero-art > span {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 }
 @media print {

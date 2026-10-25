@@ -4,6 +4,8 @@ This is the approved design direction expressed as a responsive React frontend f
 
 Demo: [Prayer Box on GitHub Pages](https://3verythingbutnothing-max.github.io/prayer-box/).
 
+Reading text, headings, labels and controls use a 12.5% larger relative type scale while keeping the rounded Rubik face. Text sizes follow browser font preferences; the miniature decorative phone artwork keeps its own proportions. Narrow request actions stack with clear spacing, account-type choices keep equal heights and donation labels flow with the rainbow instead of colliding with its edge.
+
 ## Run locally
 
 Use Node.js 20.19+ or 22.12+ and npm:

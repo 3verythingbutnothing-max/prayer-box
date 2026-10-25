@@ -1,6 +1,19 @@
 /* Donation-only refinements: decorative color moves; all funding values stay still. */
 .donation-meter-art {
   position: relative;
+  display: grid;
+}
+.donation-meter .account-meter-svg {
+  grid-area: 1 / 1;
+  align-self: start;
+}
+.donation-meter .account-meter-center {
+  grid-area: 1 / 1;
+  position: relative;
+  inset: auto;
+  align-self: end;
+  min-width: 0;
+  padding: 20% 24px 0;
 }
 .donation-meter .donation-meter-gold-edge,
 .donation-meter .donation-meter-gold,
@@ -86,6 +99,14 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
+.account-page-donations .account-contribute {
+  container-type: inline-size;
+}
+@container (max-width: 18rem) {
+  .account-page-donations .account-amounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .account-page-donations .account-amounts > label {
   min-width: 0;
 }
@@ -97,14 +118,14 @@
   justify-content: center;
 }
 .account-page-donations .account-amounts .donation-custom-choice > span {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .donation-custom-amount {
   margin-top: 18px;
 }
 .donation-custom-amount > .field {
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .donation-custom-input {
   position: relative;
@@ -126,7 +147,7 @@
   border-radius: 11px;
   background: #fffdfa;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 400;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
@@ -139,7 +160,7 @@
 }
 .donation-amount-error {
   color: #913745;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   margin: 8px 0 0;
 }
@@ -192,13 +213,13 @@
     bottom: 0;
   }
   .donation-meter .account-meter-center strong {
-    font-size: 44px;
+    font-size: 2.75rem;
   }
   .donation-meter .account-meter-kicker {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .donation-meter .account-meter-center > span:last-child {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

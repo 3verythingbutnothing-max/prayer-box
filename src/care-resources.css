@@ -3,7 +3,7 @@
   --care-navy: var(--navy, #2f4b68);
   --care-line: var(--blue-line, #c6d9e9);
   color: var(--ink, #293545);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.65;
 }
 .care-resources p {
@@ -40,7 +40,7 @@
   margin: 0 0 6px;
 }
 .care-resources .care-sources {
-  font-size: 11.5px;
+  font-size: 0.71875rem;
   line-height: 1.65;
   color: var(--muted, #5c6876);
   margin: 8px 0 0;
@@ -51,7 +51,7 @@
   text-underline-offset: 3px;
 }
 .care-resources .care-link-note {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted, #5c6876);
   margin-bottom: 20px;
 }
@@ -60,7 +60,7 @@
 }
 .care-region-field label {
   display: block;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 550;
   margin-bottom: 7px;
 }
@@ -74,12 +74,12 @@
   color: var(--ink, #293545);
   background-color: #fff;
   font: inherit;
-  font-size: 16px;
+  font-size: 1rem;
   cursor: pointer;
 }
 .care-resources .care-field-help {
   margin: 6px 0 0;
-  font-size: 11.5px;
+  font-size: 0.71875rem;
   color: var(--muted, #5c6876);
 }
 .care-local-support {
@@ -90,13 +90,13 @@
 }
 .care-local-support h3 {
   color: var(--care-navy);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.45;
   margin: 0 0 9px;
   font-weight: 550;
 }
 .care-local-support p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin-bottom: 13px;
 }
 .care-actions {
@@ -116,7 +116,7 @@
   border: 1px solid var(--care-navy);
   background: #fff;
   color: var(--care-navy);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   text-align: center;
   text-decoration: none;
@@ -132,12 +132,12 @@
   background: var(--navy-hover, #233d56);
 }
 .care-resources .care-service-note {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted, #5c6876);
   margin: 12px 0 0;
 }
 .care-resources .care-human-support {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .care-encouragement {
   background: var(--care-blue);
@@ -147,17 +147,17 @@
   color: var(--care-navy);
 }
 .care-resources .care-encouragement-label {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 550;
   letter-spacing: 0.035em;
   margin: 0 0 7px;
 }
 .care-encouragement p:last-child {
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin-bottom: 0;
 }
 .care-resources .care-demo-note {
-  font-size: 11.5px;
+  font-size: 0.71875rem;
   color: var(--muted, #5c6876);
   border-top: 1px solid var(--care-line);
   padding-top: 13px;
@@ -184,7 +184,7 @@
   border: 0;
 }
 .care-resources--compact {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .care-resources--compact .care-immediate {
   padding: 13px 14px;

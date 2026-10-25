@@ -17,13 +17,13 @@
   max-width: 610px;
 }
 .account-page h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   line-height: 1.3;
   letter-spacing: -0.5px;
   font-weight: 600;
 }
 .account-page h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 .account-page p {
   line-height: 1.65;
@@ -51,7 +51,7 @@
   border-radius: 12px;
   padding: 10px 12px;
   font: inherit;
-  font-size: 16px;
+  font-size: 1rem;
 }
 .account-page select {
   padding-right: 28px;
@@ -61,7 +61,7 @@
   flex-direction: column;
   gap: 8px;
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   min-width: 0;
 }
@@ -81,7 +81,7 @@
   cursor: not-allowed;
 }
 .account-small {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.65;
 }
@@ -98,7 +98,7 @@
 .account-kicker {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-bottom: 7px;
 }
 .account-section-top {
@@ -112,7 +112,7 @@
   margin: 0;
 }
 .account-section-top h2 > span {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
   font-weight: 400;
   letter-spacing: 0;
@@ -211,23 +211,23 @@
   gap: 6px;
 }
 .account-meter-center strong {
-  font-size: 58px;
+  font-size: 3.625rem;
   line-height: 1.05;
   font-weight: 500;
   letter-spacing: -2.5px;
 }
 .account-meter-center > span:last-child {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .account-meter-kicker {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .account-funding-caption {
   text-align: center;
   color: var(--plum);
-  font-size: 14px;
+  font-size: 0.875rem;
   margin: 14px 0 28px;
 }
 .account-funding-lines,
@@ -240,7 +240,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 10px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .account-funding-lines dt,
 .account-review-lines dt {
@@ -273,14 +273,14 @@
   background: #f4effa;
   border-radius: 12px;
   padding: 13px 14px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin-top: 20px;
   cursor: pointer;
 }
 .account-example-toggle small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin-top: 4px;
 }
 .account-donation-side {
@@ -294,12 +294,12 @@
   margin-top: 0;
 }
 .account-contribute h2 {
-  font-size: 29px;
+  font-size: 1.8125rem;
   margin: 10px 0 12px;
   letter-spacing: -0.8px;
 }
 .account-contribute > p:not(.eyebrow):not(.account-small) {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
 }
 .account-segment-field,
@@ -333,7 +333,7 @@
   text-align: center;
   padding: 13px 6px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .account-segments .is-selected > span {
   background: #fffdfa;
@@ -346,7 +346,7 @@
   outline-offset: 3px;
 }
 .account-amount-field legend {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   margin-bottom: 10px;
 }
@@ -364,7 +364,7 @@
   padding: 13px 5px;
   border: 1px solid #b6a7c6;
   border-radius: 12px;
-  font-size: 18px;
+  font-size: 1.125rem;
   text-align: center;
   background: #ffffff65;
 }
@@ -374,7 +374,7 @@
   color: white;
 }
 .account-contribute .account-frequency-note {
-  font-size: 12px !important;
+  font-size: 0.75rem !important;
   color: var(--plum) !important;
   min-height: 40px;
 }
@@ -393,7 +393,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   padding: 6px 10px 0;
 }
@@ -412,17 +412,17 @@
 }
 .account-donation-bottom h2 {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 .account-donation-bottom p {
   margin: 0;
   max-width: 480px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .account-donation-bottom > button {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .account-pill {
   display: inline-flex;
@@ -430,7 +430,7 @@
   border-radius: 8px;
   background: #eee7f8;
   color: var(--plum);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.4;
 }
 .account-history-layout {
@@ -445,7 +445,7 @@
   min-width: 0;
 }
 .account-history-records h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .account-history-filters {
   display: grid;
@@ -454,11 +454,11 @@
   margin: 25px 0 4px;
 }
 .account-history-filters .field {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .account-history-filters select,
 .account-history-filters input {
-  font-size: 14px;
+  font-size: 0.875rem;
   padding: 8px;
 }
 .account-history-summary {
@@ -469,17 +469,17 @@
   padding: 19px;
   border-radius: 12px;
   background: #edf3eb;
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin: 6px 0 18px;
 }
 .account-history-summary small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   margin-top: 6px;
 }
 .account-history-summary strong {
-  font-size: 27px;
+  font-size: 1.6875rem;
   font-weight: 500;
   letter-spacing: -1px;
 }
@@ -491,12 +491,12 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-history-table th {
   font-weight: 400;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   padding: 9px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -510,17 +510,17 @@
 }
 .account-history-table td > strong {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .account-history-table td > span:not(.account-status) {
   display: block;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin-top: 6px;
 }
 .account-status {
-  font-size: 10px;
+  font-size: 0.625rem;
   display: inline-flex;
   align-items: center;
   padding: 5px 9px;
@@ -551,7 +551,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 12px 14px;
 }
 .account-monthly-card {
@@ -563,37 +563,37 @@
   margin-bottom: 8px;
 }
 .account-monthly-card .eyebrow {
-  font-size: 10px;
+  font-size: 0.625rem;
   margin-bottom: 10px;
 }
 .account-monthly-card h2 {
   margin: 0 0 12px;
 }
 .account-monthly-card > p:not(.eyebrow):not(.account-small) {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   margin: 20px 0 14px;
 }
 .account-monthly-card p strong {
   display: inline-block;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--ink);
   margin-top: 7px;
 }
 .account-monthly-card .text-link {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 2px 0 8px;
 }
 .account-tax-note {
   padding: 24px 8px 0;
 }
 .account-tax-note h2 {
-  font-size: 17px;
+  font-size: 1.0625rem;
   margin: 0 0 10px;
 }
 .account-tax-note p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .account-print-statement {
@@ -601,7 +601,7 @@
 }
 .account-inline-error {
   color: #963d49;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-empty-records {
   text-align: center;
@@ -612,11 +612,11 @@
   margin: 0 auto;
 }
 .account-empty-records h3 {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: var(--ink);
 }
 .account-empty-records p {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-settings-layout {
   display: grid;
@@ -636,7 +636,7 @@
 }
 .account-settings-section > p,
 .account-details-body > p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   margin: 0 0 22px;
 }
@@ -648,10 +648,10 @@
   margin-top: 3px;
 }
 .account-settings-section h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .account-page .account-field-help {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: -6px 0 22px;
   line-height: 1.6;
@@ -675,7 +675,7 @@
   flex-shrink: 0;
 }
 .account-optional {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   font-weight: 400;
 }
@@ -683,7 +683,7 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   margin: 17px 0;
   cursor: pointer;
@@ -691,27 +691,27 @@
 .account-checkbox-row small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 400;
   line-height: 1.6;
   margin-top: 5px;
 }
 .account-settings-section summary {
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 500;
   list-style-position: outside;
   margin-left: 16px;
   padding-right: 6px;
 }
 .account-settings-section summary::marker {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--plum);
 }
 .account-settings-section summary > span {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 400;
   margin: 7px 0 0;
   line-height: 1.5;
@@ -724,11 +724,11 @@
   padding-top: 22px;
 }
 .account-details-body > .button {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-bottom: 22px;
 }
 .account-details-body > .account-small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin-bottom: 0;
 }
 .account-association {
@@ -746,15 +746,15 @@
   background: var(--sage);
   border-radius: 12px;
   color: #276448;
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .account-association strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .account-association div > span {
   display: block;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -765,18 +765,18 @@
   margin: 0 0 22px;
 }
 .account-recovery-codes strong {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--plum);
 }
 .account-recovery-codes code {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 2;
   margin: 13px 0;
   overflow-wrap: anywhere;
 }
 .account-recovery-codes p {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: 0;
 }
@@ -785,7 +785,7 @@
   margin: 22px 0;
 }
 .account-preference-heading {
-  font-size: 13px !important;
+  font-size: 0.8125rem !important;
   color: var(--ink) !important;
   font-weight: 500;
   margin-bottom: 10px !important;
@@ -797,7 +797,7 @@
   margin: 20px 0;
 }
 .account-template-preview p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin: 15px 0 10px;
 }
 .account-template-preview .account-pill {
@@ -810,7 +810,7 @@
   gap: 12px;
 }
 .account-template-status .button {
-  font-size: 11px;
+  font-size: 0.6875rem;
   padding: 11px;
 }
 .account-blocked-row {
@@ -824,20 +824,20 @@
   margin-bottom: 20px;
 }
 .account-blocked-row strong {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 .account-blocked-row span {
   display: block;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--muted);
   margin-top: 5px;
 }
 .account-blocked-row button {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .account-danger-link {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #963d49 !important;
   margin-top: 18px;
 }
@@ -851,15 +851,15 @@
 }
 .account-privacy-note h2 {
   margin: 20px 0 15px;
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1.25;
 }
 .account-privacy-note p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .account-privacy-note .text-link {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-top: 8px;
 }
 .account-settings-utility {
@@ -873,16 +873,16 @@
   flex-shrink: 0;
 }
 .account-settings-utility strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .account-settings-utility p {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: 6px 0 9px;
 }
 .account-settings-utility button {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-dialog {
   width: min(500px, calc(100vw - 32px));
@@ -908,7 +908,7 @@
 }
 .account-dialog h2 {
   margin: 4px 0 18px;
-  font-size: 23px;
+  font-size: 1.4375rem;
   font-weight: 500;
   letter-spacing: -0.6px;
 }
@@ -916,7 +916,7 @@
   flex-shrink: 0;
 }
 .account-dialog p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.65;
 }
 .account-dialog-note {
@@ -925,7 +925,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   margin: 0 0 18px;
-  font-size: 12px !important;
+  font-size: 0.75rem !important;
 }
 .account-review-lines {
   border-top: 1px solid var(--line);
@@ -933,7 +933,7 @@
   padding: 6px 0;
 }
 .account-review-lines > div {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-dialog-actions {
   display: flex;
@@ -943,7 +943,7 @@
   margin-top: 24px;
 }
 .account-dialog-actions .button {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 @media (max-width: 1050px) {
   .account-donation-layout {
@@ -991,16 +991,16 @@
     margin-top: 22px;
   }
   .account-meter-center strong {
-    font-size: 50px;
+    font-size: 3.125rem;
   }
   .account-meter-center {
     bottom: 6px;
   }
   .account-meter-kicker {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .account-meter-center > span:last-child {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .account-contribute {
     padding: 25px 23px;
@@ -1028,26 +1028,26 @@
   }
   .account-history-filters select,
   .account-history-filters input {
-    font-size: 16px;
+    font-size: 1rem;
   }
   .account-history-summary {
     padding: 15px;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .account-history-summary strong {
-    font-size: 24px;
+    font-size: 1.5rem;
   }
   .account-history-table {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .account-history-table td > strong {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .account-history-table td > span:not(.account-status) {
-    font-size: 9px;
+    font-size: 0.5625rem;
   }
   .account-status {
-    font-size: 9px;
+    font-size: 0.5625rem;
     padding: 5px 7px;
   }
   .account-history-side,
@@ -1065,10 +1065,10 @@
     padding: 23px 20px;
   }
   .account-settings-section h2 {
-    font-size: 19px;
+    font-size: 1.1875rem;
   }
   .account-settings-section summary {
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
   .account-privacy-note {
     padding: 26px;
@@ -1115,14 +1115,14 @@
       sans-serif;
   }
   .account-print-statement h1 {
-    font-size: 21px;
+    font-size: 1.3125rem;
     margin: 0 0 20px;
   }
   .account-print-statement table {
     width: 100%;
     border-collapse: collapse;
     margin: 22px 0;
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   .account-print-statement th,
   .account-print-statement td {

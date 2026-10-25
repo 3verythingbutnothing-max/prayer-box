@@ -9,7 +9,7 @@
   line-height: 1.75;
 }
 .about-page h2 {
-  font-size: clamp(1.3rem, 2.5vw, 1.65rem);
+  font-size: clamp(1.3rem, 2.8125vw, 1.65rem);
   line-height: 1.35;
   letter-spacing: -0.035em;
   margin: 0 0 14px;
@@ -37,7 +37,7 @@
   padding: 20px 0 30px;
 }
 .about-hero .page-title {
-  font-size: clamp(2rem, 3.6vw, 3rem);
+  font-size: clamp(2rem, 4.05vw, 3rem);
   line-height: 1.2;
   letter-spacing: -0.055em;
   margin: 12px 0 20px;
@@ -372,7 +372,7 @@
   margin-bottom: 10px;
 }
 .about-collection h2 {
-  font-size: clamp(1.45rem, 2.5vw, 1.85rem);
+  font-size: clamp(1.45rem, 2.8125vw, 1.85rem);
 }
 .about-collection-intro {
   font-size: 0.92rem;

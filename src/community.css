@@ -12,13 +12,13 @@
   max-width: 650px;
 }
 .community-page h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   line-height: 1.3;
   font-weight: 600;
   letter-spacing: -0.45px;
 }
 .community-page h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 500;
   letter-spacing: -0.3px;
 }
@@ -38,7 +38,7 @@
   box-shadow: none;
 }
 .community-small {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.6;
 }
@@ -90,7 +90,7 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 500;
   color: var(--plum);
 }
@@ -113,13 +113,13 @@
   margin: 0 0 4px;
 }
 .community-friend p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   margin: 12px 0 0;
 }
 .community-quiet-action {
   color: #825461;
-  font-size: 12px;
+  font-size: 0.75rem;
   flex-shrink: 0;
   min-height: 44px;
 }
@@ -133,13 +133,13 @@
   align-items: center;
 }
 .community-person-row h2 {
-  font-size: 19px;
+  font-size: 1.1875rem;
   margin: 0 0 8px;
 }
 .community-person-row p,
 .community-application > p {
   margin: 9px 0 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .community-actions {
@@ -154,7 +154,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .community-care-note {
   background: #f0eaf8;
@@ -178,17 +178,17 @@
   flex-shrink: 0;
 }
 .community-care-note h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   margin: 0 0 16px;
 }
 .community-care-note p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #62546c;
   margin: 12px 0;
 }
 .community-care-note .text-link {
   margin: 13px 0 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .community-distinction {
   display: flex;
@@ -198,7 +198,7 @@
   color: var(--muted);
 }
 .community-distinction p {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 0;
 }
 .community-distinction svg {
@@ -213,7 +213,7 @@
   column-gap: 16px;
   row-gap: 3px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .community-reset p,
@@ -222,7 +222,7 @@
   margin: 0 0 5px;
 }
 .community-reset small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.6;
   margin-top: 7px;
 }
@@ -238,7 +238,7 @@
   color: var(--plum);
 }
 .community-empty p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   max-width: 360px;
   margin: 12px auto 0;
@@ -254,7 +254,7 @@
 }
 .community-access p {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
   max-width: 490px;
   margin: 0 auto 22px;
 }
@@ -300,7 +300,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   cursor: pointer;
 }
 .community-check input {
@@ -313,7 +313,7 @@
 .community-check small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.7;
   margin-top: 5px;
 }
@@ -328,7 +328,7 @@
   margin: 22px 0 0;
 }
 .community-details summary {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   min-height: 48px;
@@ -336,7 +336,7 @@
   color: var(--plum);
 }
 .community-details p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   margin: 4px 0 12px;
 }
@@ -345,7 +345,7 @@
   flex-direction: column;
   gap: 8px;
   margin: 0 0 18px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   min-width: 0;
 }
@@ -359,7 +359,7 @@
   color: var(--ink);
   padding: 11px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-width: 0;
 }
 .community-page .field > input[readonly] {
@@ -373,7 +373,7 @@
   outline-offset: 3px;
 }
 .community-field-help {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   line-height: 1.7;
   margin: -7px 0 23px;
@@ -396,7 +396,7 @@
   min-width: 0;
 }
 .community-kind-field legend {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 14px;
 }
@@ -420,6 +420,7 @@
   border-radius: 14px;
   background: #fffdfa;
   min-height: 155px;
+  height: 100%;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -430,12 +431,12 @@
   margin-bottom: 13px;
 }
 .community-kind-options strong {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.5;
 }
 .community-kind-options small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin-top: 8px;
   line-height: 1.7;
@@ -450,7 +451,7 @@
   outline-offset: 4px;
 }
 .community-fixture-notice {
-  font-size: 11px;
+  font-size: 0.6875rem;
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -471,7 +472,7 @@
 }
 .community-optional {
   font-weight: 400;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .community-ministry-fields {
@@ -480,7 +481,7 @@
   margin-top: 24px;
 }
 .community-ministry-fields h2 {
-  font-size: 18px;
+  font-size: 1.125rem;
   margin: 0 0 22px;
 }
 .community-contact-details {
@@ -505,12 +506,12 @@
   margin-top: 2px;
 }
 .community-signup-policy h2 {
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: -0.15px;
   margin: 0 0 8px;
 }
 .community-signup-policy p {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 0;
   color: #685b47;
 }
@@ -526,7 +527,7 @@
   gap: 10px;
 }
 .community-signup-review > h2 {
-  font-size: 25px;
+  font-size: 1.5625rem;
   margin: 19px 0 26px;
 }
 .community-signup-review dl {
@@ -537,7 +538,7 @@
   justify-content: space-between;
   align-items: start;
   gap: 20px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 13px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -555,16 +556,16 @@
   border-radius: 13px;
 }
 .community-recovery h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   margin: 0 0 10px;
 }
 .community-recovery p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   margin: 0 0 12px;
 }
 .community-recovery .text-link {
-  font-size: 12px;
+  font-size: 0.75rem;
   min-height: 44px;
 }
 .community-recovery-codes {
@@ -572,7 +573,7 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
-  font-size: 12px;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
 .community-review-notice {
@@ -592,7 +593,7 @@
 }
 .community-review-notice p {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #4c6152;
 }
 .community-review-layout {
@@ -619,24 +620,24 @@
   margin-bottom: 18px;
 }
 .community-review-card .chip {
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 .community-review-byline {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 0 0 21px;
 }
 .community-review-byline span {
   display: block;
   margin-top: 5px;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .community-review-card blockquote {
   border-left: 3px solid #c3b1df;
   padding: 0 0 0 17px;
   margin: 20px 0;
   line-height: 1.8;
-  font-size: 14px;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 .community-attachment {
@@ -646,7 +647,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--plum);
 }
 .community-attachment svg {
@@ -660,11 +661,11 @@
   margin: 21px 0 0;
 }
 .community-review-reason strong {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .community-review-reason p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b5b43;
   margin: 8px 0 0;
 }
@@ -674,7 +675,7 @@
 }
 .community-care-note li {
   color: #62546c;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.8;
   margin: 11px 0;
 }
@@ -732,7 +733,7 @@
     flex-wrap: wrap;
   }
   .community-section-heading h2 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
   .community-person-row {
     align-items: flex-start;
@@ -751,7 +752,7 @@
     flex-basis: calc(100% - 130px);
   }
   .community-member-row .community-small {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .community-official {
     margin-left: 0;
@@ -767,10 +768,10 @@
     padding: 13px 10px;
   }
   .community-kind-options strong {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
   .community-kind-options small {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .community-field-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -790,7 +791,7 @@
     padding: 31px 21px;
   }
   .community-signup-review dl > div {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   .community-actions .button {
     min-height: 46px;
