@@ -1,6 +1,37 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 
+/** Place inside a visible label; native interaction for an ongoing preference. */
+export function PreferenceSwitch({
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <span className="preference-switch">
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="preference-switch-track" aria-hidden="true">
+        <span className="preference-switch-thumb">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path className="switch-off-mark" d="M5 8h6" />
+            <path className="switch-on-mark" d="m4 8 3 3 5-6" />
+          </svg>
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
     box: (

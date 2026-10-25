@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Viewer } from "../domain";
 import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
+import { PreferenceSwitch } from "../ui";
 
 type AccountPage = "donations" | "donation-history" | "settings";
 type Privacy = "public" | "friends" | "private";
@@ -697,7 +698,11 @@ export default function AccountPages({
                   <legend className="account-sr-only">
                     Contribution frequency
                   </legend>
-                  <div className="account-segments">
+                  <div className="account-segments" data-selection={frequency}>
+                    <span
+                      className="account-segment-indicator"
+                      aria-hidden="true"
+                    />
                     {(["one-time", "monthly"] as const).map((value) => (
                       <label
                         key={value}
@@ -1132,16 +1137,15 @@ export default function AccountPages({
                   </label>
                   <CountryFlag country={country} />
                 </div>
-                <label className="account-checkbox-row">
-                  <input
-                    type="checkbox"
+                <label className="account-checkbox-row account-switch-row">
+                  <PreferenceSwitch
                     checked={showCountry}
                     disabled={country === "none"}
-                    onChange={(event) => {
-                      setShowCountry(event.target.checked);
+                    onChange={(checked) => {
+                      setShowCountry(checked);
                       onCountryPreferenceChange?.({
                         country,
-                        show: event.target.checked,
+                        show: checked,
                       });
                     }}
                   />
@@ -1180,13 +1184,12 @@ export default function AccountPages({
                           </span>
                         </div>
                       </div>
-                      <label className="account-checkbox-row">
-                        <input
-                          type="checkbox"
+                      <label className="account-checkbox-row account-switch-row">
+                        <PreferenceSwitch
                           checked={associationVisible}
-                          onChange={(event) => {
-                            setAssociationVisible(event.target.checked);
-                            onAssociationVisibleChange?.(event.target.checked);
+                          onChange={(checked) => {
+                            setAssociationVisible(checked);
+                            onAssociationVisibleChange?.(checked);
                           }}
                         />
                         <span>
@@ -1352,13 +1355,10 @@ export default function AccountPages({
                   <p className="account-preference-heading">
                     Which prayer updates?
                   </p>
-                  <label className="account-checkbox-row">
-                    <input
-                      type="checkbox"
+                  <label className="account-checkbox-row account-switch-row">
+                    <PreferenceSwitch
                       checked={incomingUpdates}
-                      onChange={(event) =>
-                        setIncomingUpdates(event.target.checked)
-                      }
+                      onChange={setIncomingUpdates}
                     />
                     <span>
                       Incoming box updates
@@ -1368,13 +1368,10 @@ export default function AccountPages({
                       </small>
                     </span>
                   </label>
-                  <label className="account-checkbox-row">
-                    <input
-                      type="checkbox"
+                  <label className="account-checkbox-row account-switch-row">
+                    <PreferenceSwitch
                       checked={outgoingUpdates}
-                      onChange={(event) =>
-                        setOutgoingUpdates(event.target.checked)
-                      }
+                      onChange={setOutgoingUpdates}
                     />
                     <span>
                       Updates to my sent requests
@@ -1385,13 +1382,12 @@ export default function AccountPages({
                     </span>
                   </label>
                   <div className="account-setting-divider" />
-                  <label className="account-checkbox-row">
-                    <input
-                      type="checkbox"
+                  <label className="account-checkbox-row account-switch-row">
+                    <PreferenceSwitch
                       checked={reminders}
-                      onChange={(event) => {
-                        setReminders(event.target.checked);
-                        onRemindersChange?.(event.target.checked);
+                      onChange={(checked) => {
+                        setReminders(checked);
+                        onRemindersChange?.(checked);
                       }}
                     />
                     <span>
@@ -1495,15 +1491,14 @@ export default function AccountPages({
                       </button>
                     ) : null}
                   </div>
-                  <label className="account-checkbox-row">
-                    <input
-                      type="checkbox"
+                  <label className="account-checkbox-row account-switch-row">
+                    <PreferenceSwitch
                       checked={automaticEnabled}
                       disabled={automaticStatus !== "approved"}
-                      onChange={(event) => {
-                        setAutomaticEnabled(event.target.checked);
+                      onChange={(checked) => {
+                        setAutomaticEnabled(checked);
                         onAutomaticChange?.(
-                          event.target.checked,
+                          checked,
                           ownedAutomaticBox,
                           template,
                         );

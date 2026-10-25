@@ -1,0 +1,261 @@
+/* Quiet tactile feedback: no delayed actions, recurring effects, or new state. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-press: 120ms;
+  --duration-control: 160ms;
+}
+
+.button,
+.icon-button,
+.account-trigger {
+  position: relative;
+  isolation: isolate;
+  transition: transform var(--duration-press) var(--ease-out);
+}
+.button {
+  box-shadow: 0 2px 3px #233d5610;
+}
+.button::before,
+.icon-button::before,
+.account-trigger::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: #ffffff13;
+  transition: opacity var(--duration-control) var(--ease-out);
+}
+.button.secondary::before,
+.icon-button::before,
+.account-trigger::before {
+  background: #c6d9e94d;
+}
+:is(.button, .icon-button, .account-trigger):active:not(:disabled):not(
+    :focus-visible
+  ) {
+  transform: scale(0.97);
+}
+:is(.button, .icon-button, .account-trigger):active:not(:disabled)::before {
+  opacity: 1;
+}
+:is(.button, .icon-button, .account-trigger):disabled {
+  transform: none;
+  box-shadow: none;
+}
+:is(.button, .icon-button, .account-trigger):focus-visible,
+:is(.button, .icon-button, .account-trigger):focus-visible::before {
+  transition: none;
+}
+
+/* Whole-label touch target; the input keeps native focus, Space, and state. */
+.account-switch-row {
+  align-items: center;
+  min-height: 48px;
+  gap: 15px;
+}
+.account-switch-row > span:not(.preference-switch) {
+  flex: 1;
+  min-width: 0;
+}
+.preference-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 50px;
+  width: 50px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.account-page .preference-switch > input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.account-page .preference-switch > input:disabled {
+  cursor: not-allowed;
+}
+.preference-switch-track {
+  position: relative;
+  display: block;
+  width: 50px;
+  height: 28px;
+  border: 1px solid var(--control-line);
+  border-radius: 99px;
+  background: #e2e9ef;
+}
+.preference-switch-track::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--navy);
+  border-radius: inherit;
+  background: var(--navy);
+  opacity: 0;
+  transition: opacity var(--duration-control) var(--ease-out);
+}
+.preference-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fffdfa;
+  box-shadow: 0 1px 3px #233d5633;
+  transform: translateX(0);
+  transition: transform var(--duration-control) var(--ease-out);
+}
+.preference-switch-thumb path {
+  stroke: var(--navy);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.switch-on-mark {
+  opacity: 0;
+}
+.preference-switch input:checked + .preference-switch-track::before {
+  opacity: 1;
+}
+.preference-switch
+  input:checked
+  + .preference-switch-track
+  .preference-switch-thumb {
+  transform: translateX(22px);
+}
+.preference-switch input:checked + .preference-switch-track .switch-on-mark {
+  opacity: 1;
+}
+.preference-switch input:checked + .preference-switch-track .switch-off-mark {
+  opacity: 0;
+}
+.preference-switch input:focus-visible + .preference-switch-track {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+.preference-switch input:focus-visible + .preference-switch-track::before,
+.preference-switch
+  input:focus-visible
+  + .preference-switch-track
+  .preference-switch-thumb {
+  transition: none;
+}
+.preference-switch input:disabled + .preference-switch-track {
+  opacity: 0.5;
+}
+.account-switch-row:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+/* A single moving surface beneath two real, keyboard-operable radio choices. */
+.account-segments {
+  position: relative;
+  isolation: isolate;
+  background: #e1e9f2;
+}
+.account-segment-indicator {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc((100% - 15px) / 2);
+  border: 1px solid var(--control-line);
+  border-radius: 10px;
+  background: #fffdfa;
+  box-shadow: 0 2px 4px #233d5610;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform var(--duration-control) var(--ease-out);
+}
+.account-segments[data-selection="monthly"] .account-segment-indicator {
+  transform: translateX(calc(100% + 5px));
+}
+.account-segments > label {
+  z-index: 1;
+  min-width: 0;
+  touch-action: manipulation;
+}
+.account-segments label > span,
+.account-segments .is-selected > span {
+  position: relative;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.account-segments .is-selected > span {
+  font-weight: 500;
+}
+.account-segments:has(input:focus-visible) .account-segment-indicator {
+  transition: none;
+}
+.account-amounts label > span,
+.community-kind-options label > span {
+  transition: transform var(--duration-press) var(--ease-out);
+}
+.account-amounts label:active:not(:has(input:focus-visible)) > span,
+.community-kind-options label:active:not(:has(input:focus-visible)) > span {
+  transform: scale(0.97);
+}
+.account-amounts input:focus-visible + span,
+.community-kind-options input:focus-visible + span {
+  transition: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled):hover:not(:active):not(:focus-visible) {
+    transform: translateY(-1px);
+  }
+  :is(.button, .icon-button, .account-trigger):hover:not(:disabled)::before {
+    opacity: 1;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .button:not(:disabled):hover:not(:active) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.button, .icon-button, .account-trigger):active:not(:disabled) {
+    transform: none;
+  }
+  .account-amounts label:active > span,
+  .community-kind-options label:active > span {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .preference-switch-track {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Canvas;
+  }
+  .preference-switch-track::before {
+    border-color: Highlight;
+    background: Highlight;
+  }
+  .preference-switch-thumb {
+    background: ButtonText;
+  }
+  .preference-switch-thumb path {
+    stroke: Canvas;
+  }
+  .preference-switch
+    input:checked
+    + .preference-switch-track
+    .preference-switch-thumb {
+    background: HighlightText;
+  }
+  .preference-switch input:checked + .preference-switch-track path {
+    stroke: Highlight;
+  }
+}

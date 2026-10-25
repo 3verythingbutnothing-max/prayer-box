@@ -1958,10 +1958,9 @@ main:focus {
   color: var(--muted);
   margin-top: 4px;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .button:not(:disabled):hover {
     background: var(--navy-hover);
-    transform: translateY(-1px);
   }
   .button.secondary:not(:disabled):hover {
     background: var(--blue);
