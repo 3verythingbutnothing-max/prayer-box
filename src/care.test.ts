@@ -73,6 +73,31 @@ test("the actual request grounds acknowledgment rather than a stale title", () =
   assert.doesNotMatch(unknown, /mum|surgery/);
 });
 
+test("working through a concern does not imply an employment request", () => {
+  const faith = buildPlatformAcknowledgment(
+    "I have a question about something I heard about the Trinity. Please pray for understanding while I work through it with a trusted pastor.",
+    "A question of faith",
+  );
+  assert.match(faith, /questions about faith and prayer/);
+  assert.doesNotMatch(faith, /work and next steps/);
+  const relationship = buildPlatformAcknowledgment(
+    "Please pray for my husband as we work through an argument.",
+    "A prayer request",
+  );
+  assert.match(relationship, /people and relationships/);
+  assert.doesNotMatch(relationship, /work and next steps/);
+  for (const text of [
+    "Please pray as I look for work.",
+    "I am having a difficult time at work.",
+    "Work has been overwhelming lately.",
+  ]) {
+    assert.match(
+      buildPlatformAcknowledgment(text, "A prayer request"),
+      /work and next steps/,
+    );
+  }
+});
+
 test("acknowledgments do not reflect arbitrary links, handles, identifying details, or entire requests", () => {
   const text =
     "Please pray about my financial worries. My payment handle is $FictionalOnly at cash.app/fictional and my number is 2025550104.";

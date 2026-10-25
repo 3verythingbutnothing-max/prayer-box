@@ -104,7 +104,7 @@ function contextualReason(text: string): string {
       : `the ${medicalConcern} you described`;
   }
   if (
-    /\b(?:rent|bills?|financial|money|job|work|employment|unemployed|interview)\b/.test(
+    /\b(?:rent|bills?|financial|money|job|employment|unemployed|interview|career|workplace|co-?workers?|boss)\b|\b(?:for|at|from|off|of|with)\s+(?:my\s+)?work\b|\bwork\s+(?:has|is|was|feels)\b/.test(
       source,
     )
   ) {
