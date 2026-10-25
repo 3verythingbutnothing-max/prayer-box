@@ -93,6 +93,13 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
         <path d="m9 15 6-6m-6-2 2-2a5 5 0 0 1 7 7l-2 2M8 10l-2 2a5 5 0 0 0 7 7l2-2" />
       </>
     ),
+    qr: (
+      <>
+        <path d="M3 3h6v6H3Zm12 0h6v6h-6ZM3 15h6v6H3Z" />
+        <path d="M15 15h3v3h3v3m-6-3v3m6-9h-3m-6 0v3m0 6h3" />
+      </>
+    ),
+    download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
     sun: (
       <>
         <circle cx="12" cy="12" r="4" />

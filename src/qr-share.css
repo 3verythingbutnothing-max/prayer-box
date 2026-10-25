@@ -1,0 +1,113 @@
+.qr-share-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px 24px;
+}
+.qr-share-preview {
+  min-width: 0;
+  border-radius: 18px;
+  box-shadow: 0 6px 14px #2f4b6810;
+}
+.qr-share-preview > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+.qr-share-tools {
+  min-width: 0;
+}
+.qr-share-eyebrow {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin: 0 0 7px;
+}
+.qr-share-tools h3 {
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+.qr-share-tools p:not(.qr-share-eyebrow) {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.qr-share-downloads {
+  display: grid;
+  gap: 9px;
+  margin: 19px 0;
+}
+.qr-share-link {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.qr-share-link .field {
+  margin: 0;
+  font-size: 12px;
+}
+.qr-share-link input {
+  min-width: 0;
+  width: 100%;
+  font-size: 11px;
+}
+.qr-share-link .text-link {
+  font-size: 12px;
+}
+.qr-share-privacy {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 0;
+}
+.qr-share-privacy svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.qr-share-placeholder {
+  min-height: 280px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 24px;
+  font-size: 13px;
+  background: var(--blue-wash);
+  border-radius: 16px;
+}
+.qr-share-tools .qr-share-error {
+  color: #903d44;
+}
+.list-toolbar .qr-share-trigger {
+  flex-shrink: 0;
+}
+@media (max-width: 560px) {
+  .qr-share-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 23px;
+  }
+  .qr-share-preview {
+    width: min(100%, 290px);
+    margin-inline: auto;
+  }
+  .qr-share-tools h3 {
+    font-size: 20px;
+  }
+  .qr-share-link input {
+    font-size: 16px;
+  }
+  .qr-share-downloads {
+    margin-block: 15px;
+  }
+  .list-toolbar .qr-share-trigger {
+    padding-inline: 10px;
+    gap: 6px;
+    font-size: 12px;
+  }
+}

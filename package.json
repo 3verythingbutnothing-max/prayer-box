@@ -8,17 +8,20 @@
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && vite build --base=/prayer-box/",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts"
+    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts src/qr.test.ts"
   },
   "dependencies": {
+    "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "typescript": "7.0.2",
-    "vite": "8.3.5",
+    "@types/node": "24.10.1",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@types/node": "24.10.1"
+    "jsqr": "1.4.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
   }
 }

@@ -40,6 +40,7 @@ Only `dist/` is deployed. The public repository contains the frontend source, fi
 - My Prayers: `/#prayers` — accessible requests this viewer has added a human prayer or encouragement to. New author updates/testimonies return the affected delivery to its active box list. Automatic replies and merely opening a request do not move it.
 - My Church: `/#church` — Elena’s private accepted friends; friendship and organization membership remain separate.
 - Grace Church: `/#box/grace` — public box, optional organization website link, membership application/invitation and group-access disclosure.
+- Share box: every personal or organization box page has a branded QR card, downloadable as PNG for slides or SVG for print, plus a copyable box link.
 - Shared inbox: `/#inbox` — approved members, assignment conflicts, owner reassignment and work states that do not narrow the audience.
 - Member controls: `/#members` — owner-only simulated approval, invitations, removal and official-reply permission.
 - About: `/#about` — proposed public copy, confirmed Trinitarian foundation, personal/in-person prayer, Lord’s Prayer guide and 40 fully populated Scripture selections.
@@ -69,6 +70,14 @@ An approved human prayer or encouragement moves that request into **My Prayers**
 
 From **My Requests → Delete request**, select particular box deliveries or all deliveries of that story. **Delete requests** in the page toolbar supports selecting all owned requests together. Nothing starts selected; a review lists exactly what will be removed. Deletion removes each selected delivery and its linked posts, conversation and support-note fixtures from this session. Unselected deliveries and other authors' requests remain. Direct links to deleted examples become unavailable until the prototype is reset or reloaded. This does not erase downloaded copies or establish production deletion/retention enforcement.
 
+## Shareable Prayer Box QR cards
+
+Open **Share box** on Maria’s, Elena’s or Grace Church’s page. Its QR code is generated locally from that box’s normal permalink. The downloadable card includes the shared Prayer Box logo in a soft blue header, outside the scanning pattern. Dark square modules and a solid white four-module quiet zone remain clear. PNG exports use integer 3× scaling; the self-contained SVG can scale for print. Keep the complete card and white margin when placing it in a slide or handout.
+
+The encoder loads only when sharing is opened; copy-link access remains available if QR generation fails. No QR service, URL shortener, tracking, remote image generation, camera access or server is involved. Codes contain only the canonical box link, with page query parameters and earlier request routes removed. Sharing or scanning never grants additional request permissions. These three destinations are fictional prototype boxes; real account creation and server authorization remain unimplemented.
+
+The pinned [node-qrcode encoder](https://github.com/soldair/node-qrcode) uses high error correction. Independent tests rasterize and decode each personal/organization destination with [jsQR](https://github.com/cozmo/jsQR), including the hosted project path and URL privacy/rejection cases. The white margin follows [DENSO WAVE’s four-module quiet-zone guidance](https://www.qrcode.com/en/howto/code.html/index.html). Actual exported files are checked separately from these unit tests; projector, print-size and physical-phone testing remain device-specific.
+
 ## Boundaries and proposed decisions
 
 Organizations can optionally add their own website during the fictional ministry signup. The owner can edit or remove it under **Settings → Organization website**, also reached through the organization box's owner-only edit button. The link appears on the public organization box and shared-inbox heading, opens in a new tab and includes the destination domain. It is independent of personal profiles, memberships and anonymous requester identity. The seeded organization uses `https://example.org/` as a fictional example, not a verified church website.
@@ -87,4 +96,4 @@ The founder's revision-4 brief controls; companion copy is proposed. The supplie
 
 Applied available local skills: Sites (local-only workflow), web-design-taste, React best practices and animate. The brief’s `frontend-design` and `web-design-guidelines` skills were not installed locally; their official upstream instructions were inspected. No unrelated skill bundle was installed. Rubik is bundled locally with its OFL license. Icons are SVGs; the logo, favicon and hero share a vector redrawing of the founder’s supplied open-box and heart-note motif. The zero-cost shimmer uses CSS transform/opacity for one 300ms pass, with a static gold/rainbow reduced-motion fallback.
 
-The app uses React, TypeScript and Vite without routing, animation, database or service infrastructure packages. All state is in React memory. Local downloads use a controlled CSV schema with spreadsheet-formula neutralization.
+The app uses React, TypeScript and Vite without routing, animation, database or service infrastructure packages. The small QR encoder is loaded on demand, with jsQR used only for development tests. All state is in React memory. Donation CSV downloads use a controlled schema with spreadsheet-formula neutralization; QR PNG/SVG downloads contain only the branded box-link card.

@@ -4,7 +4,6 @@ import {
   canViewRequest,
   getAudienceLabel,
   getEffectiveAudience,
-  prayerBoxUrl,
   screenText,
   seedRequests,
 } from "./domain";
@@ -20,6 +19,7 @@ import GetHelpPage from "./components/GetHelpPage";
 import DeleteRequests from "./components/DeleteRequests";
 import { OrganizationWebsiteLink } from "./components/OrganizationWebsite";
 import { normalizeOrganizationWebsite } from "./organization";
+import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
 import {
   formatStoryDate,
   getStoryPosts,
@@ -777,13 +777,13 @@ export default function App() {
             <div className="list-toolbar">
               <h2 id="list-heading">A place to pray together</h2>
               <button
-                className="icon-button"
-                aria-label="Copy link to this prayer box"
+                className="button secondary compact qr-share-trigger"
+                aria-label="Share this prayer box"
                 onClick={() => {
                   setDialog("share");
                 }}
               >
-                <Icon name="link" size={18} />
+                <Icon name="qr" size={18} /> Share box
               </button>
             </div>
             <p className="story-list-intro">
@@ -2317,38 +2317,12 @@ export default function App() {
         </Modal>
       )}
       {dialog === "share" && (
-        <Modal title="Share this little box" onClose={() => setDialog(null)}>
-          <p>
-            Share {boxNames[box]}’s fictional box in this prototype. Demo
-            changes stay in your own browser session.
-          </p>
-          <label className="field">
-            Prayer box demo link
-            <input
-              value={prayerBoxUrl(window.location.href, box)}
-              readOnly
-              onFocus={(event) => event.currentTarget.select()}
-            />
-          </label>
-          <button
-            className="button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(
-                  prayerBoxUrl(window.location.href, box),
-                );
-                notify("Demo box link copied.");
-              } catch {
-                notify("Select the demo link to copy it manually.");
-              }
-            }}
-          >
-            <Icon name="link" size={17} />
-            Copy demo link
-          </button>
-          <p className="quiet-copy">
-            Sharing a link does not grant access to private requests.
-          </p>
+        <Modal
+          title="Share this little box"
+          onClose={() => setDialog(null)}
+          wide
+        >
+          <SharePrayerBoxQr key={box} box={box} boxName={boxNames[box]} />
         </Modal>
       )}
       {dialog === "blocked" && (
