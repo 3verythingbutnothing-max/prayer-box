@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   authorLabel,
   canViewRequest,
@@ -41,6 +41,25 @@ import {
 import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
 import "./story-list.css";
+
+function FeedbackUnavailable() {
+  return (
+    <section className="empty-state">
+      <h1>Report a bug</h1>
+      <p>
+        The feedback form couldn’t load. Please reload the page and try again.
+      </p>
+      <button className="button" onClick={() => window.location.reload()}>
+        Reload page
+      </button>
+    </section>
+  );
+}
+const FeedbackPage = lazy(() =>
+  import("./components/FeedbackPage").catch(() => ({
+    default: FeedbackUnavailable,
+  })),
+);
 
 type Membership = "none" | "pending" | "invited" | "approved";
 type Scenario = "normal" | "empty" | "loading" | "error" | "denied";
@@ -379,7 +398,7 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: "instant" });
       mainRef.current?.focus({ preventScroll: true });
     }
-    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
+    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "feedback" ? "Report a bug" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
   }, [route]);
   useEffect(() => {
     setMenuOpen(false);
@@ -1394,6 +1413,18 @@ export default function App() {
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
     if (page === "prayers") return renderMyPrayers();
+    if (page === "feedback")
+      return (
+        <Suspense
+          fallback={
+            <p className="quiet-copy" role="status">
+              Opening the feedback form…
+            </p>
+          }
+        >
+          <FeedbackPage key={resetVersion} />
+        </Suspense>
+      );
     if (page === "help")
       return (
         <GetHelpPage
@@ -1747,6 +1778,9 @@ export default function App() {
                     <a href="#help" onClick={() => setMenuOpen(false)}>
                       Get Help
                     </a>
+                    <a href="#feedback" onClick={() => setMenuOpen(false)}>
+                      Report a bug
+                    </a>
                     <button
                       onClick={() => {
                         setMenuOpen(false);
@@ -2022,6 +2056,7 @@ export default function App() {
           <a href="#about">About</a>
           <a href="#donations">Donations</a>
           <a href="#help">Get Help</a>
+          <a href="#feedback">Report a bug</a>
           <button onClick={() => setDialog("support")}>
             Support resources
           </button>

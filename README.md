@@ -45,6 +45,7 @@ Only `dist/` is deployed. The public repository contains the frontend source, fi
 - Member controls: `/#members` — owner-only simulated approval, invitations, removal and official-reply permission.
 - About: `/#about` — proposed public copy, confirmed Trinitarian foundation, personal/in-person prayer, Lord’s Prayer guide and 40 fully populated Scripture selections.
 - Get Help: `/#help` — regional crisis resources, official therapy/treatment pathways, affordability guidance and professional support alongside faith. It collects no clinical information and makes no referrals or appointments.
+- Report a bug: `/#feedback` — a matching feedback form with a cute bug illustration, bug/feature/other choices, a message, optional local picture previews and a clearly simulated Submit action. Available from the footer and account menu, including to visitors.
 - Donations: `/#donations` — truthful $0 initial hosting need shown with a full decorative rainbow, gold rim and one short shimmer; an optional positive-cost example still shows actual net coverage. Explicit monthly choice and simulated review remain.
 - My Donations: `/#donation-history` — Elena’s private fictional records, year/date filters, CSV and print/save-PDF, with simulated cancellation.
 - Settings: `/#settings` — privacy limits, optional country, associations, recovery fixtures, separate contact consents, reminders and off-by-default reviewed automatic acknowledgments.
@@ -85,6 +86,12 @@ Buttons use a small 120ms press/release response and a gentle highlight. Ongoing
 The One-time/Monthly selector keeps its native radio group, with one decorative pill moving beneath the labels. Space, Tab and radio Arrow keys remain available; keyboard changes are immediate with visible focus. Pointer hover is limited to fine pointers, reduced motion keeps final selection positions without transitions, and disabled controls remain inactive. No animation library, new preference, backend or service was added. Browser viewport checks cover desktop, 768px, 390px and 320px; these do not establish physical-device or frame-rate performance.
 
 ## Boundaries and proposed decisions
+
+### Bug reports and ideas
+
+The feedback page uses the existing pastel paper surfaces and tactile button styles. It accepts a required message of up to 3,000 characters and optional PNG/JPG/WebP pictures (up to three, 5 MB each). Basic client checks cover declared type, file signature, size and browser decoding. Pictures use local blob URLs, with previews/removal and cleanup on removal, a fresh report or leaving the page. These checks are not a production upload or security pipeline.
+
+**Submit creates a temporary browser preview. Nothing is sent, saved, queued or monitored.** Editing retains the draft and selected pictures; starting another or leaving clears them. The page asks for fictional text and non-sensitive sample pictures, with no account/contact fields or automatic diagnostic collection. It is available without signing in so the design also accommodates reporting account-access issues. A real reporting inbox, secure attachment service and delivery require separate backend/service approval. No GitHub issue, email or notification is created. The page and its styles load only when opened; a load failure offers a page reload.
 
 Organizations can optionally add their own website during the fictional ministry signup. The owner can edit or remove it under **Settings → Organization website**, also reached through the organization box's owner-only edit button. The link appears on the public organization box and shared-inbox heading, opens in a new tab and includes the destination domain. It is independent of personal profiles, memberships and anonymous requester identity. The seeded organization uses `https://example.org/` as a fictional example, not a verified church website.
 

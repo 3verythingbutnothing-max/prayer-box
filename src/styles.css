@@ -1019,6 +1019,7 @@ main:focus {
 }
 .site-footer nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 22px;
   align-items: center;
 }
@@ -2418,7 +2419,7 @@ main:focus {
     width: 100%;
   }
   .site-footer nav {
-    gap: 25px;
+    gap: 5px 22px;
   }
   .site-footer nav a,
   .site-footer nav button {
