@@ -195,6 +195,8 @@ function AccountDialog({
 
 function FundingMeter({ example }: { example: boolean }) {
   const gradientId = useId().replaceAll(":", "");
+  const shimmerId = `${gradientId}-gold`;
+  const shimmerMaskId = `${gradientId}-mask`;
   const [fill, setFill] = useState(0);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setFill(example ? 0.6 : 0));
@@ -203,11 +205,11 @@ function FundingMeter({ example }: { example: boolean }) {
   const angle = Math.PI * (1 - 0.6);
   return (
     <figure
-      className="account-meter"
+      className={`account-meter${example ? "" : " account-meter-no-cost"}`}
       aria-label={
         example
           ? "Fictional funding example: 60 dollars available toward 100 dollars of hosting need. 40 dollars remaining."
-          : "No hosting costs this month. No funding percentage applies."
+          : "No hosting costs this month. Actual hosting need: zero dollars. The full rainbow with a gold edge is decorative; no funding percentage applies."
       }
     >
       <svg
@@ -231,6 +233,27 @@ function FundingMeter({ example }: { example: boolean }) {
             <stop offset=".8" stopColor="#91BFD2" />
             <stop offset="1" stopColor="#B6A1D8" />
           </linearGradient>
+          <linearGradient id={shimmerId} x1="0" x2="1" y1="0" y2="0">
+            <stop stopColor="#FFF6CE" stopOpacity="0" />
+            <stop offset=".5" stopColor="#FFF7DA" stopOpacity=".92" />
+            <stop offset="1" stopColor="#E6BE6D" stopOpacity="0" />
+          </linearGradient>
+          <mask
+            id={shimmerMaskId}
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="320"
+            height="180"
+          >
+            <path
+              d="M35 150A125 125 0 0 1 285 150"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="20"
+              strokeLinecap="round"
+            />
+          </mask>
         </defs>
         <path
           d="M35 150A125 125 0 0 1 285 150"
@@ -258,7 +281,29 @@ function FundingMeter({ example }: { example: boolean }) {
               strokeWidth="2"
             />
           </>
-        ) : null}
+        ) : (
+          <>
+            <path
+              d="M35 150A125 125 0 0 1 285 150"
+              className="account-meter-gold-edge"
+            />
+            <path
+              d="M35 150A125 125 0 0 1 285 150"
+              stroke={`url(#${gradientId})`}
+              className="account-meter-full-rainbow"
+            />
+            <g mask={`url(#${shimmerMaskId})`}>
+              <rect
+                x="-95"
+                y="0"
+                width="80"
+                height="180"
+                fill={`url(#${shimmerId})`}
+                className="account-meter-gold-shimmer"
+              />
+            </g>
+          </>
+        )}
       </svg>
       <div className="account-meter-center">
         <span className="account-meter-kicker">

@@ -3,6 +3,8 @@ import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
 import { PlatformAcknowledgment } from "./CareFlow";
+import { formatStoryDate, getStoryPosts, storyRevision } from "../story";
+import "../story-detail.css";
 
 type Props = {
   request: PrayerRequest;
@@ -24,6 +26,7 @@ type Props = {
   onSupport: () => void;
   onReuse: () => void;
   onNotice: (message: string) => void;
+  onDelete?: () => void;
 };
 
 export default function PrayerDetail({
@@ -35,7 +38,6 @@ export default function PrayerDetail({
   outsideAudience,
   isFriend,
   reminders,
-  testimonyOnly,
   blockedActors,
   onRemindersChange,
   onUpdate,
@@ -46,6 +48,7 @@ export default function PrayerDetail({
   onSupport,
   onReuse,
   onNotice,
+  onDelete,
 }: Props) {
   const [safety, setSafety] = useState<
     "options" | "report" | "block" | "care" | null
@@ -64,6 +67,7 @@ export default function PrayerDetail({
   const [replyReview, setReplyReview] = useState("");
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [replyPostId, setReplyPostId] = useState("original");
   useEffect(() => {
     if (recording !== "recording") return;
     const timer = setInterval(
@@ -72,9 +76,24 @@ export default function PrayerDetail({
     );
     return () => clearInterval(timer);
   }, [recording]);
-  const author = request.authorId === viewer;
+  const author = viewer !== "guest" && request.authorId === viewer;
   const organization = request.recipient === "grace";
   const held = request.moderation !== "approved";
+  const posts = held ? [] : getStoryPosts(request);
+  const selectedPost = posts.find((post) => post.id === replyPostId);
+  const selectedScope = selectedPost?.id ?? "original";
+  const originalDate = request.postedAt ?? request.createdAt;
+  const selectedLabel = selectedPost
+    ? `${selectedPost.kind === "testimony" ? "Testimony" : "Update"} · ${formatStoryDate(selectedPost.createdAt)}`
+    : `Original request · ${formatStoryDate(originalDate)}`;
+  useEffect(() => {
+    setReplyPostId("original");
+    setFriendDismissed(false);
+    setTarget(request.authorId);
+    setReplyReview("");
+    setRecording("idle");
+    setPreviewPlaying(false);
+  }, [request.id, request.authorId]);
   const memberName =
     viewer === "owner"
       ? "Church owner"
@@ -91,6 +110,24 @@ export default function PrayerDetail({
       : memberName;
   const canReplyOfficially =
     organization && groupMember && (viewer === "owner" || officialAllowed);
+
+  const postAnchor = (id: string) => `story-post-${encodeURIComponent(id)}`;
+  const storyHref = `#request/${request.id}`;
+  function jumpToSection(id: string, scope?: string) {
+    if (scope) setReplyPostId(scope);
+    const section = document.getElementById(id);
+    section?.focus({ preventScroll: true });
+    section?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+  }
+
+  function machineDate(value: string) {
+    return Number.isNaN(Date.parse(value)) ? undefined : value;
+  }
 
   function sendReply() {
     if (postingRestricted) {
@@ -114,8 +151,10 @@ export default function PrayerDetail({
         ...row.replies,
         {
           id: `reply-${crypto.randomUUID()}`,
-          testimonyId: testimonyOnly ? row.testimony?.id : undefined,
+          testimonyId: selectedPost?.id,
           actorId: viewer,
+          postedAt: new Date().toISOString(),
+          storyRevision: storyRevision(row),
           name:
             replyAs === "official" && canReplyOfficially
               ? "Grace Church"
@@ -128,7 +167,11 @@ export default function PrayerDetail({
     setReplyReview(
       "Your example reply was added to this conversation after the demo check. No message was sent outside this browser.",
     );
-    onNotice("Example encouragement added to this thread.");
+    onNotice(
+      author
+        ? "Your example encouragement was added to this story."
+        : "Your prayer or encouragement was added. This request is now in My Prayers until the author shares an update or testimony.",
+    );
   }
 
   return (
@@ -150,15 +193,54 @@ export default function PrayerDetail({
       </button>
       <div className="detail-layout">
         <div>
-          <article className="prayer-sheet panel">
+          <nav
+            className="story-trail"
+            aria-label="Follow this prayer story by date"
+          >
+            <span className="story-trail-label">A story, still unfolding</span>
+            <ol>
+              <li>
+                <a
+                  href={storyHref}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    jumpToSection("story-original", "original");
+                  }}
+                >
+                  <span>Original prayer</span>
+                  <time dateTime={machineDate(originalDate)}>
+                    {formatStoryDate(originalDate)}
+                  </time>
+                </a>
+              </li>
+              {posts.map((post) => (
+                <li key={post.id}>
+                  <a
+                    href={storyHref}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      jumpToSection(postAnchor(post.id), post.id);
+                    }}
+                  >
+                    <span>
+                      {post.kind === "testimony" ? "Testimony" : "Update"}
+                    </span>
+                    <time dateTime={machineDate(post.createdAt)}>
+                      {formatStoryDate(post.createdAt)}
+                    </time>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+          <article
+            className="prayer-sheet panel story-original"
+            id="story-original"
+            tabIndex={-1}
+            aria-labelledby="original-prayer-title"
+          >
             <div className="detail-topline">
-              <span className="eyebrow">
-                {testimonyOnly
-                  ? request.testimony?.kind === "update"
-                    ? "A linked update"
-                    : "A linked testimony"
-                  : "A prayer request"}
-              </span>
+              <span className="eyebrow">Original prayer request</span>
               {!author && (
                 <button
                   className="icon-button"
@@ -172,7 +254,9 @@ export default function PrayerDetail({
                 </button>
               )}
             </div>
-            <h1 className="page-title">{request.topic}</h1>
+            <h1 className="page-title" id="original-prayer-title">
+              {request.topic}
+            </h1>
             <div className="request-byline">
               <span
                 className={`avatar avatar-small ${request.anonymous ? "anonymous" : ""}`}
@@ -185,7 +269,19 @@ export default function PrayerDetail({
               </span>
               <span>{authorLabel(request)}</span>
               <span aria-hidden="true">·</span>
-              <span>{request.createdAt}</span>
+              <a
+                className="story-date-link"
+                href={storyHref}
+                onClick={(event) => {
+                  event.preventDefault();
+                  jumpToSection("story-original", "original");
+                }}
+                aria-label={`Original request from ${formatStoryDate(originalDate)}`}
+              >
+                <time dateTime={machineDate(originalDate)}>
+                  {formatStoryDate(originalDate)}
+                </time>
+              </a>
             </div>
             <div className="audience-line">
               <Icon
@@ -198,19 +294,7 @@ export default function PrayerDetail({
                 ? " · account limit hides this from outsiders"
                 : ""}
             </div>
-            {testimonyOnly && request.testimony ? (
-              <>
-                <p className="prayer-text">{request.testimony.text}</p>
-                <button
-                  className="text-link"
-                  onClick={() => onNavigate(`request/${request.id}`)}
-                >
-                  <Icon name="link" size={17} /> Read the original request
-                </button>
-              </>
-            ) : (
-              <p className="prayer-text">{request.text}</p>
-            )}
+            <p className="prayer-text">{request.text}</p>
             {held && (
               <div className="notice butter">
                 <Icon name="shield" />
@@ -254,7 +338,7 @@ export default function PrayerDetail({
                 </div>
               </div>
             )}
-            {!held && !testimonyOnly && request.media && (
+            {!held && request.media && (
               <div
                 className={`media-state ${request.media.status === "pending" ? "pending" : ""}`}
               >
@@ -290,27 +374,6 @@ export default function PrayerDetail({
                 </div>
               </div>
             )}
-            {!testimonyOnly && request.testimony && (
-              <button
-                className="testimony-link"
-                onClick={() => onNavigate(`testimony/${request.id}`)}
-              >
-                <span className="testimony-mark">
-                  <Icon name="sun" size={20} />
-                </span>
-                <span>
-                  <strong>
-                    {request.testimony.kind === "testimony"
-                      ? "A little testimony"
-                      : "The story is still unfolding"}
-                  </strong>
-                  <small>
-                    Read the author’s linked {request.testimony.kind}
-                  </small>
-                </span>
-                <Icon name="arrow" size={18} />
-              </button>
-            )}
             {author && (
               <p className="private-thread-note">
                 <Icon name="lock" size={16} /> This delivery has its own
@@ -318,11 +381,90 @@ export default function PrayerDetail({
                 this recipient.
               </p>
             )}
+            {author && onDelete && (
+              <div className="story-author-actions">
+                <button className="text-link story-delete" onClick={onDelete}>
+                  <Icon name="close" size={15} />
+                  Delete request
+                </button>
+                <span>
+                  Choose the delivery scope before anything is removed.
+                </span>
+              </div>
+            )}
           </article>
+          {posts.length > 0 && (
+            <div
+              className="story-posts"
+              aria-label="Published updates and testimonies in this delivery"
+            >
+              {posts.map((post) => (
+                <article
+                  key={post.id}
+                  className={`panel story-post story-post-${post.kind}`}
+                  id={postAnchor(post.id)}
+                  tabIndex={-1}
+                  aria-labelledby={`${postAnchor(post.id)}-title`}
+                >
+                  <div className="story-post-heading">
+                    <span className="eyebrow">
+                      <Icon
+                        name={post.kind === "testimony" ? "sun" : "note"}
+                        size={16}
+                      />
+                      {post.kind === "testimony" ? "A testimony" : "An update"}
+                    </span>
+                    <a
+                      className="story-date-link"
+                      href={storyHref}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        jumpToSection(postAnchor(post.id), post.id);
+                      }}
+                    >
+                      <time dateTime={machineDate(post.createdAt)}>
+                        {formatStoryDate(post.createdAt)}
+                      </time>
+                    </a>
+                  </div>
+                  <h2 id={`${postAnchor(post.id)}-title`}>
+                    {post.kind === "testimony"
+                      ? "A little testimony"
+                      : "The story continues"}
+                  </h2>
+                  <p className="story-post-byline">
+                    From {authorLabel(request)} · Same delivery and audience
+                  </p>
+                  <p className="prayer-text">{post.text}</p>
+                  <div className="story-post-footer">
+                    <a
+                      className="text-link"
+                      href={storyHref}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        jumpToSection("story-original", "original");
+                      }}
+                    >
+                      <Icon name="link" size={16} />
+                      Original prayer · {formatStoryDate(originalDate)}
+                    </a>
+                    <button
+                      className="button secondary compact"
+                      onClick={() =>
+                        jumpToSection("story-encouragement", post.id)
+                      }
+                    >
+                      Pray for this {post.kind}
+                      <Icon name="heart" size={15} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
           {!held && (
             <>
-              {!testimonyOnly &&
-                isFriend &&
+              {isFriend &&
                 !request.anonymous &&
                 !author &&
                 reminders &&
@@ -359,7 +501,9 @@ export default function PrayerDetail({
                   </aside>
                 )}
               <section
-                className="conversation panel"
+                className="conversation panel story-conversation"
+                id="story-encouragement"
+                tabIndex={-1}
                 aria-labelledby="conversation-heading"
               >
                 <div className="section-heading">
@@ -367,20 +511,42 @@ export default function PrayerDetail({
                   <Icon name="heart" size={20} />
                 </div>
                 <p className="quiet-copy">
-                  Prayers and kind words stay in this conversation. A reply is
-                  never a promise of an outcome.
+                  Prayers and kind words stay with the part of the story you
+                  choose, in this delivery’s conversation. A reply is never a
+                  promise of an outcome.
+                </p>
+                <label className="field story-scope-field">
+                  Pray for
+                  <select
+                    value={selectedScope}
+                    onChange={(event) => {
+                      setReplyPostId(event.target.value);
+                      setReplyReview("");
+                    }}
+                  >
+                    <option value="original">
+                      Original request · {formatStoryDate(originalDate)}
+                    </option>
+                    {posts.map((post) => (
+                      <option value={post.id} key={post.id}>
+                        {post.kind === "testimony" ? "Testimony" : "Update"} ·{" "}
+                        {formatStoryDate(post.createdAt)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="story-selected-scope">
+                  <Icon name="link" size={14} />
+                  {selectedLabel}
                 </p>
                 <div className="replies">
-                  <PlatformAcknowledgment
-                    request={request}
-                    viewer={viewer}
-                    testimonyOnly={testimonyOnly}
-                  />
+                  {selectedScope === "original" && (
+                    <PlatformAcknowledgment request={request} viewer={viewer} />
+                  )}
                   {request.replies
                     .filter((r) =>
-                      testimonyOnly
-                        ? !!request.testimony &&
-                          r.testimonyId === request.testimony.id
+                      selectedPost
+                        ? r.testimonyId === selectedPost.id
                         : !r.testimonyId,
                     )
                     .filter(
@@ -406,6 +572,17 @@ export default function PrayerDetail({
                           ) : r.official ? (
                             <span className="chip">Organization reply</span>
                           ) : null}
+                          {!r.automatic && (
+                            <span className="story-reply-date">
+                              {r.postedAt ? (
+                                <time dateTime={machineDate(r.postedAt)}>
+                                  {formatStoryDate(r.postedAt)}
+                                </time>
+                              ) : (
+                                "Earlier encouragement"
+                              )}
+                            </span>
+                          )}
                           {!r.automatic &&
                             r.actorId &&
                             r.actorId !== viewer && (

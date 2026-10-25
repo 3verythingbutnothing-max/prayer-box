@@ -29,6 +29,8 @@ export type Moderation = "approved" | "pending" | "changes" | "appeal";
 
 export interface Reply {
   testimonyId?: string;
+  postedAt?: string;
+  storyRevision?: string;
   id: string;
   actorId?: string;
   name: string;
@@ -36,6 +38,13 @@ export interface Reply {
   automatic?: boolean;
   official?: boolean;
   audio?: boolean;
+}
+
+export interface PrayerPost {
+  id: string;
+  text: string;
+  kind: "testimony" | "update";
+  createdAt: string;
 }
 
 export interface PrayerRequest {
@@ -50,8 +59,15 @@ export interface PrayerRequest {
   text: string;
   topic: string;
   createdAt: string;
+  postedAt?: string;
   media?: { kind: "photo" | "audio" | "video"; status: "approved" | "pending" };
-  testimony?: { id: string; text: string; kind: "testimony" | "update" };
+  testimony?: {
+    id: string;
+    text: string;
+    kind: "testimony" | "update";
+    createdAt?: string;
+  };
+  posts?: PrayerPost[];
   replies: Reply[];
   moderation: Moderation;
   reviewReason?: string;
@@ -72,6 +88,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "public",
     topic: "For a little courage",
     createdAt: "This morning",
+    postedAt: "2026-10-24T09:00:00Z",
     text: "My mum has an appointment next week, and the waiting feels heavy. Please pray for peace for her, patience for our family, and wisdom for the people caring for her.",
     replies: [
       {
@@ -94,9 +111,11 @@ export const seedRequests: PrayerRequest[] = [
     audience: "public",
     topic: "Room for grief",
     createdAt: "Yesterday",
+    postedAt: "2026-10-23T14:00:00Z",
     text: "This is our first autumn without Dad. Small things still catch me by surprise. Please pray that we can be gentle with each other and find room for both sadness and gratitude.",
     testimony: {
       id: "testimony-room-for-grief",
+      createdAt: "2026-10-24T11:00:00Z",
       kind: "testimony",
       text: "A friend sat with me over tea this week. Nothing was fixed, but I felt less alone. I am thankful for that little kindness, and still asking for prayer as we grieve.",
     },
@@ -121,6 +140,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "private",
     topic: "While we wait",
     createdAt: "This morning",
+    postedAt: "2026-10-24T09:00:00Z",
     text: "I am helping my sister through a difficult season and sometimes feel unsure what to say. Please pray that I listen well, keep healthy boundaries, and offer steady kindness.",
     replies: [],
     moderation: "approved",
@@ -136,9 +156,11 @@ export const seedRequests: PrayerRequest[] = [
     audience: "private",
     topic: "A new beginning",
     createdAt: "Yesterday",
+    postedAt: "2026-10-23T14:00:00Z",
     text: "I am looking for work and worrying about paying rent. Please pray for a suitable opportunity, clear thinking, and the courage to ask my local church for practical guidance.",
     testimony: {
       id: "update-daniel-work",
+      createdAt: "2026-10-24T11:00:00Z",
       kind: "update",
       text: "Still looking, and still taking one step at a time. Thank you for continuing to pray. I have an application to finish this week.",
     },
@@ -157,6 +179,7 @@ export const seedRequests: PrayerRequest[] = [
     authorCeiling: "private",
     topic: "A little wisdom",
     createdAt: "Yesterday",
+    postedAt: "2026-10-23T14:00:00Z",
     text: "I am beginning a new chapter and finding it hard to make a decision. Please pray for wisdom, patience, and a heart that is willing to follow God’s lead.",
     replies: [
       {
@@ -187,6 +210,7 @@ export const seedRequests: PrayerRequest[] = [
     authorCeiling: "private",
     topic: "A little wisdom",
     createdAt: "Yesterday",
+    postedAt: "2026-10-23T14:00:00Z",
     text: "I am beginning a new chapter and finding it hard to make a decision. Please pray for wisdom, patience, and a heart that is willing to follow God’s lead.",
     replies: [
       {
@@ -212,6 +236,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "private",
     topic: "Rest for a caregiver",
     createdAt: "This week",
+    postedAt: "2026-10-21T14:00:00Z",
     text: "Caring for my husband has been tiring lately. Please pray for strength for today, good support around us, and the humility to rest when I need to.",
     replies: [
       {
@@ -235,6 +260,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "public",
     topic: "Grace for ordinary days",
     createdAt: "This week",
+    postedAt: "2026-10-21T14:00:00Z",
     text: "I am learning to pray again after a long time away. I do not have many words yet. Please pray that I keep coming honestly to God, even on the ordinary and uncertain days.",
     media: { kind: "audio", status: "approved" },
     replies: [
@@ -259,6 +285,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "private",
     topic: "A question of faith",
     createdAt: "A moment ago",
+    postedAt: "2026-10-24T15:00:00Z",
     text: "I have a question about something I heard about the Trinity. Please pray for understanding while I work through it with a trusted pastor.",
     replies: [],
     moderation: "pending",
@@ -276,6 +303,7 @@ export const seedRequests: PrayerRequest[] = [
     audience: "private",
     topic: "Peace in a busy season",
     createdAt: "A moment ago",
+    postedAt: "2026-10-24T15:00:00Z",
     text: "There is a lot changing at once. Please pray that I can notice what matters, care for the people around me, and find quiet moments with God.",
     media: { kind: "photo", status: "pending" },
     replies: [],

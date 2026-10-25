@@ -196,6 +196,63 @@ export function Modal({
   );
 }
 
+/** Shared silhouette: an open lavender box and a heart-marked prayer note. */
+function PrayerBoxDrawing({ detailed = false }: { detailed?: boolean }) {
+  return (
+    <g
+      stroke="#6D587F"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m13 54 35-15 34 15-34 15Z" fill="#DCCDF1" />
+      <path d="m13 54 35 15v24L13 78Z" fill="#EAE2FF" />
+      <path d="m48 69 34-15v24L48 93Z" fill="#CFBAE9" />
+      <g transform="rotate(-9 48 36)">
+        <rect x="29" y="9" width="39" height="54" rx="5" fill="#FFF0AE" />
+        <path d="M38 23h21m-21 8h16" stroke="#897598" strokeWidth="1.9" />
+        <path
+          d="M48 39c-5-7-13-1-7 5l7 6 7-6c6-6-2-12-7-5Z"
+          fill="#E8B2BD"
+          strokeWidth="1.7"
+        />
+        {detailed ? (
+          <path d="M38 56h19" stroke="#897598" strokeWidth="1.9" />
+        ) : null}
+      </g>
+      <path d="m13 54 35 15-9 10L5 63Z" fill="#F5EEFF" />
+      <path d="m48 69 34-15 9 9-34 16Z" fill="#EEE3FC" />
+    </g>
+  );
+}
+
+/** Decorative beside a wordmark by default; pass title for a standalone label. */
+export function PrayerBoxMark({
+  size = 36,
+  className = "",
+  title,
+}: {
+  size?: number;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 96 96"
+      fill="none"
+      className={`prayer-box-mark ${className}`.trim()}
+      focusable="false"
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+    >
+      <PrayerBoxDrawing />
+    </svg>
+  );
+}
+
 export function BoxArt({ small = false }: { small?: boolean }) {
   return (
     <svg
@@ -203,71 +260,24 @@ export function BoxArt({ small = false }: { small?: boolean }) {
       viewBox="0 0 220 180"
       fill="none"
       aria-hidden="true"
+      focusable="false"
     >
-      <ellipse cx="112" cy="158" rx="74" ry="10" fill="#DCCFE7" opacity=".38" />
-      <path
-        d="m36 91 72-30 75 31-75 32Z"
-        fill="#E0D2F5"
-        stroke="#77618F"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m36 91 72 31v36l-72-30Z"
-        fill="#EAE2FF"
-        stroke="#77618F"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m108 122 75-30v36l-75 30Z"
-        fill="#D9C8F1"
-        stroke="#77618F"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m36 91-15 17 71 31 16-17m75-30 15 15-74 32-16-17"
-        fill="#F4EDFF"
-        stroke="#77618F"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <g transform="rotate(-10 105 61)">
-        <rect
-          x="69"
-          y="23"
-          width="70"
-          height="80"
-          rx="6"
-          fill="#FFF2BF"
-          stroke="#77618F"
-          strokeWidth="2"
-        />
-        <path
-          d="M85 43h38m-38 11h29m-29 33h35"
-          stroke="#8B769A"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M104 65c-6-9-15-2-8 5l8 7 8-7c7-7-2-14-8-5Z"
-          fill="#E5B7BD"
-          stroke="#77618F"
-          strokeWidth="1.5"
-        />
+      <ellipse cx="111" cy="161" rx="74" ry="9" fill="#D5C8E6" opacity=".35" />
+      <g transform="translate(28 -2) scale(1.7)">
+        <PrayerBoxDrawing detailed />
       </g>
       <path
-        d="M165 40v12m-6-6h12M44 47l-5-7m-5 16-9-1m155 12 8-5"
+        d="M178 36v12m-6-6h12M43 43l-5-7m-6 18-9-1m168 12 8-5"
         stroke="#9983AC"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
       <path
-        d="M56 27c-5-8-13-1-7 5l7 6 7-6c6-6-2-13-7-5Z"
+        d="M56 24c-5-8-13-1-7 5l7 6 7-6c6-6-2-13-7-5Z"
         fill="#FFE5D8"
         stroke="#9983AC"
         strokeWidth="1.5"
+        strokeLinejoin="round"
       />
     </svg>
   );

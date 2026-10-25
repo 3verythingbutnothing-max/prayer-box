@@ -1,0 +1,445 @@
+.get-help-page {
+  --help-navy: var(--navy, #2f4b68);
+  --help-blue: var(--blue, #dfecf7);
+  --help-line: var(--blue-line, #c6d9e9);
+  max-width: 1060px;
+  margin: 0 auto;
+  color: var(--ink, #293545);
+}
+.get-help-page [id] {
+  scroll-margin-top: 24px;
+}
+.get-help-page p {
+  line-height: 1.75;
+}
+.get-help-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 6px 0 26px;
+}
+.get-help-header-icon {
+  display: grid;
+  place-items: center;
+  width: 55px;
+  height: 55px;
+  color: var(--help-navy);
+  background: var(--help-blue);
+  border-radius: 19px;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.get-help-header .eyebrow {
+  margin-bottom: 10px;
+}
+.get-help-header .page-title {
+  margin: 0 0 13px;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.25;
+}
+.get-help-header .page-intro {
+  font-size: 15px;
+  max-width: 690px;
+  margin-bottom: 0;
+}
+.get-help-now {
+  border: 1px solid var(--help-line);
+  background:
+    radial-gradient(circle, #2f4b6809 1px, transparent 1.5px) 0 0 / 14px 14px,
+    var(--blue-wash, #eef5fa);
+  border-radius: 22px;
+  padding: 27px 30px;
+}
+.get-help-now-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.get-help-now-heading h2 {
+  font-size: 22px;
+  margin: 0;
+  color: var(--help-navy);
+}
+.get-help-small-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  background: #fff9;
+  color: var(--help-navy);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.get-help-page .get-help-emergency {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.get-help-emergency strong {
+  font-weight: 550;
+}
+.get-help-crisis-line {
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+.get-help-immediate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.get-help-primary-action,
+.get-help-outside-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 11px 16px;
+  border-radius: 11px;
+  border: 1px solid var(--help-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+}
+.get-help-primary-action {
+  background: var(--help-navy);
+  color: #fff;
+}
+.get-help-primary-action:hover {
+  background: var(--navy-hover, #233d56);
+}
+.get-help-outside-action {
+  background: #fff9;
+  color: var(--help-navy);
+}
+.get-help-outside-action:hover {
+  background: #fff;
+}
+.get-help-page .get-help-service-note {
+  font-size: 12px;
+  color: var(--muted, #5c6876);
+  border-top: 1px solid var(--help-line);
+  padding-top: 13px;
+  margin-bottom: 11px;
+}
+.get-help-service-note strong {
+  font-weight: 550;
+  color: var(--help-navy);
+}
+.get-help-page .get-help-sources {
+  font-size: 11px;
+  color: var(--muted, #5c6876);
+  line-height: 1.8;
+  margin: 10px 0 0;
+}
+.get-help-source {
+  color: var(--help-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.get-help-source svg {
+  margin-left: 4px;
+  vertical-align: -2px;
+}
+.get-help-section-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 24px;
+  padding: 22px 2px 30px;
+}
+.get-help-section-links a {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--help-navy);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding: 8px 0;
+}
+.get-help-start > h2 {
+  font-size: 25px;
+  max-width: 690px;
+  margin-bottom: 15px;
+}
+.get-help-start > p:not(.eyebrow) {
+  max-width: 790px;
+  font-size: 14px;
+}
+.get-help-pathways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+.get-help-pathway {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid var(--help-line);
+  border-radius: 19px;
+  padding: 24px;
+  background:
+    radial-gradient(circle, #2f4b6808 1px, transparent 1.5px) 0 0 / 14px 14px,
+    #f5f8fb;
+}
+.get-help-region-label {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--help-navy);
+  border: 1px solid var(--help-line);
+  border-radius: 7px;
+  padding: 4px 7px;
+  margin-bottom: 17px;
+  background: #fff9;
+}
+.get-help-pathway h3 {
+  font-size: 18px;
+  line-height: 1.4;
+  margin: 0 0 13px;
+}
+.get-help-pathway > p:not(.get-help-sources) {
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.get-help-pathway .get-help-outside-action {
+  width: 100%;
+  font-size: 12px;
+  padding: 10px;
+  margin-top: auto;
+  background: #fff;
+}
+.get-help-pathway .get-help-sources {
+  margin-top: 14px;
+}
+.get-help-page .get-help-availability {
+  font-size: 11.5px !important;
+  color: var(--muted, #5c6876);
+  margin: 17px 2px 0;
+  max-width: 100%;
+}
+.get-help-practical-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin: 32px 0;
+}
+.get-help-cost-card,
+.get-help-questions-card {
+  border: 1px solid var(--help-line);
+  border-radius: 20px;
+  padding: 28px;
+  background: #eef5fa;
+}
+.get-help-questions-card {
+  background: #f7f8f7;
+}
+.get-help-practical-grid .get-help-small-icon {
+  margin-bottom: 18px;
+}
+.get-help-practical-grid .eyebrow {
+  margin-bottom: 10px;
+}
+.get-help-practical-grid h2 {
+  font-size: 22px;
+  line-height: 1.4;
+  margin-bottom: 15px;
+}
+.get-help-practical-grid p {
+  font-size: 13px;
+}
+.get-help-resource-links {
+  display: grid;
+  gap: 12px;
+  font-size: 12px;
+  margin: 20px 0 17px;
+}
+.get-help-resource-links a {
+  justify-self: start;
+}
+.get-help-questions-card ul {
+  margin: 0 0 20px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.get-help-questions-card li {
+  padding-left: 4px;
+  margin-bottom: 11px;
+  line-height: 1.65;
+}
+.get-help-faith {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 29px 32px;
+  border-radius: 22px;
+  border: 1px solid var(--help-line);
+  background:
+    radial-gradient(circle, #2f4b6808 1px, transparent 1.5px) 0 0 / 14px 14px,
+    var(--help-blue);
+}
+.get-help-faith-mark {
+  color: var(--help-navy);
+  font-size: 28px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.get-help-faith .eyebrow {
+  margin-bottom: 10px;
+}
+.get-help-faith h2 {
+  color: var(--help-navy);
+  font-size: 24px;
+  margin-bottom: 15px;
+}
+.get-help-faith p {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.get-help-about-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--help-navy);
+  min-height: 44px;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.get-help-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 23px 4px 10px;
+  color: var(--muted, #5c6876);
+}
+.get-help-footer svg {
+  margin-top: 3px;
+}
+.get-help-footer p {
+  font-size: 11.5px;
+  margin: 0;
+}
+.get-help-page button:focus-visible,
+.get-help-page a:focus-visible {
+  outline: 3px solid var(--help-navy);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.get-help-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 860px) {
+  .get-help-pathways {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .get-help-pathway {
+    padding: 22px;
+  }
+  .get-help-pathway .get-help-outside-action {
+    width: auto;
+    padding: 10px 14px;
+    margin-top: 0;
+  }
+  .get-help-pathway > p:not(.get-help-sources) {
+    margin-bottom: 15px;
+  }
+}
+@media (max-width: 580px) {
+  .get-help-header {
+    gap: 13px;
+    padding-bottom: 22px;
+  }
+  .get-help-header-icon {
+    width: 43px;
+    height: 43px;
+    border-radius: 14px;
+  }
+  .get-help-header .page-title {
+    font-size: 26px;
+  }
+  .get-help-header .page-intro {
+    font-size: 13px;
+  }
+  .get-help-now {
+    padding: 22px;
+    border-radius: 18px;
+  }
+  .get-help-now-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .get-help-now-heading h2 {
+    font-size: 20px;
+    padding-top: 3px;
+  }
+  .get-help-small-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+  .get-help-page .get-help-emergency,
+  .get-help-crisis-line {
+    font-size: 13px;
+  }
+  .get-help-immediate-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .get-help-section-links {
+    gap: 3px 18px;
+    padding: 16px 2px 25px;
+  }
+  .get-help-section-links a {
+    font-size: 12px;
+  }
+  .get-help-start > h2 {
+    font-size: 23px;
+  }
+  .get-help-start > p:not(.eyebrow) {
+    font-size: 13px;
+  }
+  .get-help-practical-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin: 26px 0;
+  }
+  .get-help-cost-card,
+  .get-help-questions-card {
+    padding: 23px;
+    border-radius: 18px;
+  }
+  .get-help-practical-grid h2 {
+    font-size: 21px;
+  }
+  .get-help-faith {
+    display: block;
+    padding: 24px;
+    border-radius: 18px;
+  }
+  .get-help-faith-mark {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .get-help-faith h2 {
+    font-size: 22px;
+  }
+  .get-help-faith p {
+    font-size: 13px;
+  }
+}

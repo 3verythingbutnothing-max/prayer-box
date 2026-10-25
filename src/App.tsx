@@ -9,13 +9,23 @@ import {
   seedRequests,
 } from "./domain";
 import type { Audience, BoxId, PrayerRequest, Viewer } from "./domain";
-import { BoxArt, CountryFlag, Icon, Modal } from "./ui";
+import { BoxArt, CountryFlag, Icon, Modal, PrayerBoxMark } from "./ui";
 import PrayerComposer from "./components/PrayerComposer";
 import PrayerDetail from "./components/PrayerDetail";
 import AccountPages from "./components/AccountPages";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
 import CareResources from "./components/CareResources";
+import GetHelpPage from "./components/GetHelpPage";
+import DeleteRequests from "./components/DeleteRequests";
+import {
+  formatStoryDate,
+  getStoryPosts,
+  hasPrayedForLatest,
+  publishStoryPost,
+  storyPublicationPlan,
+  withdrawOwnDeliveries,
+} from "./story";
 import {
   CareReviewQueue,
   PrivateSupportNotifications,
@@ -28,6 +38,7 @@ import {
 } from "./care";
 import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
+import "./story-list.css";
 
 type Membership = "none" | "pending" | "invited" | "approved";
 type Scenario = "normal" | "empty" | "loading" | "error" | "denied";
@@ -85,18 +96,16 @@ const cloneFixtures = () =>
 function PrayerCard({
   row,
   onNavigate,
-  testimony = false,
   outsideAudience,
 }: {
   row: PrayerRequest;
   onNavigate: (route: string) => void;
-  testimony?: boolean;
   outsideAudience: Audience;
 }) {
+  const posts = getStoryPosts(row);
+  const latest = posts.at(-1);
   return (
-    <article
-      className={`prayer-card panel ${testimony ? "testimony-card" : ""}`}
-    >
+    <article className="prayer-card panel">
       <div className="card-topline">
         <div className="request-byline">
           <span
@@ -110,28 +119,27 @@ function PrayerCard({
           </span>
           <span>{authorLabel(row)}</span>
         </div>
-        <span className="card-date">{row.createdAt}</span>
+        <span className="card-date">
+          {row.postedAt ? formatStoryDate(row.postedAt) : row.createdAt}
+        </span>
       </div>
-      {testimony && (
-        <p className="eyebrow">
-          <Icon name="sun" size={14} />{" "}
-          {row.testimony?.kind === "update"
-            ? "An unfinished story"
-            : "A little testimony"}
-        </p>
-      )}
       <h3>
-        <button
-          onClick={() =>
-            onNavigate(`${testimony ? "testimony" : "request"}/${row.id}`)
-          }
-        >
+        <button onClick={() => onNavigate(`request/${row.id}`)}>
           {row.topic}
         </button>
       </h3>
-      <p className="card-prayer-text">
-        {testimony ? row.testimony?.text : row.text}
-      </p>
+      <p className="card-prayer-text">{row.text}</p>
+      {latest && (
+        <div className="card-latest-post">
+          <Icon name={latest.kind === "testimony" ? "sun" : "link"} size={15} />
+          <strong>
+            {latest.kind === "testimony" ? "Testimony shared" : "Update shared"}
+          </strong>
+          <time dateTime={latest.createdAt}>
+            {formatStoryDate(latest.createdAt)}
+          </time>
+        </div>
+      )}
       <div className="card-bottom">
         <span className="audience-line">
           <Icon
@@ -142,24 +150,13 @@ function PrayerCard({
         </span>
         <button
           className="text-link"
-          onClick={() =>
-            onNavigate(`${testimony ? "testimony" : "request"}/${row.id}`)
-          }
+          onClick={() => onNavigate(`request/${row.id}`)}
         >
-          {testimony ? "Read the story" : "Read & encourage"}{" "}
+          {latest ? "Read the whole story" : "Read & pray"}{" "}
           <Icon name="arrow" size={16} />
         </button>
       </div>
-      {!testimony && row.testimony && (
-        <button
-          className="card-linked-update"
-          onClick={() => onNavigate(`testimony/${row.id}`)}
-        >
-          <Icon name="link" size={15} />A linked {row.testimony.kind}
-          <Icon name="arrow" size={14} />
-        </button>
-      )}
-      {!testimony && row.media && (
+      {row.media && (
         <p className="media-inline">
           <Icon name={row.media.kind} size={14} />
           {row.media.kind}{" "}
@@ -265,7 +262,7 @@ export default function App() {
     "demo" | "notifications" | "blocked" | "share" | "support" | null
   >(null);
   const [scenario, setScenario] = useState<Scenario>("normal");
-  const [tab, setTab] = useState<"requests" | "testimonies">("requests");
+  const [deleteStory, setDeleteStory] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [resetVersion, setResetVersion] = useState(0);
   const [updateStory, setUpdateStory] = useState<string | null>(null);
@@ -346,7 +343,10 @@ export default function App() {
     noticeTimer.current = setTimeout(() => setNotice(""), 6500);
   }
   function navigate(destination: string) {
-    const target = destination === "box" ? `box/${ownBox}` : destination;
+    const target =
+      destination === "box"
+        ? `box/${ownBox}`
+        : destination.replace(/^testimony\//, "request/");
     setMenuOpen(false);
     setScenario("normal");
     if (window.location.hash.slice(1) === target) {
@@ -374,11 +374,13 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: "instant" });
       mainRef.current?.focus({ preventScroll: true });
     }
-    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
+    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
   }, [route]);
   useEffect(() => {
     setMenuOpen(false);
     setScenario("normal");
+    setDeleteStory(null);
+    setUpdateStory(null);
   }, [viewer]);
 
   function openComposer(recipient: BoxId, initial?: PrayerRequest) {
@@ -504,7 +506,12 @@ export default function App() {
   function commitRequests(rows: PrayerRequest[]) {
     setRequests((previous) => [
       ...previous,
-      ...rows.map(withPlatformAcknowledgment),
+      ...rows.map((row) =>
+        withPlatformAcknowledgment({
+          ...row,
+          postedAt: row.postedAt ?? new Date().toISOString(),
+        }),
+      ),
     ]);
     const offers = rows.filter((row) => hasSupportLanguage(row.text));
     if (offers.length)
@@ -525,6 +532,41 @@ export default function App() {
       });
   }
 
+  function deleteDeliveries(ids: string[]) {
+    const removed = requests.filter(
+      (row) => row.authorId === viewer && ids.includes(row.id),
+    );
+    if (viewer === "guest" || !removed.length) return;
+    const removedIds = removed.map((row) => row.id);
+    setRequests((previous) =>
+      withdrawOwnDeliveries(previous, viewer, removedIds),
+    );
+    setSupportNotes((previous) =>
+      previous.filter((note) => !removedIds.includes(note.requestId)),
+    );
+    setCareConcerns((previous) =>
+      previous.filter((concern) => !removedIds.includes(concern.requestId)),
+    );
+    setHeldStories((previous) =>
+      previous
+        .map((story) => ({
+          ...story,
+          destinations: story.destinations.filter(
+            (id) => !removedIds.includes(id),
+          ),
+        }))
+        .filter((story) => story.destinations.length > 0),
+    );
+    setUpdateDestinations((previous) =>
+      previous.filter((id) => !removedIds.includes(id)),
+    );
+    setDeleteStory(null);
+    navigate("requests");
+    notify(
+      "Selected deliveries and their linked stories were deleted from this fictional session. Unselected prayer boxes keep their separate copies.",
+    );
+  }
+
   function renderBox() {
     const mine =
       box === ownBox &&
@@ -538,8 +580,10 @@ export default function App() {
         r.moderation === "approved" &&
         canRead(r),
     );
-    const displayedRows =
-      tab === "testimonies" ? rows.filter((r) => r.testimony) : rows;
+    const displayedRows = rows.filter(
+      (row) => !hasPrayedForLatest(row, viewer),
+    );
+    const prayedRows = rows.filter((row) => hasPrayedForLatest(row, viewer));
     return (
       <>
         <div className="breadcrumb">
@@ -709,63 +753,11 @@ export default function App() {
                 <Icon name="link" size={18} />
               </button>
             </div>
-            <div
-              className="tabs"
-              role="tablist"
-              aria-label="Prayer box content"
-              onKeyDown={(event) => {
-                if (
-                  event.key === "ArrowRight" ||
-                  event.key === "ArrowLeft" ||
-                  event.key === "Home" ||
-                  event.key === "End"
-                ) {
-                  event.preventDefault();
-                  const next =
-                    event.key === "Home"
-                      ? "requests"
-                      : event.key === "End"
-                        ? "testimonies"
-                        : tab === "requests"
-                          ? "testimonies"
-                          : "requests";
-                  setTab(next);
-                  document.getElementById(`${next}-tab`)?.focus();
-                }
-              }}
-            >
-              <button
-                role="tab"
-                id="requests-tab"
-                tabIndex={tab === "requests" ? 0 : -1}
-                aria-controls="request-list"
-                aria-selected={tab === "requests"}
-                className={`tab ${tab === "requests" ? "active" : ""}`}
-                onClick={() => setTab("requests")}
-              >
-                Prayer requests
-              </button>
-              <button
-                role="tab"
-                id="testimonies-tab"
-                tabIndex={tab === "testimonies" ? 0 : -1}
-                aria-controls="request-list"
-                aria-selected={tab === "testimonies"}
-                className={`tab ${tab === "testimonies" ? "active" : ""}`}
-                onClick={() => setTab("testimonies")}
-              >
-                <Icon name="sun" size={16} />
-                Testimonies & updates
-              </button>
-            </div>
-            <div
-              id="request-list"
-              role="tabpanel"
-              aria-labelledby={
-                tab === "requests" ? "requests-tab" : "testimonies-tab"
-              }
-              className="request-list"
-            >
+            <p className="story-list-intro">
+              One card for each request, with its updates and testimonies linked
+              together inside.
+            </p>
+            <div id="request-list" className="request-list">
               {inaccessible || scenario === "denied" ? (
                 <EmptyState
                   kind="denied"
@@ -787,7 +779,6 @@ export default function App() {
                     row={row}
                     outsideAudience={outsideAudience(row)}
                     onNavigate={navigate}
-                    testimony={tab === "testimonies"}
                   />
                 ))
               ) : (
@@ -798,6 +789,46 @@ export default function App() {
               <Icon name="heart" size={14} />
               Small words, shared with care.
             </p>
+            {!inaccessible && scenario === "normal" && viewer !== "guest" && (
+              <section
+                className="my-prayers-section"
+                aria-labelledby="box-my-prayers-title"
+              >
+                <div className="section-heading">
+                  <h2 id="box-my-prayers-title">
+                    <Icon name="heart" size={20} /> My Prayers
+                  </h2>
+                  <button
+                    className="text-link"
+                    onClick={() => navigate("prayers")}
+                  >
+                    All my prayers <Icon name="arrow" size={16} />
+                  </button>
+                </div>
+                <p className="story-list-intro">
+                  Requests you’ve added a prayer or encouragement to rest here.
+                  A new author update or testimony brings them back above.
+                </p>
+                <div className="request-list">
+                  {prayedRows.length ? (
+                    prayedRows.map((row) => (
+                      <PrayerCard
+                        key={row.id}
+                        row={row}
+                        outsideAudience={outsideAudience(row)}
+                        onNavigate={navigate}
+                      />
+                    ))
+                  ) : (
+                    <p className="my-prayers-empty">
+                      After you add a prayer or encouragement, you can return to
+                      that request here. Opening a request or receiving an
+                      automatic reply does not move it.
+                    </p>
+                  )}
+                </div>
+              </section>
+            )}
           </section>
           <aside className="box-sidebar">
             <div className="side-note butter-wash">
@@ -831,6 +862,19 @@ export default function App() {
               </p>
               <button className="text-link" onClick={() => navigate("about")}>
                 About Prayer Box <Icon name="arrow" size={16} />
+              </button>
+            </div>
+            <div className="side-note help-note">
+              <span className="side-icon">
+                <Icon name="heart" size={23} />
+              </span>
+              <h2>A little help, beyond prayer.</h2>
+              <p>
+                Find therapy, crisis support and ways to talk with someone you
+                trust. You are welcome here.
+              </p>
+              <button className="text-link" onClick={() => navigate("help")}>
+                Get Help <Icon name="arrow" size={16} />
               </button>
             </div>
             <div className="box-link-note">
@@ -871,6 +915,14 @@ export default function App() {
           <button className="button" onClick={() => openComposer("maria")}>
             <Icon name="note" size={18} />A new prayer request
           </button>
+          {own.length > 0 && (
+            <button
+              className="button secondary"
+              onClick={() => setDeleteStory("all")}
+            >
+              Delete requests
+            </button>
+          )}
           <span className="quiet-copy">
             An update can be hopeful, difficult, or still unfinished.
           </span>
@@ -948,6 +1000,12 @@ export default function App() {
                     >
                       Send a separate copy <Icon name="arrow" size={15} />
                     </button>
+                    <button
+                      className="text-link delete-action"
+                      onClick={() => setDeleteStory(source)}
+                    >
+                      Delete request
+                    </button>
                   </div>
                 </article>
               );
@@ -956,6 +1014,69 @@ export default function App() {
         ) : (
           <EmptyState kind="empty" onAction={() => openComposer("maria")} />
         )}
+      </div>
+    );
+  }
+
+  function renderMyPrayers() {
+    if (viewer === "guest")
+      return <EmptyState kind="denied" onAction={() => navigate("signup")} />;
+    const rows = requests.filter(
+      (row) => canRead(row) && hasPrayedForLatest(row, viewer),
+    );
+    return (
+      <div className="my-prayers-page">
+        <header className="page-heading">
+          <p className="eyebrow">
+            <Icon name="heart" size={16} /> Room to keep praying
+          </p>
+          <h1 className="page-title">
+            My Prayers<span className="hero-dot">.</span>
+          </h1>
+          <p className="page-intro">
+            Requests you’ve added a prayer or encouragement to. When the author
+            shares an update or testimony, their request returns to the active
+            list in its prayer box.
+          </p>
+        </header>
+        <div className="page-toolbar">
+          <button
+            className="button secondary"
+            onClick={() => navigate(`box/${ownBox}`)}
+          >
+            Back to my box <Icon name="arrow" size={16} />
+          </button>
+        </div>
+        <div className="request-list">
+          {rows.length ? (
+            rows.map((row) => (
+              <PrayerCard
+                key={row.id}
+                row={row}
+                outsideAudience={outsideAudience(row)}
+                onNavigate={navigate}
+              />
+            ))
+          ) : (
+            <div className="my-prayers-empty">
+              <strong>There’s room to begin.</strong>
+              <p>
+                Add a prayer or encouragement to an accessible request, and it
+                will be here for you to return to.
+              </p>
+              <button
+                className="text-link"
+                onClick={() => navigate("box/maria")}
+              >
+                Visit Maria’s example <Icon name="arrow" size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+        <p className="quiet-copy">
+          Only requests you can still access are shown. Your list does not
+          change anyone else’s prayer box.
+        </p>
       </div>
     );
   }
@@ -971,10 +1092,12 @@ export default function App() {
           <EmptyState kind="denied" onAction={() => navigate("box/grace")} />
         </>
       );
-    const rows = requests.filter(
+    const allRows = requests.filter(
       (r) =>
         r.recipient === "grace" && r.moderation === "approved" && canRead(r),
     );
+    const rows = allRows.filter((row) => !hasPrayedForLatest(row, viewer));
+    const prayedRows = allRows.filter((row) => hasPrayedForLatest(row, viewer));
     const take = (row: PrayerRequest) => {
       if (row.assignedTo) {
         notify(
@@ -1140,19 +1263,53 @@ export default function App() {
           Internal work states are not claims that a person has prayed or that
           God has answered.
         </p>
+        <section
+          className="my-prayers-section"
+          aria-labelledby="inbox-my-prayers-title"
+        >
+          <div className="section-heading">
+            <h2 id="inbox-my-prayers-title">
+              <Icon name="heart" size={20} /> My Prayers
+            </h2>
+            <button className="text-link" onClick={() => navigate("prayers")}>
+              All my prayers <Icon name="arrow" size={16} />
+            </button>
+          </div>
+          <p className="story-list-intro">
+            Your own prayed-for requests rest here until an author update. Other
+            approved members keep their own lists and the same group access.
+          </p>
+          <div className="request-list">
+            {prayedRows.length ? (
+              prayedRows.map((row) => (
+                <PrayerCard
+                  key={row.id}
+                  row={row}
+                  outsideAudience={outsideAudience(row)}
+                  onNavigate={navigate}
+                />
+              ))
+            ) : (
+              <p className="my-prayers-empty">
+                After you add a prayer or encouragement, that request will be
+                here for you.
+              </p>
+            )}
+          </div>
+        </section>
       </>
     );
   }
 
   function renderDetail() {
     const row = requests.find((r) => r.id === resource);
-    if (!row || !canRead(row) || (page === "testimony" && !row.testimony))
+    if (!row || !canRead(row))
       return (
         <EmptyState kind="denied" onAction={() => navigate("box/maria")} />
       );
     return (
       <PrayerDetail
-        key={`${page}-${row.id}`}
+        key={`${row.id}-${viewer}`}
         request={row}
         viewer={viewer}
         groupMember={groupMember}
@@ -1161,7 +1318,11 @@ export default function App() {
         postingRestricted={restricted.includes(viewer)}
         isFriend={viewer === "elena" && friends.includes(row.authorId)}
         reminders={reminders}
-        testimonyOnly={page === "testimony"}
+        onDelete={
+          row.authorId === viewer
+            ? () => setDeleteStory(row.sourceId)
+            : undefined
+        }
         blockedActors={blockedActors}
         onRemindersChange={setReminders}
         onUpdate={(update) =>
@@ -1198,6 +1359,14 @@ export default function App() {
   function renderPage() {
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
+    if (page === "prayers") return renderMyPrayers();
+    if (page === "help")
+      return (
+        <GetHelpPage
+          onSupport={() => setDialog("support")}
+          onNavigate={navigate}
+        />
+      );
     if (page === "request" || page === "testimony") return renderDetail();
     if (page === "inbox") return renderInbox();
     if (isAbout) return <AboutPage onNavigate={navigate} />;
@@ -1424,12 +1593,7 @@ export default function App() {
             className="brand"
             aria-label="Prayer Box, Maria’s example"
           >
-            <img
-              src={`${import.meta.env.BASE_URL}favicon.svg`}
-              width="32"
-              height="32"
-              alt=""
-            />
+            <PrayerBoxMark size={38} />
             Prayer Box<span aria-hidden="true">✦</span>
           </a>
           <nav className="desktop-nav" aria-label="Main navigation">
@@ -1516,6 +1680,9 @@ export default function App() {
                     <a href="#box/grace" onClick={() => setMenuOpen(false)}>
                       Grace Church
                     </a>
+                    <a href="#prayers" onClick={() => setMenuOpen(false)}>
+                      My Prayers
+                    </a>
                     {groupMember && (
                       <a href="#inbox" onClick={() => setMenuOpen(false)}>
                         Shared church inbox
@@ -1537,6 +1704,9 @@ export default function App() {
                     </a>
                     <a href="#about" onClick={() => setMenuOpen(false)}>
                       About Prayer Box
+                    </a>
+                    <a href="#help" onClick={() => setMenuOpen(false)}>
+                      Get Help
                     </a>
                     <button
                       onClick={() => {
@@ -1719,25 +1889,53 @@ export default function App() {
                     <button
                       className="button secondary compact"
                       onClick={() => {
+                        const plan = storyPublicationPlan(
+                          requests,
+                          story.authorId,
+                          story.destinations,
+                          restricted.includes(story.authorId),
+                        );
+                        if (!plan.ready.length) {
+                          notify(
+                            restricted.includes(story.authorId)
+                              ? "This author's posting restriction is still active. The story remains held until that restriction is reviewed."
+                              : "No selected original delivery is currently approved. This story draft remains held; nothing was published.",
+                          );
+                          return;
+                        }
                         setRequests((previous) =>
-                          previous.map((row) =>
-                            story.destinations.includes(row.id)
-                              ? {
-                                  ...row,
-                                  testimony: {
-                                    id: `story-${crypto.randomUUID()}`,
-                                    text: story.text,
-                                    kind: story.kind,
-                                  },
-                                }
-                              : row,
+                          publishStoryPost(
+                            previous,
+                            story.authorId,
+                            plan.ready,
+                            {
+                              text: story.text,
+                              kind: story.kind,
+                              createdAt: new Date().toISOString(),
+                            },
+                            () => `story-${crypto.randomUUID()}`,
                           ),
                         );
                         setHeldStories((previous) =>
-                          previous.filter((item) => item.id !== story.id),
+                          previous.flatMap((item) =>
+                            item.id !== story.id
+                              ? [item]
+                              : plan.held.length
+                                ? [
+                                    {
+                                      ...item,
+                                      destinations: plan.held,
+                                      reason:
+                                        "This draft remains held for the remaining destinations because their original requests are not currently approved. No story was published to those boxes.",
+                                    },
+                                  ]
+                                : [],
+                          ),
                         );
                         notify(
-                          "Story approved in the simulated human-review queue. Its selected delivery audiences remain unchanged.",
+                          plan.held.length
+                            ? "Story approved only for currently eligible deliveries. Its remaining destinations stay in the review queue with the draft preserved."
+                            : "Story approved in the simulated human-review queue. Its selected delivery audiences remain unchanged.",
                         );
                       }}
                     >
@@ -1774,6 +1972,7 @@ export default function App() {
       <footer className="site-footer">
         <div>
           <a href="#home" className="footer-brand">
+            <PrayerBoxMark size={30} />
             Prayer Box
           </a>
           <p>A little space for prayer, encouragement, and hope.</p>
@@ -1781,6 +1980,7 @@ export default function App() {
         <nav aria-label="Footer">
           <a href="#about">About</a>
           <a href="#donations">Donations</a>
+          <a href="#help">Get Help</a>
           <button onClick={() => setDialog("support")}>
             Support resources
           </button>
@@ -1849,6 +2049,18 @@ export default function App() {
           onCommit={commitRequests}
           onNavigate={navigate}
           onSignIn={() => setViewer("elena")}
+        />
+      )}
+      {deleteStory && viewer !== "guest" && (
+        <DeleteRequests
+          key={`${deleteStory}-${viewer}`}
+          requests={requests.filter(
+            (row) =>
+              row.authorId === viewer &&
+              (deleteStory === "all" || row.sourceId === deleteStory),
+          )}
+          onClose={() => setDeleteStory(null)}
+          onDelete={deleteDeliveries}
         />
       )}
       {dialog === "demo" && (
@@ -2046,6 +2258,15 @@ export default function App() {
           <div className="modal-actions">
             <button
               className="button secondary"
+              onClick={() => {
+                setDialog(null);
+                navigate("help");
+              }}
+            >
+              More ways to Get Help
+            </button>
+            <button
+              className="button secondary"
               onClick={() => setDialog(null)}
             >
               Close resources
@@ -2219,20 +2440,32 @@ export default function App() {
                 !updateText.trim()
               }
               onClick={() => {
+                const plan = storyPublicationPlan(
+                  requests,
+                  viewer,
+                  updateDestinations,
+                  restricted.includes(viewer),
+                );
+                if (!plan.ready.length || plan.held.length) {
+                  setUpdateDestinations(plan.ready);
+                  notify(
+                    "The selected delivery or posting permissions have changed. Your draft is still here; review the available destinations before sharing.",
+                  );
+                  return;
+                }
                 const check = screenText(updateText);
                 if (check.state === "approved") {
                   setRequests((previous) =>
-                    previous.map((row) =>
-                      updateDestinations.includes(row.id)
-                        ? {
-                            ...row,
-                            testimony: {
-                              id: `story-${crypto.randomUUID()}`,
-                              text: updateText,
-                              kind: updateKind,
-                            },
-                          }
-                        : row,
+                    publishStoryPost(
+                      previous,
+                      viewer,
+                      updateDestinations,
+                      {
+                        text: updateText,
+                        kind: updateKind,
+                        createdAt: new Date().toISOString(),
+                      },
+                      () => `story-${crypto.randomUUID()}`,
                     ),
                   );
                   notify(

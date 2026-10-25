@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && vite build --base=/prayer-box/",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts"
+    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts"
   },
   "dependencies": {
     "react": "19.3.1",
