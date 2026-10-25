@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { normalizeOrganizationWebsite } from "../organization";
 import { Icon } from "../ui";
+import { useActionFeedback } from "../action-feedback";
 import "../organization-website.css";
 
 export function OrganizationWebsiteLink({
@@ -37,6 +38,7 @@ export function OrganizationWebsiteEditor({
   value: string;
   onSave: (website: string) => void;
 }) {
+  const feedback = useActionFeedback();
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState("");
   const helpId = useId();
@@ -54,9 +56,15 @@ export function OrganizationWebsiteEditor({
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          feedback.prepare();
           const result = normalizeOrganizationWebsite(draft);
           if (!result.valid) {
             setError(result.error);
+            feedback.respond({
+              tone: "error",
+              title: "Please check this website address.",
+              message: result.error,
+            });
             return;
           }
           setError("");

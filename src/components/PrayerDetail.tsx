@@ -4,6 +4,7 @@ import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
 import { PlatformAcknowledgment } from "./CareFlow";
 import { formatStoryDate, getStoryPosts, storyRevision } from "../story";
+import { useActionFeedback } from "../action-feedback";
 import "../story-detail.css";
 
 type Props = {
@@ -50,6 +51,7 @@ export default function PrayerDetail({
   onNotice,
   onDelete,
 }: Props) {
+  const feedback = useActionFeedback();
   const [safety, setSafety] = useState<
     "options" | "report" | "block" | "care" | null
   >(null);
@@ -144,10 +146,17 @@ export default function PrayerDetail({
   }
 
   function sendReply() {
+    feedback.prepare();
     if (postingRestricted) {
       setReplyReview(
         "Posting is restricted after a simulated validated review. A human must review the account appeal before posting resumes.",
       );
+      feedback.respond({
+        tone: "pending",
+        title: "A person needs to review this account first.",
+        message:
+          "Your draft is still here. This example has not been published.",
+      });
       return;
     }
     const result = screenText(reply);
@@ -157,6 +166,15 @@ export default function PrayerDetail({
           ? "The simulated audio prayer is held for transcription and media review. No recording or transcript is visible to recipients yet. You can return to its draft or try text."
           : `${result.reason} Your reply is not published. You can revise it or request human review.`,
       );
+      feedback.respond({
+        tone: "pending",
+        title:
+          replyKind === "audio"
+            ? "Your audio example is awaiting review."
+            : "Your encouragement needs a little review.",
+        message:
+          "This example remains unpublished. Please read the guidance below; your draft is still here.",
+      });
       return;
     }
     onUpdate((row) => ({
@@ -186,6 +204,14 @@ export default function PrayerDetail({
         ? "Your example encouragement was added to this story."
         : "Your prayer or encouragement was added. This request is now in My Prayers until the author shares an update or testimony.",
     );
+    feedback.respond({
+      tone: "success",
+      title: author
+        ? "Your encouragement has been added."
+        : "Thank you for praying for someone in need and serving God’s Kingdom.",
+      message:
+        "Your fictional prayer or encouragement is now in this demo conversation. No message left this browser.",
+    });
   }
 
   return (
@@ -332,6 +358,7 @@ export default function PrayerDetail({
                       <button
                         className="button secondary compact"
                         onClick={() => {
+                          feedback.prepare();
                           appealFocusFor.current = request.id;
                           onUpdate((row) => ({
                             ...row,
@@ -341,6 +368,12 @@ export default function PrayerDetail({
                           onNotice(
                             "Simulated appeal added to the separate human-review queue.",
                           );
+                          feedback.respond({
+                            tone: "pending",
+                            title: "Your demo appeal is awaiting a person.",
+                            message:
+                              "The example remains unpublished. A human review has not happened yet.",
+                          });
                         }}
                       >
                         Appeal for human review
@@ -505,10 +538,17 @@ export default function PrayerDetail({
                     <button
                       className="text-link"
                       onClick={() => {
+                        feedback.prepare();
                         onRemindersChange(false);
                         onNotice(
                           "Prayer-together reminders are off for this demo session.",
                         );
+                        feedback.respond({
+                          tone: "success",
+                          title: "Your reminder preference is updated.",
+                          message:
+                            "Prayer-together reminders are off for this demo session.",
+                        });
                       }}
                     >
                       Turn these reminders off
@@ -797,11 +837,19 @@ export default function PrayerDetail({
                           {!replyReview.startsWith("Your example reply") && (
                             <button
                               className="text-link"
-                              onClick={() =>
+                              onClick={() => {
+                                feedback.prepare();
                                 setReplyReview(
                                   "Your simulated appeal is awaiting manual review. This example remains unpublished. No automated restriction has been removed. Return to the draft to revise it.",
-                                )
-                              }
+                                );
+                                feedback.respond({
+                                  tone: "pending",
+                                  title:
+                                    "Your demo appeal is awaiting a person.",
+                                  message:
+                                    "This example remains unpublished. You can still return to your draft.",
+                                });
+                              }}
                             >
                               Request human review
                             </button>
@@ -941,6 +989,7 @@ export default function PrayerDetail({
                 <button
                   className="button"
                   onClick={() => {
+                    feedback.prepare();
                     onCareConcern();
                     setSafety(null);
                   }}
@@ -993,6 +1042,7 @@ export default function PrayerDetail({
                 <button
                   className="button"
                   onClick={() => {
+                    feedback.prepare();
                     if (safety === "report") onReport(reportReason, target);
                     else onBlock(target);
                     setSafety(null);

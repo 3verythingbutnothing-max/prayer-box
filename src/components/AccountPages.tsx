@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { Viewer } from "../domain";
 import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
 import { PreferenceSwitch } from "../ui";
+import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
 
 type AccountPage = "donations" | "donation-history" | "settings";
 type Privacy = "public" | "friends" | "private";
@@ -192,6 +193,7 @@ function AccountDialog({
           <AccountIcon name="close" />
         </button>
       </div>
+      <div className="modal-feedback-slot" />
       {children}
     </dialog>
   );
@@ -400,6 +402,7 @@ export default function AccountPages({
   organizationWebsite = "",
   onOrganizationWebsiteChange,
 }: AccountPagesProps) {
+  const feedback = useActionFeedback();
   const [example, setExample] = useState(false);
   const [frequency, setFrequency] = useState<"one-time" | "monthly">(
     "one-time",
@@ -481,60 +484,85 @@ export default function AccountPages({
   const rangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
 
   function exportCsv() {
-    const rows: (string | number)[][] = [
-      ["Contribution history — fictional examples, for your records"],
-      [
-        "Issuer",
-        "Prayer Box prototype — entity and tax eligibility not verified",
-      ],
-      ["As of", AS_OF, "Currency", "USD"],
-      [
-        "Date",
-        "Private reference",
-        "Frequency",
-        "Status",
-        "Gross paid USD",
-        "Refund USD",
-        "Net USD",
-      ],
-      ...filteredRecords.map((record) => [
-        record.date,
-        record.reference,
-        record.type,
-        record.status,
-        record.status === "Failed" ? "0.00" : record.amount.toFixed(2),
-        record.refund.toFixed(2),
-        (record.status === "Failed"
-          ? 0
-          : record.amount - record.refund
-        ).toFixed(2),
-      ]),
-      [
-        "Totals",
-        "",
-        "",
-        "",
-        paid.toFixed(2),
-        refunds.toFixed(2),
-        (paid - refunds).toFixed(2),
-      ],
-      [
-        "Not a tax receipt. No real payments were made. Pending/failed payments and future renewals are excluded.",
-      ],
-    ];
-    const blob = new Blob(
-      ["\uFEFF", rows.map((row) => row.map(csvCell).join(",")).join("\r\n")],
-      { type: "text/csv;charset=utf-8;" },
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Prayer-Box-fictional-contributions-${year}.csv`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    onNotice(
-      "Fictional contribution history exported as CSV. This is a personal record, not a tax receipt.",
-    );
+    feedback.prepare();
+    let exportUrl: string | undefined;
+    try {
+      const rows: (string | number)[][] = [
+        ["Contribution history — fictional examples, for your records"],
+        [
+          "Issuer",
+          "Prayer Box prototype — entity and tax eligibility not verified",
+        ],
+        ["As of", AS_OF, "Currency", "USD"],
+        [
+          "Date",
+          "Private reference",
+          "Frequency",
+          "Status",
+          "Gross paid USD",
+          "Refund USD",
+          "Net USD",
+        ],
+        ...filteredRecords.map((record) => [
+          record.date,
+          record.reference,
+          record.type,
+          record.status,
+          record.status === "Failed" ? "0.00" : record.amount.toFixed(2),
+          record.refund.toFixed(2),
+          (record.status === "Failed"
+            ? 0
+            : record.amount - record.refund
+          ).toFixed(2),
+        ]),
+        [
+          "Totals",
+          "",
+          "",
+          "",
+          paid.toFixed(2),
+          refunds.toFixed(2),
+          (paid - refunds).toFixed(2),
+        ],
+        [
+          "Not a tax receipt. No real payments were made. Pending/failed payments and future renewals are excluded.",
+        ],
+      ];
+      const blob = new Blob(
+        ["\uFEFF", rows.map((row) => row.map(csvCell).join(",")).join("\r\n")],
+        { type: "text/csv;charset=utf-8;" },
+      );
+      const url = URL.createObjectURL(blob);
+      exportUrl = url;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Prayer-Box-fictional-contributions-${year}.csv`;
+      link.click();
+      onNotice(
+        "Fictional contribution history exported as CSV. This is a personal record, not a tax receipt.",
+      );
+      feedback.respond({
+        tone: "success",
+        title: "Your fictional contribution record is ready.",
+        message:
+          "The CSV was prepared for download. These are demo records, not a tax receipt.",
+      });
+    } catch {
+      onNotice(
+        "This browser could not prepare the fictional CSV. Your example records are still available.",
+      );
+      feedback.respond({
+        tone: "error",
+        title: "Your demo record could not be prepared.",
+        message:
+          "No file is confirmed. Your example records are still here; you can try again.",
+      });
+    } finally {
+      if (exportUrl) {
+        const url = exportUrl;
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    }
   }
 
   function updateAutomaticDraft() {
@@ -970,12 +998,19 @@ export default function AccountPages({
                     <button
                       className="text-link"
                       onClick={() => {
+                        feedback.prepare();
                         setPlanActive(true);
                         setPlanAmount(10);
                         setPlanNextDay(20);
                         onNotice(
                           "The fictional monthly plan was reset. No subscription was created.",
                         );
+                        feedback.respond({
+                          tone: "info",
+                          title: "Your example monthly plan is reset.",
+                          message:
+                            "No real subscription was created or changed.",
+                        });
                       }}
                     >
                       Reset example plan
@@ -1072,6 +1107,7 @@ export default function AccountPages({
           </header>
           <div className="account-settings-layout">
             <div className="account-settings-main">
+              <FeedbackPreferences />
               {viewer === "owner" && onOrganizationWebsiteChange && (
                 <OrganizationWebsiteEditor
                   key={organizationWebsite}
@@ -1473,7 +1509,17 @@ export default function AccountPages({
                     {automaticStatus === "draft" ? (
                       <button
                         className="button secondary"
-                        onClick={() => setAutomaticStatus("pending")}
+                        onClick={() => {
+                          feedback.prepare();
+                          setAutomaticStatus("pending");
+                          feedback.respond({
+                            tone: "pending",
+                            title:
+                              "Your demo welcome template is awaiting review.",
+                            message:
+                              "It cannot send or be enabled while this example is pending.",
+                          });
+                        }}
                       >
                         Simulate submitting for review
                       </button>
@@ -1481,10 +1527,17 @@ export default function AccountPages({
                       <button
                         className="button secondary"
                         onClick={() => {
+                          feedback.prepare();
                           setAutomaticStatus("approved");
                           onNotice(
                             "Fictional template review is complete. This is not working content screening.",
                           );
+                          feedback.respond({
+                            tone: "success",
+                            title: "Your template review example is complete.",
+                            message:
+                              "Approval was simulated in this browser. No live content screening happened.",
+                          });
                         }}
                       >
                         Simulate review approval
@@ -1496,12 +1549,28 @@ export default function AccountPages({
                       checked={automaticEnabled}
                       disabled={automaticStatus !== "approved"}
                       onChange={(checked) => {
+                        feedback.prepare();
                         setAutomaticEnabled(checked);
                         onAutomaticChange?.(
                           checked,
                           ownedAutomaticBox,
                           template,
                         );
+                        const deliveryModeled =
+                          viewer === "elena" ||
+                          viewer === "maria" ||
+                          viewer === "owner";
+                        feedback.respond({
+                          tone: deliveryModeled ? "success" : "info",
+                          title: deliveryModeled
+                            ? "Your demo welcome preference is updated."
+                            : "Your welcome preference preview is updated.",
+                          message: !deliveryModeled
+                            ? "Only this viewer’s preference preview changed. Their personal box is not modeled; no demo deliveries or other boxes were changed."
+                            : checked
+                              ? "The reviewed example is on for new approved demo deliveries only. No older request receives a message."
+                              : "The optional demo box welcome is off. No external message was sent.",
+                        });
                       }}
                     />
                     <span>
@@ -1560,12 +1629,21 @@ export default function AccountPages({
                       <button
                         className="text-link"
                         onClick={() => {
+                          feedback.prepare();
                           setBlocked((value) => !value);
                           onNotice(
                             blocked
                               ? "Example block cleared. Previously removed requests are not automatically restored."
                               : "The fictional account is blocked in this example.",
                           );
+                          feedback.respond({
+                            tone: "info",
+                            title: blocked
+                              ? "Your example block is cleared."
+                              : "Your example block is in place.",
+                            message:
+                              "This setting changes only the fictional walkthrough.",
+                          });
                         }}
                       >
                         {blocked ? "Unblock example" : "Block example"}
@@ -1681,6 +1759,7 @@ export default function AccountPages({
             <button
               className="button"
               onClick={() => {
+                feedback.prepare();
                 if (frequency === "monthly") {
                   setPlanActive(true);
                   setPlanAmount(amount);
@@ -1690,6 +1769,12 @@ export default function AccountPages({
                 onNotice(
                   `Preview complete: ${money(amount)} USD ${frequency === "monthly" ? "monthly" : "one-time"}. No money was charged and no subscription was created.`,
                 );
+                feedback.respond({
+                  tone: "success",
+                  title: "Thank you for caring for this little space.",
+                  message:
+                    "Your contribution preview is complete. No money was charged and no subscription was created.",
+                });
               }}
             >
               Simulate{" "}
@@ -1722,11 +1807,18 @@ export default function AccountPages({
             <button
               className="button"
               onClick={() => {
+                feedback.prepare();
                 setPlanActive(false);
                 setDialog(null);
                 onNotice(
                   "Example monthly plan canceled effective October 24, 2026. No future example renewals. No real billing was changed.",
                 );
+                feedback.respond({
+                  tone: "success",
+                  title: "Your example monthly plan is canceled.",
+                  message:
+                    "No future demo renewals remain. No real billing or subscription was changed.",
+                });
               }}
             >
               Cancel example plan

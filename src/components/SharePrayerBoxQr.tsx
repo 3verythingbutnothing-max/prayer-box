@@ -3,6 +3,7 @@ import { prayerBoxUrl } from "../domain";
 import type { BoxId } from "../domain";
 import type { createPrayerBoxQr } from "../qr";
 import { Icon, PrayerBoxMark } from "../ui";
+import { useActionFeedback } from "../action-feedback";
 import "../qr-share.css";
 
 type Qr = ReturnType<typeof createPrayerBoxQr>;
@@ -28,11 +29,14 @@ function saveBlob(blob: Blob, filename: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  // Give the browser time to consume the download before releasing its URL.
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    document.body.append(link);
+    link.click();
+  } finally {
+    link.remove();
+    // Give the browser time to consume the download before releasing its URL.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
 
 async function pngFromSvg(svg: Blob, width: number, height: number) {
@@ -75,6 +79,7 @@ export default function SharePrayerBoxQr({
   box: BoxId;
   boxName: string;
 }) {
+  const feedback = useActionFeedback();
   const pageUrl = window.location.href;
   const permalink = prayerBoxUrl(pageUrl, box);
   const [qr, setQr] = useState<Qr | null>(null);
@@ -83,7 +88,17 @@ export default function SharePrayerBoxQr({
   const [exportError, setExportError] = useState("");
   const [copyFeedback, setCopyFeedback] = useState("");
   const svg = useRef<SVGSVGElement>(null);
+  const mounted = useRef(true);
+  const exportingNow = useRef(false);
+  const copyingNow = useRef(false);
   const heading = useId();
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +126,9 @@ export default function SharePrayerBoxQr({
   const printedUrl = new URL(permalink);
 
   async function download(format: "png" | "svg") {
-    if (!svg.current || exporting) return;
+    if (!svg.current || exportingNow.current) return;
+    feedback.prepare();
+    exportingNow.current = true;
     setExportError("");
     setExporting(true);
     try {
@@ -121,13 +138,27 @@ export default function SharePrayerBoxQr({
       });
       const blob =
         format === "png" ? await pngFromSvg(vector, width, height) : vector;
+      if (!mounted.current) return;
       saveBlob(blob, `prayer-box-${box}.${format}`);
+      feedback.respond({
+        tone: "success",
+        title: "Your QR card is ready for sharing.",
+        message: `${format.toUpperCase()} prepared for download. Your browser manages saving the file; nothing was uploaded or shared.`,
+      });
     } catch {
+      if (!mounted.current) return;
       setExportError(
         "We couldn’t prepare that download. Try again, or copy the box link.",
       );
+      feedback.respond({
+        tone: "error",
+        title: "Your QR download could not be prepared.",
+        message:
+          "No file is confirmed. You can try again or copy the box link instead.",
+      });
     } finally {
-      setExporting(false);
+      exportingNow.current = false;
+      if (mounted.current) setExporting(false);
     }
   }
 
@@ -276,13 +307,44 @@ export default function SharePrayerBoxQr({
           <button
             className="text-link"
             onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(permalink);
-                setCopyFeedback("Box link copied.");
-              } catch {
+              if (copyingNow.current) return;
+              feedback.prepare();
+              if (!navigator.clipboard?.writeText) {
                 setCopyFeedback(
                   "Select the box link above to copy it manually.",
                 );
+                feedback.respond({
+                  tone: "info",
+                  title: "Your box link is ready to copy manually.",
+                  message:
+                    "Automatic clipboard copying is unavailable here. Select the normal box link above to copy it.",
+                });
+                return;
+              }
+              copyingNow.current = true;
+              try {
+                await navigator.clipboard.writeText(permalink);
+                if (!mounted.current) return;
+                setCopyFeedback("Box link copied.");
+                feedback.respond({
+                  tone: "success",
+                  title: "Your box link is copied.",
+                  message:
+                    "It is ready to paste wherever you choose. Private requests still need permission.",
+                });
+              } catch {
+                if (!mounted.current) return;
+                setCopyFeedback(
+                  "Select the box link above to copy it manually.",
+                );
+                feedback.respond({
+                  tone: "error",
+                  title: "Please copy the box link manually.",
+                  message:
+                    "Automatic copying was not allowed. Select the normal box link above to copy it instead.",
+                });
+              } finally {
+                copyingNow.current = false;
               }
             }}
           >

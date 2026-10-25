@@ -3,6 +3,7 @@ import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import { Icon, Modal } from "../ui";
 import { normalizeOrganizationWebsite } from "../organization";
+import { useActionFeedback } from "../action-feedback";
 import "../community.css";
 
 type MembershipStatus = "none" | "pending" | "invited" | "approved";
@@ -99,6 +100,7 @@ function AccessNotice({
 }
 
 function ChurchPage(props: CommunityPagesProps) {
+  const feedback = useActionFeedback();
   const [invitation, setInvitation] = useState<
     "pending" | "accepted" | "declined"
   >("pending");
@@ -205,6 +207,7 @@ function ChurchPage(props: CommunityPagesProps) {
                 <button
                   className="button"
                   onClick={() => {
+                    feedback.prepare();
                     props.onFriendsChange([
                       ...new Set([...props.friends, "jordan"]),
                     ]);
@@ -212,6 +215,12 @@ function ChurchPage(props: CommunityPagesProps) {
                     props.onNotice(
                       "Jordan’s fictional friendship invitation was accepted. No invitation was sent.",
                     );
+                    feedback.respond({
+                      tone: "success",
+                      title: "There’s room for prayer together.",
+                      message:
+                        "Jordan’s fictional invitation is accepted. No real invitation was sent.",
+                    });
                   }}
                 >
                   Accept invitation
@@ -220,10 +229,17 @@ function ChurchPage(props: CommunityPagesProps) {
                 <button
                   className="button secondary"
                   onClick={() => {
+                    feedback.prepare();
                     setInvitation("declined");
                     props.onNotice(
                       "The fictional friendship invitation was declined.",
                     );
+                    feedback.respond({
+                      tone: "info",
+                      title: "Your invitation choice is updated.",
+                      message:
+                        "The fictional friendship invitation was declined.",
+                    });
                   }}
                 >
                   Decline
@@ -236,7 +252,15 @@ function ChurchPage(props: CommunityPagesProps) {
               <p>Jordan’s sample invitation was declined.</p>
               <button
                 className="text-link"
-                onClick={() => setInvitation("pending")}
+                onClick={() => {
+                  feedback.prepare();
+                  setInvitation("pending");
+                  feedback.respond({
+                    tone: "info",
+                    title: "The example invitation is reset.",
+                    message: "Nothing was sent to another person.",
+                  });
+                }}
               >
                 Reset fictional invitation
               </button>
@@ -253,12 +277,19 @@ function ChurchPage(props: CommunityPagesProps) {
                   key={person.id}
                   className="text-link"
                   onClick={() => {
+                    feedback.prepare();
                     props.onFriendsChange([
                       ...new Set([...props.friends, person.id]),
                     ]);
                     props.onNotice(
                       `${person.name}’s fictional friendship was restored for this walkthrough.`,
                     );
+                    feedback.respond({
+                      tone: "info",
+                      title: "Your fictional friendship is restored.",
+                      message:
+                        "This resets the walkthrough. Real friendship would require mutual consent.",
+                    });
                   }}
                 >
                   Restore {person.name} demo
@@ -320,6 +351,7 @@ function ChurchPage(props: CommunityPagesProps) {
             <button
               className="button"
               onClick={() => {
+                feedback.prepare();
                 props.onFriendsChange(
                   props.friends.filter((id) => id !== removePerson.id),
                 );
@@ -327,6 +359,12 @@ function ChurchPage(props: CommunityPagesProps) {
                 props.onNotice(
                   `${removePerson.name} was removed from the fictional friend circle.`,
                 );
+                feedback.respond({
+                  tone: "info",
+                  title: "Your fictional circle is updated.",
+                  message:
+                    "The demo friendship was removed. Separate prayer deliveries remain.",
+                });
               }}
             >
               Remove friendship
@@ -345,6 +383,7 @@ function ChurchPage(props: CommunityPagesProps) {
 }
 
 function MembersPage(props: CommunityPagesProps) {
+  const feedback = useActionFeedback();
   const [confirm, setConfirm] = useState<"elena" | "member" | null>(null);
   if (props.viewer !== "owner")
     return (
@@ -403,10 +442,17 @@ function MembersPage(props: CommunityPagesProps) {
                   <button
                     className="button"
                     onClick={() => {
+                      feedback.prepare();
                       props.onMembershipChange("approved");
                       props.onNotice(
                         "Elena is now Approved by Grace Church in this fictional demo. This is not verified identity.",
                       );
+                      feedback.respond({
+                        tone: "success",
+                        title: "The demo application is approved.",
+                        message:
+                          "Elena has fictional Grace Church membership in this session. This is not verified identity.",
+                      });
                     }}
                   >
                     Approve application
@@ -415,10 +461,17 @@ function MembersPage(props: CommunityPagesProps) {
                   <button
                     className="button secondary"
                     onClick={() => {
+                      feedback.prepare();
                       props.onMembershipChange("none");
                       props.onNotice(
                         "Elena’s fictional membership application was declined.",
                       );
+                      feedback.respond({
+                        tone: "info",
+                        title: "Your demo membership decision is recorded.",
+                        message:
+                          "The fictional application was declined; no membership access was granted.",
+                      });
                     }}
                   >
                     Decline
@@ -457,10 +510,17 @@ function MembersPage(props: CommunityPagesProps) {
                   <button
                     className="text-link"
                     onClick={() => {
+                      feedback.prepare();
                       props.onMembershipChange("none");
                       props.onNotice(
                         "The fictional organization invitation was withdrawn.",
                       );
+                      feedback.respond({
+                        tone: "info",
+                        title: "Your example invitation is withdrawn.",
+                        message:
+                          "No real invitation or membership was changed.",
+                      });
                     }}
                   >
                     Withdraw invitation
@@ -479,10 +539,18 @@ function MembersPage(props: CommunityPagesProps) {
                     <button
                       className="button secondary"
                       onClick={() => {
+                        feedback.prepare();
                         props.onMembershipChange("invited");
                         props.onNotice(
                           "A fictional in-app invitation is ready for Elena to accept. Nothing was sent externally.",
                         );
+                        feedback.respond({
+                          tone: "pending",
+                          title:
+                            "Your example invitation is ready for acceptance.",
+                          message:
+                            "No real invitation was sent. Private inbox access stays off until demo acceptance.",
+                        });
                       }}
                     >
                       Invite Elena
@@ -491,10 +559,17 @@ function MembersPage(props: CommunityPagesProps) {
                     <button
                       className="text-link"
                       onClick={() => {
+                        feedback.prepare();
                         props.onMembershipChange("pending");
                         props.onNotice(
                           "A fictional application has been added for the owner-review walkthrough.",
                         );
+                        feedback.respond({
+                          tone: "pending",
+                          title: "A sample application is waiting for review.",
+                          message:
+                            "This fictional example grants no membership access yet.",
+                        });
                       }}
                     >
                       Try a sample application
@@ -544,10 +619,17 @@ function MembersPage(props: CommunityPagesProps) {
                 onClick={() => {
                   if (props.memberActive) setConfirm("member");
                   else {
+                    feedback.prepare();
                     props.onMemberActiveChange(true);
                     props.onNotice(
                       "Samuel’s fictional approved membership was restored.",
                     );
+                    feedback.respond({
+                      tone: "info",
+                      title: "Your fictional membership example is restored.",
+                      message:
+                        "Samuel’s approved role is active again in this demo session.",
+                    });
                   }
                 }}
               >
@@ -560,12 +642,20 @@ function MembersPage(props: CommunityPagesProps) {
                   type="checkbox"
                   checked={props.officialReplyAllowed}
                   onChange={(event) => {
+                    feedback.prepare();
                     props.onOfficialReplyChange(event.target.checked);
                     props.onNotice(
                       event.target.checked
                         ? "Samuel may use the official Grace Church reply identity in this demo."
                         : "Samuel may reply personally with affiliation; official church replies are disabled for him.",
                     );
+                    feedback.respond({
+                      tone: "success",
+                      title: "The demo reply permission is updated.",
+                      message: event.target.checked
+                        ? "Samuel may use Grace Church’s identity in this fictional example. Replies still need review."
+                        : "Samuel keeps personal replies with affiliation; official church replies are off.",
+                    });
                   }}
                 />
                 <span>
@@ -679,6 +769,7 @@ function MembersPage(props: CommunityPagesProps) {
             <button
               className="button"
               onClick={() => {
+                feedback.prepare();
                 if (confirm === "elena") props.onMembershipChange("none");
                 else {
                   props.onMemberActiveChange(false);
@@ -688,6 +779,12 @@ function MembersPage(props: CommunityPagesProps) {
                   "Fictional membership removed. No real access-control system is connected.",
                 );
                 setConfirm(null);
+                feedback.respond({
+                  tone: "info",
+                  title: "The demo membership is removed.",
+                  message:
+                    "Membership access is removed in this example. No real account or access-control system was changed.",
+                });
               }}
             >
               Remove membership
@@ -706,6 +803,7 @@ function MembersPage(props: CommunityPagesProps) {
 }
 
 function SignupPage(props: CommunityPagesProps) {
+  const feedback = useActionFeedback();
   const [kind, setKind] = useState<"individual" | "ministry">("individual");
   const [contacts, setContacts] = useState<"none" | "email" | "phone" | "both">(
     "none",
@@ -717,6 +815,7 @@ function SignupPage(props: CommunityPagesProps) {
   const [website, setWebsite] = useState("");
   const [websiteError, setWebsiteError] = useState("");
   const complete = () => {
+    feedback.prepare();
     if (kind === "ministry") props.onCreateOrganization?.(website);
     props.onViewerChange(kind === "individual" ? "elena" : "owner");
     props.onNotice(
@@ -725,6 +824,12 @@ function SignupPage(props: CommunityPagesProps) {
         : "The fictional ministry setup is complete with its owner. No account was created and nobody was invited.",
     );
     props.onNavigate(kind === "individual" ? "box/mine" : "inbox");
+    feedback.respond({
+      tone: "success",
+      title: "Welcome to your Prayer Box preview!",
+      message:
+        "Your fictional setup is ready to explore. No real account, credentials or invitations were created.",
+    });
   };
   return (
     <div className="community-page community-signup-page">
@@ -746,15 +851,28 @@ function SignupPage(props: CommunityPagesProps) {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
+                feedback.prepare();
                 if (kind === "ministry") {
                   const result = normalizeOrganizationWebsite(website);
                   if (!result.valid) {
                     setWebsiteError(result.error);
+                    feedback.respond({
+                      tone: "error",
+                      title:
+                        "Please check your organization’s website address.",
+                      message: result.error,
+                    });
                     return;
                   }
                   setWebsite(result.url);
                 }
                 setStep("review");
+                feedback.respond({
+                  tone: "info",
+                  title: "Your fictional setup is ready to review.",
+                  message:
+                    "Check your choices before opening the demo. No real account has been created.",
+                });
               }}
             >
               <fieldset className="community-kind-field">
@@ -1118,6 +1236,7 @@ function reviewReason(request: PrayerRequest) {
 }
 
 function ReviewPage(props: CommunityPagesProps) {
+  const feedback = useActionFeedback();
   const [decision, setDecision] = useState<{
     id: string;
     action: "reject" | "revision";
@@ -1154,6 +1273,7 @@ function ReviewPage(props: CommunityPagesProps) {
     (request) => request.id === decision?.id,
   );
   const approve = (id: string) => {
+    feedback.prepare();
     props.onUpdateRequests((rows) =>
       rows.map((request) =>
         request.id === id
@@ -1172,9 +1292,16 @@ function ReviewPage(props: CommunityPagesProps) {
     props.onNotice(
       "A manual approval was simulated. This changes fictional browser state only; no live text or media screening was performed.",
     );
+    feedback.respond({
+      tone: "success",
+      title: "Your demo review is complete.",
+      message:
+        "Approval was simulated in this browser only. No live text or media screening happened.",
+    });
   };
   const finishDecision = () => {
     if (!decision) return;
+    feedback.prepare();
     props.onUpdateRequests((rows) =>
       rows.map((request) =>
         request.id === decision.id
@@ -1187,6 +1314,12 @@ function ReviewPage(props: CommunityPagesProps) {
       `Simulated ${decision.action === "reject" ? "rejection" : "revision request"}: ${reason} The author can revise or appeal; no account was automatically banned.`,
     );
     setDecision(null);
+    feedback.respond({
+      tone: "info",
+      title: "Your demo review decision is recorded.",
+      message:
+        "The example remains unpublished. The author can revise or appeal; no account was automatically banned.",
+    });
   };
   return (
     <div className="community-page">
@@ -1297,7 +1430,10 @@ function ReviewPage(props: CommunityPagesProps) {
                   </button>
                   <button
                     className="text-link"
-                    onClick={() => props.onCareConcern(request.id)}
+                    onClick={() => {
+                      feedback.prepare();
+                      props.onCareConcern(request.id);
+                    }}
                   >
                     This person may need help
                   </button>

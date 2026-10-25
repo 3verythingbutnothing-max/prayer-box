@@ -229,6 +229,7 @@ export function Modal({
           <Icon name="close" />
         </button>
       </header>
+      <div className="modal-feedback-slot" />
       <div className="modal-body">{children}</div>
     </dialog>
   );

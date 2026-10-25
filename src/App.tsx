@@ -21,6 +21,8 @@ import { OrganizationWebsiteLink } from "./components/OrganizationWebsite";
 import { normalizeOrganizationWebsite } from "./organization";
 import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
 import { useAppInstall } from "./app-install";
+import { useActionFeedback } from "./action-feedback";
+import type { FeedbackTone } from "./feedback-cues";
 import {
   formatStoryDate,
   getStoryPosts,
@@ -252,6 +254,7 @@ function EmptyState({
 
 export default function App() {
   const appInstall = useAppInstall();
+  const feedback = useActionFeedback();
   const [route, setRoute] = useState(
     () => window.location.hash.slice(1) || "box/maria",
   );
@@ -305,7 +308,6 @@ export default function App() {
   >(null);
   const [scenario, setScenario] = useState<Scenario>("normal");
   const [deleteStory, setDeleteStory] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
   const [resetVersion, setResetVersion] = useState(0);
   const [updateStory, setUpdateStory] = useState<string | null>(null);
   const [updateKind, setUpdateKind] = useState<"testimony" | "update">(
@@ -318,9 +320,6 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationRead, setNotificationRead] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
   const cleanRoute = route.split("?")[0];
   const [page, resource] = cleanRoute.split("/");
   const isAbout = aboutAnchors.includes(page);
@@ -380,9 +379,15 @@ export default function App() {
   }
 
   function notify(message: string) {
-    clearTimeout(noticeTimer.current);
-    setNotice(message);
-    noticeTimer.current = setTimeout(() => setNotice(""), 6500);
+    feedback.showNotice(message);
+  }
+  function acknowledge(tone: FeedbackTone, title: string, message?: string) {
+    feedback.prepare();
+    feedback.respond({ tone, title, message });
+  }
+  function changeViewer(next: Viewer) {
+    feedback.clear();
+    setViewer(next);
   }
   function navigate(destination: string) {
     const target =
@@ -402,7 +407,6 @@ export default function App() {
     window.addEventListener("hashchange", update);
     return () => {
       window.removeEventListener("hashchange", update);
-      clearTimeout(noticeTimer.current);
     };
   }, []);
   useEffect(() => {
@@ -448,16 +452,22 @@ export default function App() {
   }
   function saveOrganizationWebsite(value: string) {
     if (viewer !== "owner") {
-      notify("Only the organization owner can change its website.");
+      acknowledge(
+        "error",
+        "This link couldn’t be saved.",
+        "Only the organization owner can change its website.",
+      );
       return;
     }
     const result = normalizeOrganizationWebsite(value);
     if (!result.valid) {
-      notify(result.error);
+      acknowledge("error", "Check the website link.", result.error);
       return;
     }
     setOrganizationWebsite(result.url);
-    notify(
+    acknowledge(
+      "success",
+      result.url ? "Organization website saved." : "Website link removed.",
       result.url
         ? "Organization website saved in this demo. It is visible on Grace Church’s public prayer box."
         : "Organization website removed from this demo’s public prayer box.",
@@ -490,7 +500,11 @@ export default function App() {
           state: "open",
         },
       ]);
-    notify(
+    acknowledge(
+      "success",
+      reportReason
+        ? "Thank you for helping keep Prayer Box safe."
+        : "Your box has been updated.",
       reportReason
         ? "Report recorded in the demo. This account’s content has been removed from your affected box or view."
         : "Account blocked in the demo. Its requests and linked material are removed from your affected box or view.",
@@ -507,13 +521,17 @@ export default function App() {
       row &&
       (row.moderation !== "approved" || row.media?.status === "pending");
     if (!row || viewer === "guest" || (!canRead(row) && !isReviewEvidence)) {
-      notify(
+      acknowledge(
+        "error",
+        "This request couldn’t be flagged.",
         "Only an accessible request or assigned review example can be flagged for care.",
       );
       return;
     }
     if (careConcerns.some((concern) => concern.requestId === row.id)) {
-      notify(
+      acknowledge(
+        "info",
+        "Someone has already asked for care.",
         "A care concern is already recorded for this request. No duplicate note was added.",
       );
       return;
@@ -530,14 +548,23 @@ export default function App() {
         status: "new",
       }),
     );
-    notify(
+    acknowledge(
+      "pending",
+      "Thank you for looking out for someone.",
       "A compassionate review was requested in this demo. The request stays in place; no account was blocked, restricted or contacted.",
     );
   }
 
   function sendSupportNote(concernId: string) {
     const concern = careConcerns.find((item) => item.id === concernId);
-    if (viewer !== "operator" || !concern || concern.status !== "new") return;
+    if (viewer !== "operator" || !concern || concern.status !== "new") {
+      acknowledge(
+        "error",
+        "This support note couldn’t be added.",
+        "The review state has changed. Check the current case before trying again.",
+      );
+      return;
+    }
     const sourceId = requests.find(
       (row) => row.id === concern.requestId,
     )?.sourceId;
@@ -567,7 +594,11 @@ export default function App() {
         item.id === concern.id ? { ...item, status: "support-sent" } : item,
       ),
     );
-    notify(
+    acknowledge(
+      existed ? "info" : "success",
+      existed
+        ? "Support has already been offered."
+        : "A little care, offered privately.",
       existed
         ? "Support has already been offered privately for this request. No duplicate reminder was added or reopened."
         : "A private support note was added to the requester's demo notifications. No external message or emergency alert was sent.",
@@ -607,7 +638,14 @@ export default function App() {
     const removed = requests.filter(
       (row) => row.authorId === viewer && ids.includes(row.id),
     );
-    if (viewer === "guest" || !removed.length) return;
+    if (viewer === "guest" || !removed.length) {
+      acknowledge(
+        "error",
+        "Nothing was deleted.",
+        "Only your own selected requests can be removed. Review the current selection and try again.",
+      );
+      return;
+    }
     const removedIds = removed.map((row) => row.id);
     setRequests((previous) =>
       withdrawOwnDeliveries(previous, viewer, removedIds),
@@ -633,7 +671,9 @@ export default function App() {
     );
     setDeleteStory(null);
     navigate("requests");
-    notify(
+    acknowledge(
+      "success",
+      "Selected prayer requests deleted.",
       "Selected deliveries and their linked stories were deleted from this fictional session. Unselected prayer boxes keep their separate copies.",
     );
   }
@@ -789,7 +829,9 @@ export default function App() {
                 className="button compact"
                 onClick={() => {
                   setMembership("approved");
-                  notify(
+                  acknowledge(
+                    "success",
+                    "Invitation accepted.",
                     "Invitation accepted for the fictional account. Group access is now active.",
                   );
                 }}
@@ -804,7 +846,9 @@ export default function App() {
                   if (viewer === "guest") navigate("signup");
                   else {
                     setMembership("pending");
-                    notify(
+                    acknowledge(
+                      "pending",
+                      "Your church approval request is ready.",
                       "Fictional membership request sent to the owner. Access is still pending.",
                     );
                   }
@@ -1182,7 +1226,9 @@ export default function App() {
     const prayedRows = allRows.filter((row) => hasPrayedForLatest(row, viewer));
     const take = (row: PrayerRequest) => {
       if (row.assignedTo) {
-        notify(
+        acknowledge(
+          "info",
+          "This request already has a teammate.",
           `This example is already assigned to ${row.assignedTo}. The owner can explicitly reassign it.`,
         );
         return;
@@ -1194,7 +1240,9 @@ export default function App() {
             : r,
         ),
       );
-      notify(
+      acknowledge(
+        "success",
+        "Thank you for sharing the care.",
         "Request assigned to you in the demo. Every active approved member can still read it.",
       );
     };
@@ -1279,7 +1327,7 @@ export default function App() {
                     Work state
                     <select
                       value={row.workState}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         setRequests((previous) =>
                           previous.map((r) =>
                             r.id === row.id
@@ -1290,8 +1338,13 @@ export default function App() {
                                 }
                               : r,
                           ),
-                        )
-                      }
+                        );
+                        acknowledge(
+                          "info",
+                          "Work state updated.",
+                          "This demo workflow change keeps the same church-wide audience. It is not a claim that someone has prayed.",
+                        );
+                      }}
                     >
                       <option value="new">New</option>
                       <option value="assigned">Assigned</option>
@@ -1318,7 +1371,11 @@ export default function App() {
                                 : r,
                             ),
                           );
-                          notify("Owner reassignment updated in this demo.");
+                          acknowledge(
+                            "success",
+                            "Assignment updated.",
+                            "Owner reassignment updated in this demo. Every approved member keeps the same access.",
+                          );
                         }}
                       >
                         <option value="">Unassigned</option>
@@ -1498,7 +1555,7 @@ export default function App() {
             requests={requests}
             onNavigate={navigate}
             onNotice={notify}
-            onViewerChange={setViewer}
+            onViewerChange={changeViewer}
             onUpdateRequests={(update) =>
               setRequests((previous) =>
                 update(previous).map(withPlatformAcknowledgment),
@@ -1523,13 +1580,18 @@ export default function App() {
             <CareReviewQueue
               concerns={careConcerns}
               onSend={sendSupportNote}
-              onClose={(id) =>
+              onClose={(id) => {
                 setCareConcerns((previous) =>
                   previous.map((item) =>
                     item.id === id ? { ...item, status: "closed" } : item,
                   ),
-                )
-              }
+                );
+                acknowledge(
+                  "info",
+                  "Care review closed.",
+                  "This fictional review was closed without contacting anyone.",
+                );
+              }}
             />
           )}
           {page === "review" && viewer === "operator" && (
@@ -1567,7 +1629,9 @@ export default function App() {
                             setRestricted((previous) => [
                               ...new Set([...previous, report.actorId]),
                             ]);
-                            notify(
+                            acknowledge(
+                              "success",
+                              "Review decision recorded.",
                               "Human-review decision simulated. Account posting is restricted in this local demo.",
                             );
                           }}
@@ -1576,15 +1640,20 @@ export default function App() {
                         </button>
                         <button
                           className="text-link"
-                          onClick={() =>
+                          onClick={() => {
                             setReports((previous) =>
                               previous.map((r) =>
                                 r.id === report.id
                                   ? { ...r, state: "dismissed" }
                                   : r,
                               ),
-                            )
-                          }
+                            );
+                            acknowledge(
+                              "success",
+                              "Report dismissed in this demo.",
+                              "The review decision was recorded for this example.",
+                            );
+                          }}
                         >
                           Dismiss report
                         </button>
@@ -1602,7 +1671,9 @@ export default function App() {
                                   : r,
                               ),
                             );
-                            notify(
+                            acknowledge(
+                              "success",
+                              "Evaluation example marked.",
                               "Marked for a proposed deidentified evaluation set. No model is trained or connected.",
                             );
                           }}
@@ -1862,8 +1933,10 @@ export default function App() {
             <button
               className="text-link"
               onClick={() =>
-                notify(
-                  "A simulated account appeal has been recorded. Restriction remains until a person reviews it.",
+                acknowledge(
+                  "pending",
+                  "Your account appeal is ready for review.",
+                  "Simulation only. Nothing was sent; the restriction remains until a person reviews it.",
                 )
               }
             >
@@ -1988,6 +2061,11 @@ export default function App() {
                                 : item,
                             ),
                           );
+                          acknowledge(
+                            "pending",
+                            "Your story appeal is awaiting review.",
+                            "Demo queue only. Your story remains unpublished while a person reviews it.",
+                          );
                         }}
                       >
                         Appeal for human review
@@ -2022,7 +2100,9 @@ export default function App() {
                           restricted.includes(story.authorId),
                         );
                         if (!plan.ready.length) {
-                          notify(
+                          acknowledge(
+                            "pending",
+                            "This story is still waiting.",
                             restricted.includes(story.authorId)
                               ? "This author's posting restriction is still active. The story remains held until that restriction is reviewed."
                               : "No selected original delivery is currently approved. This story draft remains held; nothing was published.",
@@ -2058,7 +2138,11 @@ export default function App() {
                                 : [],
                           ),
                         );
-                        notify(
+                        acknowledge(
+                          plan.held.length ? "pending" : "success",
+                          plan.held.length
+                            ? "Some story deliveries still need review."
+                            : "Story review completed.",
                           plan.held.length
                             ? "Story approved only for currently eligible deliveries. Its remaining destinations stay in the review queue with the draft preserved."
                             : "Story approved in the simulated human-review queue. Its selected delivery audiences remain unchanged.",
@@ -2082,7 +2166,9 @@ export default function App() {
                               : item,
                           ),
                         );
-                        notify(
+                        acknowledge(
+                          "pending",
+                          "Changes requested.",
                           "Story remains unpublished. The author can read the reason and appeal.",
                         );
                       }}
@@ -2150,19 +2236,6 @@ export default function App() {
           </a>
         ))}
       </nav>
-      {notice && (
-        <div className="toast" role="status">
-          <Icon name="info" size={18} />
-          <span>{notice}</span>
-          <button
-            className="icon-button"
-            aria-label="Dismiss update"
-            onClick={() => setNotice("")}
-          >
-            <Icon name="close" size={16} />
-          </button>
-        </div>
-      )}
       {composer && (
         <PrayerComposer
           key={`${composer.recipient}-${composer.initial?.id ?? "new"}`}
@@ -2176,7 +2249,7 @@ export default function App() {
           onClose={() => setComposer(null)}
           onCommit={commitRequests}
           onNavigate={navigate}
-          onSignIn={() => setViewer("elena")}
+          onSignIn={() => changeViewer("elena")}
         />
       )}
       {deleteStory && viewer !== "guest" && (
@@ -2204,7 +2277,7 @@ export default function App() {
             View as
             <select
               value={viewer}
-              onChange={(event) => setViewer(event.target.value as Viewer)}
+              onChange={(event) => changeViewer(event.target.value as Viewer)}
             >
               <option value="elena">
                 Elena · personal account, not initially a church member
@@ -2274,7 +2347,7 @@ export default function App() {
             <button
               className="button secondary compact"
               onClick={() => {
-                setViewer("operator");
+                changeViewer("operator");
                 navigate("review");
                 setDialog(null);
               }}
@@ -2437,7 +2510,9 @@ export default function App() {
                         (actor) => actor !== id,
                       ),
                     }));
-                    notify(
+                    acknowledge(
+                      "success",
+                      "Personal block removed.",
                       "Personal block removed. Content removed from an owned box is not automatically republished.",
                     );
                   }}
@@ -2543,6 +2618,7 @@ export default function App() {
                 !updateText.trim()
               }
               onClick={() => {
+                feedback.prepare();
                 const plan = storyPublicationPlan(
                   requests,
                   viewer,
@@ -2551,7 +2627,9 @@ export default function App() {
                 );
                 if (!plan.ready.length || plan.held.length) {
                   setUpdateDestinations(plan.ready);
-                  notify(
+                  acknowledge(
+                    "error",
+                    "Check the selected prayer boxes.",
                     "The selected delivery or posting permissions have changed. Your draft is still here; review the available destinations before sharing.",
                   );
                   return;
@@ -2571,7 +2649,11 @@ export default function App() {
                       () => `story-${crypto.randomUUID()}`,
                     ),
                   );
-                  notify(
+                  acknowledge(
+                    "success",
+                    updateKind === "testimony"
+                      ? "Thank you for sharing your testimony!"
+                      : "Your prayer update has been added!",
                     "Fictional linked story added only to the selected deliveries after the demo check.",
                   );
                 } else {
@@ -2588,7 +2670,9 @@ export default function App() {
                       reason: check.reason,
                     },
                   ]);
-                  notify(
+                  acknowledge(
+                    "pending",
+                    "Your story is waiting for review.",
                     "Story held for review in My Requests. It has not been shared with recipients.",
                   );
                 }

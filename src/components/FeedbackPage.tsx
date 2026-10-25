@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Icon } from "../ui";
 import FeedbackBug from "./FeedbackBug";
+import { useActionFeedback } from "../action-feedback";
 import "../feedback.css";
 
 type FeedbackType = "bug" | "feature" | "other";
@@ -32,6 +33,7 @@ async function isSupportedPicture(file: File) {
 }
 
 export default function FeedbackPage() {
+  const feedback = useActionFeedback();
   const [kind, setKind] = useState<FeedbackType>("bug");
   const [message, setMessage] = useState("");
   const [pictures, setPictures] = useState<Picture[]>([]);
@@ -131,14 +133,25 @@ export default function FeedbackPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (checking || preview) return;
+    feedback.prepare();
     if (!message.trim()) {
       setMessageError("Add a few words so we know what you’d like to share.");
       messageRef.current?.focus();
+      feedback.respond({
+        tone: "error",
+        title: "Add a little detail before submitting.",
+        message: "A few words will help explain your bug, idea or question.",
+      });
       return;
     }
     setMessageError("");
     moveFocus.current = true;
     setPreview(true);
+    feedback.respond({
+      tone: "success",
+      title: "Thank you for helping make Prayer Box better!",
+      message: "Demo preview only. Nothing was sent or saved.",
+    });
   }
 
   function edit() {
@@ -211,9 +224,9 @@ export default function FeedbackPage() {
               </span>
               <p className="feedback-eyebrow">Fictional demo</p>
               <h2 ref={previewRef} tabIndex={-1} id={`${ids}-title`}>
-                Your feedback preview is ready.
+                Thank you for helping make Prayer Box better!
               </h2>
-              <p>Thanks for helping care for this little space.</p>
+              <p>Your feedback preview is ready.</p>
               <p className="feedback-demo-note">
                 <Icon name="info" size={17} />
                 <span>

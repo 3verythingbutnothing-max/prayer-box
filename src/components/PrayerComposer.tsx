@@ -5,6 +5,7 @@ import { Icon, Modal } from "../ui";
 import { buildPlatformAcknowledgment, hasSupportLanguage } from "../care";
 import CareResources from "./CareResources";
 import { PlatformAcknowledgment } from "./CareFlow";
+import { useActionFeedback } from "../action-feedback";
 
 type Props = {
   recipient: BoxId;
@@ -68,6 +69,7 @@ export default function PrayerComposer({
   onNavigate,
   onSignIn,
 }: Props) {
+  const feedback = useActionFeedback();
   const [step, setStep] = useState<
     "write" | "support" | "preview" | "checking" | "result"
   >("write");
@@ -87,6 +89,7 @@ export default function PrayerComposer({
   const [acknowledgments, setAcknowledgments] = useState<PrayerRequest[]>([]);
   const [supportShownFor, setSupportShownFor] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const submitting = useRef(false);
   const draftField = useRef<HTMLTextAreaElement>(null);
   const stepHeading = useRef<HTMLHeadingElement>(null);
   const previousStep = useRef(step);
@@ -108,6 +111,9 @@ export default function PrayerComposer({
   const signedIn = viewer !== "guest";
 
   function submit(retryOnly = false) {
+    if (submitting.current) return;
+    feedback.prepare();
+    submitting.current = true;
     setStep("checking");
     const targets = retryOnly
       ? outcomes.filter((o) => o.status === "failed").map((o) => o.recipient)
@@ -199,6 +205,51 @@ export default function PrayerComposer({
           : results,
       );
       setStep("result");
+      submitting.current = false;
+      const sent = results.filter(
+        (outcome) => outcome.status === "sent",
+      ).length;
+      const failed = results.filter(
+        (outcome) => outcome.status === "failed",
+      ).length;
+      if (sent === results.length && sent > 0 && !media) {
+        feedback.respond({
+          tone: "success",
+          title: "Your prayer request has been sent!",
+          message: retryOnly
+            ? "The interrupted demo delivery is now added. Your earlier copy was not sent again. Nothing left this browser."
+            : "Demo confirmation only. Nothing left this browser. Thank you for sharing what’s on your heart.",
+        });
+      } else if (failed === results.length && failed > 0) {
+        feedback.respond({
+          tone: "error",
+          title: "Your demo request was not delivered.",
+          message:
+            "This simulated interruption kept your draft here. You can try the interrupted destination again.",
+        });
+      } else {
+        feedback.respond({
+          tone: "pending",
+          title:
+            failed > 0
+              ? sent > 0
+                ? "Some demo deliveries need another try."
+                : "Your demo request needs review and a retry."
+              : sent > 0 && media
+                ? "Your text is added; your attachment is still under review."
+                : results.some((outcome) => outcome.status === "changes")
+                  ? "A few changes are needed before this request can be shared."
+                  : "Your demo request is awaiting review.",
+          message:
+            failed > 0
+              ? sent > 0
+                ? "Your successful copy is kept. Only the interrupted destination needs a retry. Nothing left this browser."
+                : "One destination was interrupted; the other copy is held for review. No request was delivered."
+              : sent > 0 && media
+                ? "The fictional attachment is unavailable until its own review passes. No actual media or request was sent."
+                : "Please read the review guidance below. This request has not reached its recipient; your draft is still here.",
+        });
+      }
     }, 650);
   }
   const draftId = useRef(crypto.randomUUID());
