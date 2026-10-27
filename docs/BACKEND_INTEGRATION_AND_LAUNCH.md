@@ -37,7 +37,7 @@ The account requirement permits a username and password without requiring an ema
 
 Before selecting a provider, demonstrate username uniqueness and safe normalization, enumeration-resistant sign-in/recovery, password/session protections, optional verified contact methods, and usable single-use recovery codes for people without contacts. Prove atomic consumption of recovery codes, session-epoch invalidation after recovery, session revocation and administrative MFA. Keep the provider's subject mapping internal. Do not put provider tokens in local storage or URLs.
 
-Production sessions use a Secure, HttpOnly, SameSite cookie scoped to the application origin. The local-only session fixture uses an HTTP localhost cookie. Mutation requests require the trusted Origin and a session-bound CSRF token. MFA and a recent authentication event are required for sensitive administrative commands; no browser-supplied role or membership field can grant access.
+Production sessions must use a Secure, HttpOnly, SameSite cookie scoped to the application origin. The local-only session fixture uses an HTTP localhost cookie. Mutation requests require the trusted Origin and a session-bound CSRF token. MFA and a recent authentication event are required for sensitive administrative commands; no browser-supplied role or membership field can grant access.
 
 The checked-in configuration refuses requests to non-loopback hosts while `APP_ENV=local`. There is no development-login endpoint. Creating a public configuration requires deliberate new environment bindings and an identity implementation, not changing a browser toggle.
 
@@ -75,7 +75,7 @@ Care requests remain separate from abuse violations. Mentioning self-harm must o
 
 ## Durable notifications and operational delivery
 
-Workers commit an outbox row in the same D1 transaction as the originating report. A scheduled dispatcher sends only the job ID. Queue delivery may repeat or arrive out of order; the consumer uses durable leases, guarded writes and unique effects. A duplicate must not create duplicate notices or override a completed job. Expired leases can be retried. Exhausted processing attempts and transport failures are visible as durable review cases; operators must monitor and resolve them.
+Workers commit an outbox row in the same D1 transaction as the originating report. A scheduled dispatcher sends only the job ID. Queue delivery may repeat or arrive out of order; the consumer uses durable leases, guarded writes and unique effects. A duplicate must not create duplicate notices or override a completed job. Expired leases can be retried. Exhausted processing attempts and transport dead letters create durable review cases; ordinary send failures retain an outbox error and scheduled retry. Operators must monitor and resolve these failure states.
 
 Notifications are stored privately and rechecked against the current owning resource before display. Deleted resources and inactive recipients do not generate usable notices. Initial notices contain generic receipt/status wording, not prayer text. Email, SMS, web push, external bug trackers and Zapier are not connected. A later integration must have explicit destination consent, sanitized payloads, idempotency and verified real delivery.
 
@@ -100,7 +100,7 @@ Open `http://localhost:8787/`. Browser asset requests to the emulator’s displa
 
 Wrangler does not automatically run scheduled handlers locally. After a synthetic accepted report, trigger the local dispatcher at `http://localhost:8787/cdn-cgi/local/scheduled` to exercise receipt delivery; runtime tests exercise the actual local Queue binding as well. Production dispatch is configured for every five minutes, and latency should be measured before choosing a pilot interval.
 
-`backend:dry-run` validates the bundle without deploying. Every migration is append-only once shared. Never edit an applied migration to fix live data. Separate staging and production D1/R2/Queue bindings, a proper custom application origin, secrets and an approved deployment workflow are future work. The all-zero local database identifier is deliberately not a provisioned resource.
+`backend:dry-run` validates the bundle without deploying. Every migration is append-only once shared. Never edit an applied migration to fix live data. Separate staging and production D1/R2/Queue bindings, a proper custom application origin, secrets and an approved deployment workflow are future work. The placeholder local database identifier is deliberately not a provisioned resource.
 
 The backend GitHub workflow runs type generation/checks, local runtime tests, policy tests, frontend checks and a dry-run bundle. It has read-only repository permissions and no deployment credentials. GitHub Pages continues to build the prototype on main. Backend work is reviewed on a `codex/` branch before merging. Do not commit `.dev.vars`, `.env` files, local databases, token fixtures, uploaded screenshots, founder briefs or private evidence.
 
