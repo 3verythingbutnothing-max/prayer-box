@@ -216,14 +216,6 @@
   font-weight: 500;
   letter-spacing: -2.5px;
 }
-.account-meter-center > span:last-child {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.account-meter-kicker {
-  font-size: 0.6875rem;
-  color: var(--muted);
-}
 .account-funding-caption {
   text-align: center;
   color: var(--plum);
@@ -995,12 +987,6 @@
   }
   .account-meter-center {
     bottom: 6px;
-  }
-  .account-meter-kicker {
-    font-size: 0.625rem;
-  }
-  .account-meter-center > span:last-child {
-    font-size: 0.6875rem;
   }
   .account-contribute {
     padding: 25px 23px;

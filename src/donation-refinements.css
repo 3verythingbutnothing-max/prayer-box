@@ -13,7 +13,15 @@
   inset: auto;
   align-self: end;
   min-width: 0;
-  padding: 20% 24px 0;
+  padding: 0 24px 12%;
+}
+.donation-meter-status {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: break-word;
 }
 .donation-meter .donation-meter-gold-edge,
 .donation-meter .donation-meter-gold,
@@ -214,12 +222,6 @@
   }
   .donation-meter .account-meter-center strong {
     font-size: 2.75rem;
-  }
-  .donation-meter .account-meter-kicker {
-    font-size: 0.5625rem;
-  }
-  .donation-meter .account-meter-center > span:last-child {
-    font-size: 0.625rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

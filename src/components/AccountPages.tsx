@@ -442,17 +442,14 @@ function FundingMeter({ window }: { window: FundingWindow }) {
           )}
         </svg>
         <div className="account-meter-center">
-          <span className="account-meter-kicker">
-            {positiveCost ? "Three-month coverage" : "Three-month hosting need"}
-          </span>
           <strong>{positiveCost ? `${Math.floor(ratio * 100)}%` : "$0"}</strong>
-          <span>
-            {positiveCost
-              ? `${money(window.remainingCents / 100)} USD still needed`
-              : "No hosting costs this month."}
-          </span>
         </div>
       </div>
+      <figcaption className="donation-meter-status">
+        {positiveCost
+          ? `${money(window.remainingCents / 100)} USD still needed`
+          : "Our hosting cost has been met this month"}
+      </figcaption>
     </figure>
   );
 }
