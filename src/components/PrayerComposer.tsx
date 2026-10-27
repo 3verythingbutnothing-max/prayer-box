@@ -348,7 +348,7 @@ export default function PrayerComposer({
           : step === "result"
             ? "Your delivery update"
             : initial
-              ? "Send a separate copy"
+              ? "Add to another prayer box"
               : "Leave a prayer request"
       }
       onClose={() => {

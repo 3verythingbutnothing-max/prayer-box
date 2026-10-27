@@ -278,6 +278,25 @@ test("care concerns deduplicate by request, without turning reports into votes o
   );
 });
 
+test("care concerns allow a later update or closed-case follow-up without duplicate active cases", () => {
+  const original: CareConcern = {
+    id: "original-case", requestId: "delivery", authorId: "daniel",
+    title: "A new beginning", evidence: "Original request.", anonymous: false,
+    reportedBy: "elena", status: "new",
+  };
+  const update: CareConcern = { ...original, id: "update-case", postId: "update-1", evidence: "New update context." };
+  const both = addCareConcern([original], update);
+  assert.equal(both.length, 2);
+  assert.equal(both[1].evidence, "New update context.");
+  assert.strictEqual(addCareConcern(both, { ...update, id: "repeat", reportedBy: "member" }), both);
+  const supported = [{ ...update, status: "support-sent" as const }];
+  assert.strictEqual(addCareConcern(supported, { ...update, id: "repeat-supported" }), supported);
+  const closed = [{ ...update, status: "closed" as const }];
+  assert.equal(addCareConcern(closed, { ...update, id: "new-followup" }).length, 2);
+  assert.equal(addCareConcern(both, { ...update, id: "another-post", postId: "update-2" }).length, 3);
+  assert.equal(addCareConcern(both, { ...update, id: "another-delivery", requestId: "different-delivery" }).length, 3);
+});
+
 test("support notes stay strictly with their signed-in recipient, never a group or safety role", () => {
   const notes: SupportNote[] = [
     {

@@ -19,6 +19,26 @@ export function getStoryPosts(request: PrayerRequest): PrayerPost[] {
   });
 }
 
+/** Resolve only the selected post/reply in this delivery, without falling back. */
+export function storyReportEvidence(
+  request: PrayerRequest,
+  actorId: string,
+  replyId?: string,
+  postId?: string,
+): string | null {
+  const scope = postId === "original" ? undefined : postId;
+  const post = scope ? getStoryPosts(request).find((item) => item.id === scope) : undefined;
+  if (scope && !post) return null;
+  if (replyId) {
+    const matches = request.replies.filter((reply) => reply.id === replyId);
+    const reply = matches[0];
+    return matches.length === 1 && !reply.automatic && reply.actorId === actorId && reply.testimonyId === scope
+      ? reply.text
+      : null;
+  }
+  return actorId === request.authorId ? (post?.text ?? request.text) : null;
+}
+
 export function formatStoryDate(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())

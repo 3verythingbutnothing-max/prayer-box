@@ -519,6 +519,31 @@
   margin-bottom: 25px;
   padding: 15px 0 1px;
 }
+/* Signup keeps provider details in Preview options, away from the form. */
+.community-signup-bot-check {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 19px;
+  background: #edf3f8;
+  border: 1px solid #d3dfe9;
+  border-radius: 14px;
+  color: #344f65;
+}
+.community-signup-bot-check > svg {
+  flex-shrink: 0;
+}
+.community-signup-bot-check strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.community-signup-bot-check p {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+}
+.community-signup-language {
+  max-width: 100%;
+}
 .community-full-button {
   width: 100%;
   display: flex;

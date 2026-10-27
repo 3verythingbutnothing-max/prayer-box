@@ -14,6 +14,9 @@
 .request-search-field { display: flex; gap: 11px; align-items: center; padding: 0 14px; border: 1px solid var(--control-line); border-radius: 12px; background: #fffdfa; color: var(--navy); min-width: 0; }
 .request-search-field input { flex: 1; min-width: 0; width: 100%; padding: 13px 0; border: 0; background: transparent; color: var(--ink); font-size: .85rem; }
 .own-request-date { display: block; font-size: .7rem; color: var(--muted); margin: -4px 0 18px; }
+.my-requests-page .own-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 12px 24px; }
+.my-requests-page .own-actions > button { min-width: 0; max-width: 100%; min-height: 44px; margin: 0; white-space: normal; }
+.my-requests-page .own-actions > .text-link { font-size: .75rem; line-height: 1.5; padding-block: 8px; }
 .story-notifications { display: grid; gap: 18px; margin: 22px 0; }
 .story-notification { border: 1px solid #d5cee2; border-radius: 15px; background: #f7f2ff; padding: 23px; }
 .story-notification h3 { margin-bottom: 9px; font-size: 1.1rem; }
@@ -28,4 +31,5 @@
 .church-directory-card .text-link { flex-shrink: 0; }
 @media(max-width:900px) { .desktop-nav { gap: 10px; } .desktop-nav a { gap: 6px; font-size: .75rem; padding-inline: 8px; } }
 @media(max-width:650px) { .my-requests-page .page-toolbar { grid-template-columns: minmax(0,1fr); } .story-notification { padding: 19px; } .church-directory-card { flex-wrap: wrap; } .church-directory-card .text-link { margin-left: 43px; } }
+@media(max-width:600px) { .my-requests-page .own-actions { flex-direction: column; align-items: stretch; gap: 12px; } .my-requests-page .own-actions > button { justify-content: center; text-align: center; } }
 @media(max-width:360px) { .brand > span[aria-hidden] { display: none; } .header-inner { gap: 6px; } .header-utilities { gap: 3px; } .account-trigger { gap: 3px; } .demo-preview-bar { gap: 8px; } .demo-preview-bar > a, .demo-preview-bar button { font-size: .6rem; } }

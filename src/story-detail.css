@@ -86,6 +86,51 @@
 .story-original > .request-byline {
   row-gap: 2px;
 }
+.story-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px 16px;
+  margin-bottom: 17px;
+}
+.story-card-author {
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 360px) {
+  .story-card-author > .avatar {
+    display: none;
+  }
+}
+.story-card-author > span:last-child {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.story-card-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.story-card-utilities > .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.story-card-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  font-size: 0.8125rem;
+}
 .story-author-actions {
   display: flex;
   flex-wrap: wrap;
@@ -308,25 +353,28 @@
   padding-top: 12px;
   margin-top: 2px;
 }
-.story-conversation .replies {
+.story-prayers-feed .replies {
   margin-block: 16px 26px;
 }
-.story-conversation .reply-heading {
+.story-prayers-feed .reply-heading {
   flex-wrap: wrap;
   gap: 8px 12px;
 }
-.story-conversation .reply-heading .icon-button {
+.story-prayers-feed .reply-heading .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 0 0 auto;
   flex-shrink: 0;
 }
 .story-reply-thread {
   min-width: 0;
 }
-.story-conversation .reply-note {
+.story-prayers-feed .reply-note {
   overflow-wrap: anywhere;
   padding: 20px;
   margin-block: 12px;
 }
-.story-conversation .story-nested-reply {
+.story-prayers-feed .story-nested-reply {
   margin-left: 18px;
   border-left: 3px solid #b6cbd9;
   background: #f0f6fa;
@@ -362,16 +410,74 @@
 .story-private-agreement {
   line-height: 1.8;
 }
+.story-prayers-feed h3 {
+  font-size: 1.375rem;
+  line-height: 1.4;
+  margin: 8px 0 16px;
+}
+.story-feed-post,
+.story-feed-original p {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.story-feed-post {
+  padding: 17px 20px;
+  border-left: 3px solid #b8a1d0;
+  border-radius: 8px;
+  background: #f5f0fb;
+}
+.story-feed-original {
+  margin-bottom: 22px;
+}
+.story-feed-original summary {
+  color: var(--plum);
+  line-height: 1.8;
+  cursor: pointer;
+}
+.story-feed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.story-safety-context {
+  padding: 14px 17px;
+  border: 1px solid #d8cde4;
+  border-radius: 10px;
+  background: #f5f0fb;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.story-safety-context > span {
+  display: block;
+  color: var(--ink);
+}
 @media (max-width: 600px) {
-  .story-conversation .reply-note {
+  .story-prayers-feed .reply-note {
     padding: 16px;
   }
-  .story-conversation .story-nested-reply {
+  .story-prayers-feed .story-nested-reply {
     margin-left: 10px;
   }
   .story-reply-actions {
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+  }
+  .story-card-heading {
+    gap: 4px 10px;
+    margin-bottom: 14px;
+  }
+  .story-card-utilities .story-date-link {
+    font-size: 0.8125rem;
+  }
+  .story-feed-actions > .button {
+    width: 100%;
+    white-space: normal;
   }
 }

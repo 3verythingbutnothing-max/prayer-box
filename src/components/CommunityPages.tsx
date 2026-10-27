@@ -5,7 +5,6 @@ import { Icon, Modal } from "../ui";
 import { normalizeOrganizationWebsite } from "../organization";
 import { useActionFeedback } from "../action-feedback";
 import {
-  biblePreference,
   resolveUiLanguage,
   supportedLanguages,
   uiText,
@@ -833,8 +832,6 @@ function SignupPage(props: CommunityPagesProps) {
   );
   const [privacy, setPrivacy] = useState<Audience>("private");
   const [step, setStep] = useState<"details" | "review">("details");
-  const [challenge, setChallenge] = useState(false);
-  const [showCodes, setShowCodes] = useState(false);
   const [website, setWebsite] = useState("");
   const [websiteError, setWebsiteError] = useState("");
   const reviewHeading = useRef<HTMLHeadingElement>(null);
@@ -855,15 +852,15 @@ function SignupPage(props: CommunityPagesProps) {
     props.onViewerChange(kind === "individual" ? "elena" : "owner");
     props.onNotice(
       kind === "individual"
-        ? "Elena’s fictional setup is complete. No account, credentials, contact details, or recovery codes were created."
-        : "The fictional ministry setup is complete with its owner. No account was created and nobody was invited.",
+        ? "Your personal Prayer Box preview is ready."
+        : "Your organization’s Prayer Box preview is ready.",
     );
     props.onNavigate(kind === "individual" ? "box/mine" : "inbox");
     feedback.respond({
       tone: "success",
       title: "Welcome to your Prayer Box preview!",
       message:
-        "Your fictional setup is ready to explore. No real account, credentials or invitations were created.",
+        "Your Prayer Box preview is ready to explore.",
     });
   };
   return (
@@ -877,8 +874,8 @@ function SignupPage(props: CommunityPagesProps) {
         }
       >
         {step === "details"
-          ? "Explore signup using fictional details. Asking for prayer is always free, and you can begin without an email address or phone number."
-          : "Review the fictional setup before opening the demo. These choices do not create a real account or contact anyone."}
+          ? "Asking for prayer is always free. You can begin without an email address or phone number."
+          : "Review your choices and make a little space for prayer."}
       </Heading>
       <div className="community-signup-layout">
         <section className="panel community-signup-form">
@@ -905,9 +902,9 @@ function SignupPage(props: CommunityPagesProps) {
                 setStep("review");
                 feedback.respond({
                   tone: "info",
-                  title: "Your fictional setup is ready to review.",
+                  title: "Your Prayer Box is ready to review.",
                   message:
-                    "Check your choices before opening the demo. No real account has been created.",
+                    "Check your choices before continuing to your Prayer Box preview.",
                 });
               }}
             >
@@ -948,17 +945,12 @@ function SignupPage(props: CommunityPagesProps) {
                   </label>
                 </div>
               </fieldset>
-              <p className="community-fixture-notice">
-                <Icon name="lock" size={16} />
-                Identity details are read-only. Please use only fictional
-                information in this demo.
-              </p>
               <div className="community-field-grid">
                 <label className="field">
                   Username
                   <input
                     readOnly
-                    value={kind === "individual" ? "elena_demo" : "owner_demo"}
+                    value={kind === "individual" ? "elena" : "church-owner"}
                     autoComplete="off"
                   />
                 </label>
@@ -975,17 +967,12 @@ function SignupPage(props: CommunityPagesProps) {
                 Password
                 <input
                   readOnly
-                  value="Demo only — no password collected"
-                  type="text"
+                  value="prayer-box-preview"
+                  type="password"
                   autoComplete="off"
                 />
               </label>
-              <p className="community-field-help">
-                Production signup will use an approved username-only
-                authentication and recovery system. This prototype creates
-                neither.
-              </p>
-              <div className="community-field-grid">
+              <div className="community-signup-language">
                 <label className="field">
                   {uiText("languageLabel", props.language)}
                   <select
@@ -1004,35 +991,20 @@ function SignupPage(props: CommunityPagesProps) {
                     ))}
                   </select>
                 </label>
-                <label className="field">
-                  {uiText("editionLabel", props.language)}
-                  <select
-                    value={biblePreference.id}
-                    onChange={() => {}}
-                    aria-describedby="signup-bible-help"
-                  >
-                    <option value={biblePreference.id}>
-                      {biblePreference.name} ({biblePreference.id})
-                    </option>
-                  </select>
-                </label>
               </div>
               <p className="community-field-help" id="signup-language-help">
                 {uiText("languageHelp", props.language)}
-              </p>
-              <p className="community-field-help" id="signup-bible-help">
-                {uiText("editionHelp", props.language)}
               </p>
               {kind === "ministry" && (
                 <div className="community-ministry-fields">
                   <h2>Your separate organization box</h2>
                   <label className="field">
                     Organization name
-                    <input readOnly value="Grace Church · fictional example" />
+                    <input readOnly value="Grace Church" />
                   </label>
                   <label className="field">
                     Organization link
-                    <input readOnly value="/ministry/grace-church-demo" />
+                    <input readOnly value="/ministry/grace-church" />
                   </label>
                   <label className="field">
                     Organization website{" "}
@@ -1059,8 +1031,7 @@ function SignupPage(props: CommunityPagesProps) {
                     id="organization-signup-website-help"
                   >
                     Your website link will appear on your organization’s public
-                    prayer box. Leave it blank if you do not have one. Use
-                    example.org for a fictional preview.
+                    prayer box. Leave it blank if you do not have one.
                   </p>
                   {websiteError && (
                     <p className="organization-website-error" role="alert">
@@ -1068,8 +1039,8 @@ function SignupPage(props: CommunityPagesProps) {
                     </p>
                   )}
                   <p className="community-field-help">
-                    You can start with the owner alone. Invitations are optional
-                    and are never sent as part of this demo.
+                    You can start with the owner alone and invite prayer
+                    warriors when you’re ready.
                   </p>
                 </div>
               )}
@@ -1094,7 +1065,7 @@ function SignupPage(props: CommunityPagesProps) {
                 <summary>Optional contact & recovery</summary>
                 <div className="community-details-body">
                   <label className="field">
-                    Choose fictional contact examples
+                    Contact preference
                     <select
                       value={contacts}
                       onChange={(event) =>
@@ -1102,27 +1073,27 @@ function SignupPage(props: CommunityPagesProps) {
                       }
                     >
                       <option value="none">No email or phone</option>
-                      <option value="email">Example email only</option>
-                      <option value="phone">Example phone only</option>
-                      <option value="both">Example email and phone</option>
+                      <option value="email">Email only</option>
+                      <option value="phone">Phone only</option>
+                      <option value="both">Email and phone</option>
                     </select>
                   </label>
                   {(contacts === "email" || contacts === "both") && (
                     <label className="field">
-                      Email example · unverified
+                      Email · unverified
                       <input readOnly value="elena@example.invalid" />
                     </label>
                   )}
                   {(contacts === "phone" || contacts === "both") && (
                     <label className="field">
-                      Phone example · unverified
+                      Phone · unverified
                       <input readOnly value="+1 (202) 555-0104" />
                     </label>
                   )}
                   <p>
-                    Contact is optional. Verification and alert consent would be
-                    separate choices. No email, SMS, or marketing is enabled
-                    here.
+                    Contact details stay private. Verification and permission
+                    to send alerts are separate choices. Marketing is optional
+                    and off by default.
                   </p>
                   <p>
                     Without a verified contact method, recovery codes are
@@ -1143,25 +1114,15 @@ function SignupPage(props: CommunityPagesProps) {
                   </p>
                 </div>
               </div>
-              <div className="community-challenge">
-                <label className="community-check">
-                  <input
-                    type="checkbox"
-                    checked={challenge}
-                    onChange={(event) => setChallenge(event.target.checked)}
-                  />
-                  <span>
-                    Simulate a bot check
-                    <small>
-                      {challenge
-                        ? "Demo interaction complete. No CAPTCHA token or bot protection exists."
-                        : "A production challenge needs server validation and an accessible fallback. This is only a visual example."}
-                    </small>
-                  </span>
-                </label>
+              <div className="community-challenge community-signup-bot-check">
+                <Icon name="shield" size={22} />
+                <div>
+                  <strong>Bot check</strong>
+                  <p>A little care to keep this space welcoming.</p>
+                </div>
               </div>
               <button className="button community-full-button" type="submit">
-                Review fictional setup
+                Review your Prayer Box
                 <Icon name="arrow-right" size={18} />
               </button>
             </form>
@@ -1193,7 +1154,7 @@ function SignupPage(props: CommunityPagesProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt>Visibility example</dt>
+                  <dt>Visibility</dt>
                   <dd>
                     {privacy === "private"
                       ? "Private"
@@ -1203,7 +1164,7 @@ function SignupPage(props: CommunityPagesProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt>Contact examples</dt>
+                  <dt>Contact preference</dt>
                   <dd>
                     {contacts === "none"
                       ? "None required"
@@ -1218,45 +1179,24 @@ function SignupPage(props: CommunityPagesProps) {
                   <dt>Interface language</dt>
                   <dd>English</dd>
                 </div>
-                <div>
-                  <dt>Bible edition</dt>
-                  <dd>{biblePreference.id} · reading links</dd>
-                </div>
               </dl>
               <section className="community-recovery">
                 <h3>Keep a way back.</h3>
                 <p>
-                  Recovery codes would help you return without email or phone.
-                  These sample codes do not work and should never be used as
-                  credentials.
+                  Without a verified email or phone number, keep your recovery
+                  codes somewhere safe. Losing both your password and codes can
+                  prevent account recovery.
                 </p>
-                <button
-                  className="text-link"
-                  onClick={() => setShowCodes(!showCodes)}
-                  aria-expanded={showCodes}
-                  aria-controls="demo-recovery-codes"
-                >
-                  {showCodes ? "Hide" : "View"} example recovery codes
-                </button>
-                {showCodes && (
-                  <div
-                    className="community-recovery-codes"
-                    id="demo-recovery-codes"
-                  >
-                    <code>DEMO-ONLY-CODE-ONE</code>
-                    <code>DEMO-ONLY-CODE-TWO</code>
-                  </div>
-                )}
               </section>
               {kind === "ministry" && (
                 <p className="community-field-help">
-                  The owner can begin alone. This action does not invite anyone,
-                  establish real organization authority, or approve members.
+                  Your organization can begin with its owner. Prayer warriors
+                  join through an invitation or an approved application.
                 </p>
               )}
               <div className="community-actions">
                 <button className="button" onClick={complete}>
-                  Open the fictional demo
+                  Open your Prayer Box preview
                   <Icon name="arrow-right" size={17} />
                 </button>
                 <button
@@ -1291,14 +1231,6 @@ function SignupPage(props: CommunityPagesProps) {
               <Icon name="arrow-right" size={16} />
             </button>
           </section>
-          <div className="community-distinction">
-            <Icon name="shield" size={18} />
-            <p>
-              Fictional setup only. No real accounts, credentials, contact
-              verification, bot protection, recovery codes, or delivery are
-              created.
-            </p>
-          </div>
         </aside>
       </div>
     </div>

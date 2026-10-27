@@ -9,6 +9,7 @@ import {
   publishStoryPost,
   storyRevision,
   storyPublicationPlan,
+  storyReportEvidence,
   withdrawOwnDeliveries,
 } from "./story.ts";
 
@@ -35,6 +36,31 @@ const publication = {
   kind: "update" as const,
   createdAt: "2026-10-25T09:00:00Z",
 };
+
+test("safety evidence uses the exact selected original, update or reply", () => {
+  const row = example({
+    posts: [{ ...publication, id: "update-1" }],
+    replies: [
+      { id: "original-reply", name: "Elena", actorId: "elena", text: "Reply to original." },
+      { id: "update-reply", name: "Maria", actorId: "maria", text: "Reply to update.", testimonyId: "update-1" },
+    ],
+  });
+  assert.equal(storyReportEvidence(row, "elena"), row.text);
+  assert.equal(storyReportEvidence(row, "elena", undefined, "update-1"), publication.text);
+  assert.equal(storyReportEvidence(row, "elena", "original-reply"), "Reply to original.");
+  assert.equal(storyReportEvidence(row, "maria", "update-reply", "update-1"), "Reply to update.");
+});
+
+test("safety evidence rejects missing, mismatched, automatic or duplicate replies", () => {
+  const reply = { id: "reply", name: "Maria", actorId: "maria", text: "Private update reply.", testimonyId: "update-1" };
+  const row = example({ posts: [{ ...publication, id: "update-1" }], replies: [reply] });
+  assert.equal(storyReportEvidence(row, "elena", undefined, "another-delivery-post"), null);
+  assert.equal(storyReportEvidence(row, "maria", "reply"), null);
+  assert.equal(storyReportEvidence(row, "elena", "reply", "update-1"), null);
+  assert.equal(storyReportEvidence(row, "maria", "missing", "update-1"), null);
+  assert.equal(storyReportEvidence({ ...row, replies: [{ ...reply, automatic: true }] }, "maria", "reply", "update-1"), null);
+  assert.equal(storyReportEvidence({ ...row, replies: [reply, reply] }, "maria", "reply", "update-1"), null);
+});
 
 test("multiple dated posts retain the original, earlier testimony and scoped conversations", () => {
   const original = example({

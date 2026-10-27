@@ -190,6 +190,8 @@ export function canSeePlatformAcknowledgment(
 export interface CareConcern {
   id: string;
   requestId: string;
+  /** Exact story post; absent for the original request. */
+  postId?: string;
   authorId: string;
   title: string;
   evidence: string;
@@ -206,12 +208,16 @@ export interface SupportNote {
   requestId: string;
 }
 
-/** Repeated reports never become multiple concerns or votes against an author. */
+/** Dedupe active concerns on the same post, while allowing later care needs. */
 export function addCareConcern(
   existing: CareConcern[],
   next: CareConcern,
 ): CareConcern[] {
-  return existing.some((concern) => concern.requestId === next.requestId)
+  return existing.some((concern) =>
+    concern.requestId === next.requestId &&
+    concern.postId === next.postId &&
+    concern.status !== "closed",
+  )
     ? existing
     : [...existing, next];
 }

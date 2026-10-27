@@ -33,6 +33,7 @@ import {
   hasPrayedForLatest,
   publishStoryPost,
   storyPublicationPlan,
+  storyReportEvidence,
   withdrawOwnDeliveries,
 } from "./story";
 import {
@@ -558,7 +559,7 @@ export default function App() {
     );
   }
 
-  function raiseCareConcern(requestId: string) {
+  function raiseCareConcern(requestId: string, postId?: string) {
     const row = requests.find((request) => request.id === requestId);
     const isReviewEvidence =
       viewer === "operator" &&
@@ -572,11 +573,16 @@ export default function App() {
       );
       return;
     }
-    if (careConcerns.some((concern) => concern.requestId === row.id)) {
+    const evidence = storyReportEvidence(row, row.authorId, undefined, postId);
+    if (evidence === null) {
+      acknowledge("error", "This update is no longer available.", "Reopen the story before requesting care.");
+      return;
+    }
+    if (careConcerns.some((concern) => concern.requestId === row.id && concern.postId === postId && concern.status !== "closed")) {
       acknowledge(
         "info",
         "Someone has already asked for care.",
-        "A care concern is already recorded for this request. No duplicate note was added.",
+        "A care concern is already recorded for this part of the story. No duplicate case was added.",
       );
       return;
     }
@@ -584,9 +590,10 @@ export default function App() {
       addCareConcern(previous, {
         id: crypto.randomUUID(),
         requestId: row.id,
+        postId,
         authorId: row.authorId,
         title: row.topic,
-        evidence: row.text,
+        evidence,
         anonymous: row.anonymous,
         reportedBy: viewer,
         status: "new",
@@ -1151,7 +1158,7 @@ export default function App() {
                             {copy.moderation === "approved"
                               ? copy.media?.status === "pending"
                                 ? "Text delivered · media held"
-                                : "Delivered in demo"
+                                : "Delivered"
                               : copy.moderation === "appeal"
                                 ? "Appeal awaiting human review"
                                 : copy.moderation === "changes"
@@ -1183,7 +1190,7 @@ export default function App() {
                         className="text-link"
                         onClick={() => openComposer(copyTarget, first)}
                       >
-                        Send a separate copy <Icon name="arrow" size={15} />
+                        Add to another prayer box <Icon name="arrow" size={15} />
                       </button>
                     )}
                     <button
@@ -1551,16 +1558,16 @@ export default function App() {
           )
         }
         onNavigate={navigate}
-        onReport={(reason, actor, replyId) => {
-          const reply = row.replies.find((r) => r.actorId === actor && (!replyId || r.id === replyId));
-          if (replyId && !reply) {
-            notify("That reply is no longer available. Please reopen the story.");
+        onReport={(reason, actor, replyId, postId) => {
+          const evidence = storyReportEvidence(row, actor, replyId, postId);
+          if (evidence === null) {
+            notify("That post or reply is no longer available. Please reopen the story.");
             return;
           }
-          removeActor(actor, reason, replyId ? reply!.text : actor === row.authorId ? row.text : (reply?.text ?? "Reported reply fixture"));
+          removeActor(actor, reason, evidence);
         }}
         onBlock={(actor) => removeActor(actor)}
-        onCareConcern={() => raiseCareConcern(row.id)}
+        onCareConcern={(postId) => raiseCareConcern(row.id, postId)}
         onSupport={() => setDialog("support")}
         onReuse={() => {
           if (row.authorId !== viewer) {
@@ -2420,7 +2427,7 @@ export default function App() {
           <p className="quiet-copy">
             Confirmed: church-approved access, sender-chosen separate
             deliveries, anonymous identity protection, and a Trinitarian
-            foundation. English and NIV selection are confirmed. Still
+            foundation. English and NIV reading links are confirmed. Still
             unresolved: exact editorial wording, NIV quotation rights, native
             widget packaging, future-member history, retention, block/group
             semantics, moderation operations, providers and donation surplus
