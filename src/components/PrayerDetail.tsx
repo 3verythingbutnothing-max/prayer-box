@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
-import type { Audience, PrayerRequest, Viewer } from "../domain";
+import type { Audience, PrayerRequest, Reply, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
 import { PlatformAcknowledgment } from "./CareFlow";
 import { formatStoryDate, getStoryPosts, storyRevision } from "../story";
 import { useActionFeedback } from "../action-feedback";
+import { scopedStoryReplies } from "../story-replies";
 import "../story-detail.css";
 
 type Props = {
@@ -17,11 +19,12 @@ type Props = {
   isFriend: boolean;
   reminders: boolean;
   testimonyOnly?: boolean;
+  focusedPostId?: string;
   blockedActors: string[];
   onRemindersChange: (enabled: boolean) => void;
   onUpdate: (update: (row: PrayerRequest) => PrayerRequest) => void;
   onNavigate: (route: string) => void;
-  onReport: (reason: string, actorId: string) => void;
+  onReport: (reason: string, actorId: string, replyId?: string) => void;
   onBlock: (actorId: string) => void;
   onCareConcern: () => void;
   onSupport: () => void;
@@ -40,6 +43,7 @@ export default function PrayerDetail({
   isFriend,
   reminders,
   blockedActors,
+  focusedPostId,
   onRemindersChange,
   onUpdate,
   onNavigate,
@@ -57,6 +61,7 @@ export default function PrayerDetail({
   >(null);
   const [reportReason, setReportReason] = useState("Scam or request for money");
   const [target, setTarget] = useState(request.authorId);
+  const [targetReplyId, setTargetReplyId] = useState<string | undefined>();
   const [friendDismissed, setFriendDismissed] = useState(false);
   const [reply, setReply] = useState(
     "Father, please give peace for today and wisdom for the next step. Help us trust you, through Jesus Christ, with the help of the Holy Spirit. Amen.",
@@ -69,7 +74,15 @@ export default function PrayerDetail({
   const [replyReview, setReplyReview] = useState("");
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [previewPlaying, setPreviewPlaying] = useState(false);
-  const [replyPostId, setReplyPostId] = useState("original");
+  const [replyPostId, setReplyPostId] = useState(() =>
+    focusedPostId === "original" ||
+    getStoryPosts(request).some((post) => post.id === focusedPostId)
+      ? focusedPostId!
+      : (getStoryPosts(request).at(-1)?.id ?? "original"),
+  );
+  const [showPrayers, setShowPrayers] = useState(false);
+  const [parentReplyId, setParentReplyId] = useState<string | null>(null);
+  const replyField = useRef<HTMLTextAreaElement>(null);
   const appealStatus = useRef<HTMLElement>(null);
   const appealFocusFor = useRef<string | null>(null);
   useEffect(() => {
@@ -103,13 +116,40 @@ export default function PrayerDetail({
     ? `${selectedPost.kind === "testimony" ? "Testimony" : "Update"} · ${formatStoryDate(selectedPost.createdAt)}`
     : `Original request · ${formatStoryDate(originalDate)}`;
   useEffect(() => {
-    setReplyPostId("original");
+    const currentPosts =
+      request.moderation === "approved" ? getStoryPosts(request) : [];
+    setReplyPostId(
+      focusedPostId === "original" ||
+      currentPosts.some((post) => post.id === focusedPostId)
+        ? focusedPostId!
+        : (currentPosts.at(-1)?.id ?? "original"),
+    );
+    setShowPrayers(false);
+    setParentReplyId(null);
     setFriendDismissed(false);
     setTarget(request.authorId);
+    setTargetReplyId(undefined);
     setReplyReview("");
     setRecording("idle");
     setPreviewPlaying(false);
-  }, [request.id, request.authorId]);
+  }, [request.id, request.authorId, focusedPostId, request.moderation]);
+  useEffect(() => {
+    if (!focusedPostId || held) return;
+    const validPost =
+      focusedPostId === "original" ||
+      getStoryPosts(request).some((post) => post.id === focusedPostId);
+    if (!validPost) return;
+    const section = document.getElementById(
+      focusedPostId === "original"
+        ? "story-original"
+        : `story-post-${encodeURIComponent(focusedPostId)}`,
+    );
+    section?.focus({ preventScroll: true });
+    section?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [request.id, focusedPostId, held]);
+  useEffect(() => {
+    if (parentReplyId && replyKind === "text") replyField.current?.focus();
+  }, [parentReplyId, replyKind]);
   const memberName =
     viewer === "owner"
       ? "Church owner"
@@ -119,7 +159,9 @@ export default function PrayerDetail({
           ? "Maria"
           : viewer === "operator"
             ? "Safety reviewer"
-            : "Elena";
+            : viewer === "team"
+              ? "Prayer Box team"
+              : "Elena";
   const personalByline =
     groupMember && organization
       ? `${memberName} · Grace Church prayer community`
@@ -130,7 +172,11 @@ export default function PrayerDetail({
   const postAnchor = (id: string) => `story-post-${encodeURIComponent(id)}`;
   const storyHref = `#request/${request.id}`;
   function jumpToSection(id: string, scope?: string) {
-    if (scope) setReplyPostId(scope);
+    if (scope) {
+      setReplyPostId(scope);
+      setParentReplyId(null);
+      setReplyReview("");
+    }
     const section = document.getElementById(id);
     section?.focus({ preventScroll: true });
     section?.scrollIntoView({
@@ -145,8 +191,153 @@ export default function PrayerDetail({
     return Number.isNaN(Date.parse(value)) ? undefined : value;
   }
 
+  const scopedReplies = scopedStoryReplies(
+    request.replies,
+    selectedPost?.id,
+    blockedActors,
+    author ||
+      (request.recipient === "mine" && viewer === "elena") ||
+      (request.recipient === "maria" && viewer === "maria") ||
+      (request.recipient === "prayerbox" && viewer === "team") ||
+      (organization && groupMember),
+  );
+  const parentReply = scopedReplies.find(
+    (row) => row.id === parentReplyId && !row.automatic,
+  );
+  const conversationRoots = scopedReplies.filter((row) => !row.parentReplyId);
+
+  function showConversation(scope: string) {
+    setShowPrayers(true);
+    jumpToSection("story-encouragement", scope);
+  }
+
+  function agreeWithReply(row: Reply) {
+    feedback.prepare();
+    if (viewer === "guest" || postingRestricted || held || row.automatic) return;
+    const alreadyAgreed = row.agreedBy?.includes(viewer) ?? false;
+    onUpdate((current) => ({
+      ...current,
+      replies: current.replies.map((item) =>
+        item.id === row.id && item.testimonyId === selectedPost?.id
+          ? {
+              ...item,
+              agreedBy: alreadyAgreed
+                ? item.agreedBy?.filter((actor) => actor !== viewer)
+                : [...new Set([...(item.agreedBy ?? []), viewer])],
+            }
+          : item,
+      ),
+    }));
+    feedback.respond({
+      tone: "success",
+      title: alreadyAgreed
+        ? "Your agreement was removed."
+        : "Amen. Your agreement is saved.",
+      message:
+        "Only your own selection is shown, with no public count. This stays in the browser demo.",
+    });
+  }
+
+  function renderReply(row: Reply, nested = false) {
+    return (
+      <article
+        className={`reply-note ${row.automatic ? "automatic" : ""} ${nested ? "story-nested-reply" : ""}`}
+        key={row.id}
+      >
+        <div className="reply-heading">
+          <strong>{row.name}</strong>
+          {row.automatic ? (
+            <span className="chip">Automatic box welcome</span>
+          ) : row.official ? (
+            <span className="chip">Organization reply</span>
+          ) : null}
+          {!row.automatic && (
+            <span className="story-reply-date">
+              {row.postedAt ? (
+                <time dateTime={machineDate(row.postedAt)}>
+                  {formatStoryDate(row.postedAt)}
+                </time>
+              ) : (
+                "Earlier encouragement"
+              )}
+            </span>
+          )}
+          {!row.automatic && row.actorId && row.actorId !== viewer && (
+            <button
+              className="icon-button"
+              aria-label={`Report or block reply from ${row.name}`}
+              onClick={() => {
+                setTarget(row.actorId!);
+                setTargetReplyId(row.id);
+                setSafety("report");
+              }}
+            >
+              <Icon name="more" size={18} />
+            </button>
+          )}
+        </div>
+        <p>{row.text}</p>
+        {row.automatic ? (
+          <small>
+            An automatic welcome. This does not mean someone has read, prayed,
+            or taken this request.
+          </small>
+        ) : viewer !== "guest" ? (
+          <div className="story-reply-actions">
+            <button
+              className="text-link"
+              aria-pressed={row.agreedBy?.includes(viewer) ?? false}
+              disabled={postingRestricted}
+              onClick={() => agreeWithReply(row)}
+            >
+              <Icon name="heart" size={17} />
+              {row.agreedBy?.includes(viewer) ? "Amen · agreed" : "Amen / I agree"}
+            </button>
+            <button
+              className="text-link"
+              disabled={postingRestricted}
+              onClick={() => {
+                setParentReplyId(row.id);
+                setReplyKind("text");
+                setReplyReview("");
+                replyField.current?.focus();
+              }}
+            >
+              Reply to {row.name}<Icon name="arrow" size={16} />
+            </button>
+          </div>
+        ) : null}
+      </article>
+    );
+  }
+
+  function renderReplyThread(row: Reply, nested = false): ReactNode {
+    return (
+      <div className="story-reply-thread" key={row.id}>
+        {renderReply(row, nested)}
+        {scopedReplies
+          .filter((child) => child.parentReplyId === row.id)
+          .map((child) => renderReplyThread(child, true))}
+      </div>
+    );
+  }
+
   function sendReply() {
     feedback.prepare();
+    if (viewer === "guest" || held || !reply.trim()) return;
+    if (parentReplyId && !parentReply) {
+      setParentReplyId(null);
+      setReplyReview(
+        "That encouragement is no longer available in this conversation. Your draft is still here; choose another reply or respond to the story post.",
+      );
+      feedback.respond({
+        tone: "pending",
+        title: "Please choose where your reply belongs.",
+        message:
+          "The previous reply is no longer available. Your draft has not been sent.",
+      });
+      return;
+    }
     if (postingRestricted) {
       setReplyReview(
         "Posting is restricted after a simulated validated review. A human must review the account appeal before posting resumes.",
@@ -184,6 +375,7 @@ export default function PrayerDetail({
         {
           id: `reply-${crypto.randomUUID()}`,
           testimonyId: selectedPost?.id,
+          parentReplyId: parentReply?.id,
           actorId: viewer,
           postedAt: new Date().toISOString(),
           storyRevision: storyRevision(row),
@@ -196,6 +388,8 @@ export default function PrayerDetail({
         },
       ],
     }));
+    setShowPrayers(true);
+    setParentReplyId(null);
     setReplyReview(
       "Your example reply was added to this conversation after the demo check. No message was sent outside this browser.",
     );
@@ -287,6 +481,7 @@ export default function PrayerDetail({
                   aria-label="Request safety and care options"
                   onClick={() => {
                     setTarget(request.authorId);
+                    setTargetReplyId(undefined);
                     setSafety("options");
                   }}
                 >
@@ -429,6 +624,14 @@ export default function PrayerDetail({
                 this recipient.
               </p>
             )}
+            {!held && (
+              <button
+                className="button secondary story-read-prayers"
+                onClick={() => showConversation("original")}
+              >
+                <Icon name="people" size={18} /> Read prayers &amp; encouragement
+              </button>
+            )}
             {author && onDelete && (
               <div className="story-author-actions">
                 <button className="text-link story-delete" onClick={onDelete}>
@@ -476,9 +679,7 @@ export default function PrayerDetail({
                     </a>
                   </div>
                   <h2 id={`${postAnchor(post.id)}-title`}>
-                    {post.kind === "testimony"
-                      ? "A little testimony"
-                      : "The story continues"}
+                    {request.topic}
                   </h2>
                   <p className="story-post-byline">
                     From {authorLabel(request)} · Same delivery and audience
@@ -502,8 +703,14 @@ export default function PrayerDetail({
                         jumpToSection("story-encouragement", post.id)
                       }
                     >
-                      Pray for this {post.kind}
-                      <Icon name="heart" size={15} />
+                      Respond to this {post.kind}
+                      <Icon name="heart" size={17} />
+                    </button>
+                    <button
+                      className="text-link story-read-prayers"
+                      onClick={() => showConversation(post.id)}
+                    >
+                      <Icon name="people" size={18} /> Read prayers &amp; encouragement
                     </button>
                   </div>
                 </article>
@@ -512,49 +719,6 @@ export default function PrayerDetail({
           )}
           {!held && (
             <>
-              {isFriend &&
-                !request.anonymous &&
-                !author &&
-                reminders &&
-                !friendDismissed && (
-                  <aside className="friend-reminder">
-                    <button
-                      className="icon-button"
-                      aria-label="Dismiss the prayer-together reminder"
-                      onClick={() => setFriendDismissed(true)}
-                    >
-                      <Icon name="close" size={17} />
-                    </button>
-                    <span className="eyebrow">
-                      <Icon name="people" size={15} /> A little encouragement
-                    </span>
-                    <h2>There’s room for prayer beyond the screen.</h2>
-                    <p>
-                      When it’s possible and welcomed, consider praying with
-                      your friend in person. Ask before laying a hand on their
-                      shoulder. Pray in Jesus’ name with gentleness, respect,
-                      and trust in God’s will.
-                    </p>
-                    <button
-                      className="text-link"
-                      onClick={() => {
-                        feedback.prepare();
-                        onRemindersChange(false);
-                        onNotice(
-                          "Prayer-together reminders are off for this demo session.",
-                        );
-                        feedback.respond({
-                          tone: "success",
-                          title: "Your reminder preference is updated.",
-                          message:
-                            "Prayer-together reminders are off for this demo session.",
-                        });
-                      }}
-                    >
-                      Turn these reminders off
-                    </button>
-                  </aside>
-                )}
               <section
                 className="conversation panel story-conversation"
                 id="story-encouragement"
@@ -576,6 +740,7 @@ export default function PrayerDetail({
                     value={selectedScope}
                     onChange={(event) => {
                       setReplyPostId(event.target.value);
+                      setParentReplyId(null);
                       setReplyReview("");
                     }}
                   >
@@ -594,75 +759,35 @@ export default function PrayerDetail({
                   <Icon name="link" size={14} />
                   {selectedLabel}
                 </p>
-                <div className="replies">
-                  {selectedScope === "original" && (
-                    <PlatformAcknowledgment request={request} viewer={viewer} />
-                  )}
-                  {request.replies
-                    .filter((r) =>
-                      selectedPost
-                        ? r.testimonyId === selectedPost.id
-                        : !r.testimonyId,
-                    )
-                    .filter(
-                      (r) => !r.actorId || !blockedActors.includes(r.actorId),
-                    )
-                    .filter(
-                      (r) =>
-                        !r.automatic ||
-                        author ||
-                        (request.recipient === "mine" && viewer === "elena") ||
-                        (request.recipient === "maria" && viewer === "maria") ||
-                        (organization && groupMember),
-                    )
-                    .map((r) => (
-                      <div
-                        className={`reply-note ${r.automatic ? "automatic" : ""}`}
-                        key={r.id}
-                      >
-                        <div className="reply-heading">
-                          <strong>{r.name}</strong>
-                          {r.automatic ? (
-                            <span className="chip">Automatic box welcome</span>
-                          ) : r.official ? (
-                            <span className="chip">Organization reply</span>
-                          ) : null}
-                          {!r.automatic && (
-                            <span className="story-reply-date">
-                              {r.postedAt ? (
-                                <time dateTime={machineDate(r.postedAt)}>
-                                  {formatStoryDate(r.postedAt)}
-                                </time>
-                              ) : (
-                                "Earlier encouragement"
-                              )}
-                            </span>
-                          )}
-                          {!r.automatic &&
-                            r.actorId &&
-                            r.actorId !== viewer && (
-                              <button
-                                className="icon-button"
-                                aria-label={`Report or block reply from ${r.name}`}
-                                onClick={() => {
-                                  setTarget(r.actorId!);
-                                  setSafety("report");
-                                }}
-                              >
-                                <Icon name="more" size={16} />
-                              </button>
-                            )}
-                        </div>
-                        <p>{r.text}</p>
-                        {r.automatic && (
-                          <small>
-                            An automatic welcome. This does not mean someone has
-                            read, prayed, or taken this request.
-                          </small>
-                        )}
-                      </div>
-                    ))}
-                </div>
+                <button
+                  className="text-link story-conversation-toggle"
+                  aria-expanded={showPrayers}
+                  aria-controls="story-prayer-replies"
+                  onClick={() => setShowPrayers((value) => !value)}
+                >
+                  <Icon name="people" size={18} />
+                  {showPrayers
+                    ? "Hide prayers & encouragement"
+                    : "Read prayers & encouragement"}
+                </button>
+                {showPrayers && (
+                  <div className="replies" id="story-prayer-replies">
+                    {selectedScope === "original" && (
+                      <PlatformAcknowledgment request={request} viewer={viewer} />
+                    )}
+                    {conversationRoots.length === 0 && (
+                      <p className="story-empty-prayers">
+                        There is room for a first prayer or word of encouragement
+                        for this {selectedPost?.kind ?? "request"}.
+                      </p>
+                    )}
+                    {conversationRoots.map((row) => renderReplyThread(row))}
+                    <p className="quiet-copy story-private-agreement">
+                      Your Amen selection has no public count. Replies stay in
+                      this delivery and this part of the story.
+                    </p>
+                  </div>
+                )}
                 {viewer === "guest" ? (
                   <div className="guest-reply">
                     <Icon name="lock" />
@@ -679,6 +804,16 @@ export default function PrayerDetail({
                   </div>
                 ) : (
                   <div className="reply-composer">
+                    {parentReply && (
+                      <div className="story-replying-to" role="status">
+                        <span>
+                          Replying to {parentReply.name} on this {selectedPost?.kind ?? "request"}
+                        </span>
+                        <button className="text-link" onClick={() => setParentReplyId(null)}>
+                          Cancel reply
+                        </button>
+                      </div>
+                    )}
                     <label className="field">
                       Reply as
                       <select
@@ -726,6 +861,7 @@ export default function PrayerDetail({
                       <label className="field">
                         <span className="sr-only">Fictional encouragement</span>
                         <textarea
+                          ref={replyField}
                           rows={4}
                           value={reply}
                           maxLength={5000}
@@ -826,7 +962,7 @@ export default function PrayerDetail({
                     >
                       {replyKind === "audio"
                         ? "Submit example for review"
-                        : "Leave encouragement"}{" "}
+                        : parentReply ? "Send reply" : "Leave encouragement"}{" "}
                       <Icon name="arrow" size={17} />
                     </button>
                     {replyReview && (
@@ -860,6 +996,49 @@ export default function PrayerDetail({
                   </div>
                 )}
               </section>
+              {isFriend &&
+                !request.anonymous &&
+                !author &&
+                reminders &&
+                !friendDismissed && (
+                  <aside className="friend-reminder">
+                    <button
+                      className="icon-button"
+                      aria-label="Dismiss the prayer-together reminder"
+                      onClick={() => setFriendDismissed(true)}
+                    >
+                      <Icon name="close" size={17} />
+                    </button>
+                    <span className="eyebrow">
+                      <Icon name="people" size={15} /> A little encouragement
+                    </span>
+                    <h2>There’s room for prayer beyond the screen.</h2>
+                    <p>
+                      When it’s possible and welcomed, consider praying with
+                      your friend in person. Ask before laying a hand on their
+                      shoulder. Pray in Jesus’ name with gentleness, respect,
+                      and trust in God’s will.
+                    </p>
+                    <button
+                      className="text-link"
+                      onClick={() => {
+                        feedback.prepare();
+                        onRemindersChange(false);
+                        onNotice(
+                          "Prayer-together reminders are off for this demo session.",
+                        );
+                        feedback.respond({
+                          tone: "success",
+                          title: "Your reminder preference is updated.",
+                          message:
+                            "Prayer-together reminders are off for this demo session.",
+                        });
+                      }}
+                    >
+                      Turn these reminders off
+                    </button>
+                  </aside>
+                )}
             </>
           )}
         </div>
@@ -874,7 +1053,9 @@ export default function PrayerDetail({
             <p>
               {organization
                 ? "All active approved Grace Church members can read this organization delivery. Assignment does not narrow that audience."
-                : `This request belongs to ${request.recipient === "mine" ? "Elena" : "Maria"}’s personal box. A church association does not give anyone access to it.`}
+                : request.recipient === "prayerbox"
+                  ? "This delivery goes to the Prayer Box team. It stays separate from any copies you send to individuals or your church."
+                  : `This request belongs to ${request.recipient === "mine" ? "Elena" : request.recipient === "daniel" ? "Daniel" : request.recipient === "jordan" ? "Jordan" : "Maria"}’s personal box. A church association does not give anyone access to it.`}
             </p>
             {organization && (
               <p className="quiet-copy">
@@ -888,8 +1069,9 @@ export default function PrayerDetail({
             <Icon name="sun" size={23} />
             <h2>You can bring your own heart to God.</h2>
             <p>
-              You do not need impressive words, or a large audience. The prayers
-              of others can accompany your own prayer life.
+              Let the prayers of others accompany your own relationship with God.
+              We encourage you to pursue a personal relationship with Him through
+              prayer and reading your Bible to hear God’s word.
             </p>
             <button
               className="text-link"
@@ -1043,7 +1225,7 @@ export default function PrayerDetail({
                   className="button"
                   onClick={() => {
                     feedback.prepare();
-                    if (safety === "report") onReport(reportReason, target);
+                    if (safety === "report") onReport(reportReason, target, targetReplyId);
                     else onBlock(target);
                     setSafety(null);
                   }}

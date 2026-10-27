@@ -12,22 +12,13 @@ import type { BoxId } from "./domain.ts";
 function decodeModules(
   qr: ReturnType<typeof createPrayerBoxQr>,
   scale: number,
-  badge: "none" | "filled" | "checker" = "none",
 ): string {
   const width = (qr.size + qr.quietZone * 2) * scale;
   const pixels = new Uint8ClampedArray(width * width * 4);
   pixels.fill(255); // Opaque white pixels, including the complete quiet zone.
   for (let row = 0; row < qr.size; row += 1) {
     for (let column = 0; column < qr.size; column += 1) {
-      const inBadge =
-        row >= qr.logo.row &&
-        row < qr.logo.row + qr.logo.size &&
-        column >= qr.logo.column &&
-        column < qr.logo.column + qr.logo.size;
-      const dark =
-        inBadge && badge !== "none"
-          ? badge === "filled" || (row + column) % 2 === 0
-          : qr.data[row * qr.size + column];
+      const dark = qr.data[row * qr.size + column];
       if (!dark) continue;
       for (let y = 0; y < scale; y += 1) {
         for (let x = 0; x < scale; x += 1) {
@@ -53,7 +44,7 @@ function decodeModules(
   return decoded.data;
 }
 
-const boxes: BoxId[] = ["maria", "mine", "grace"];
+const boxes: BoxId[] = ["maria", "mine", "grace", "prayerbox", "daniel", "jordan"];
 const locations = [
   {
     label: "GitHub Pages project path",
@@ -69,7 +60,7 @@ const locations = [
   },
 ];
 
-const brandedPages = [
+const variedPages = [
   "https://3verythingbutnothing-max.github.io/prayer-box/?private=omit#request/old",
   "http://127.0.0.1:4173/prayer-box/?private=omit#request/old",
   "https://example.org/祈り/?private=omit#request/old",
@@ -77,27 +68,19 @@ const brandedPages = [
 ];
 
 for (const box of boxes) {
-  test(`small and phone-sized branded QR area independently decodes for ${box}`, () => {
-    for (const page of brandedPages) {
+  test(`small and phone-sized clear QR code independently decodes for ${box}`, () => {
+    for (const page of variedPages) {
       const qr = createPrayerBoxQr(page, box);
       for (const scale of [2, 3, 4]) {
-        // Conservative occlusion probes fill more of the reserved logo badge
-        // than the actual light pastel mark. Actual SVG/PNG pixels are also QA'd.
-        for (const badge of ["none", "filled", "checker"] as const) {
-          assert.equal(
-            decodeModules(qr, scale, badge),
-            qr.url,
-            `${page} / ${scale}× / ${badge}`,
-          );
-        }
+        assert.equal(decodeModules(qr, scale), qr.url, `${page} / ${scale}×`);
       }
     }
   });
 }
 
-test("the central logo cutout preserves all functional modules plus a one-module buffer", () => {
+test("clear QR symbols preserve every encoded data and functional module", () => {
   const pages = [
-    ...brandedPages,
+    ...variedPages,
     `https://example.org/${"sample/".repeat(65)}`,
   ];
   const versions = new Set<number>();
@@ -108,33 +91,10 @@ test("the central logo cutout preserves all functional modules plus a one-module
       versions.add(raw.version);
       assert.equal(qr.errorCorrectionLevel, "H");
       assert.equal(qr.quietZone, 4);
-      assert.ok(qr.logo.size >= 5 && qr.logo.size <= 9);
-      assert.ok(qr.logo.size ** 2 / qr.size ** 2 <= 0.04);
-      const rowCenter = qr.logo.row + (qr.logo.size - 1) / 2;
-      const columnCenter = qr.logo.column + (qr.logo.size - 1) / 2;
-      assert.ok(rowCenter >= qr.size / 4 && rowCenter <= (qr.size * 3) / 4);
-      assert.ok(
-        columnCenter >= qr.size / 4 && columnCenter <= (qr.size * 3) / 4,
-      );
-      for (let row = 0; row < qr.size; row++) {
-        for (let column = 0; column < qr.size; column++) {
-          const index = row * qr.size + column;
-          const cutout =
-            row >= qr.logo.row &&
-            row < qr.logo.row + qr.logo.size &&
-            column >= qr.logo.column &&
-            column < qr.logo.column + qr.logo.size;
-          const buffer =
-            row >= qr.logo.row - 1 &&
-            row <= qr.logo.row + qr.logo.size &&
-            column >= qr.logo.column - 1 &&
-            column <= qr.logo.column + qr.logo.size;
-          if (buffer) assert.equal(raw.modules.isReserved(row, column), 0);
-          assert.equal(qr.reserved[index], raw.modules.reservedBit[index]);
-          assert.equal(qr.data[index], cutout ? 0 : raw.modules.data[index]);
-        }
-      }
-      assert.equal(decodeModules(qr, 4, "checker"), qr.url);
+      assert.equal("logo" in qr, false, "No cutout metadata should remain");
+      assert.deepEqual(qr.data, new Uint8Array(raw.modules.data));
+      assert.deepEqual(qr.reserved, new Uint8Array(raw.modules.reservedBit));
+      assert.equal(decodeModules(qr, 4), qr.url);
     }
   }
   assert.ok(
@@ -166,10 +126,13 @@ test("personal and organization boxes produce distinct independently decoded des
     "https://example.org/prayer-box/#box/maria",
     "https://example.org/prayer-box/#box/mine",
     "https://example.org/prayer-box/#box/grace",
+    "https://example.org/prayer-box/#box/prayerbox",
+    "https://example.org/prayer-box/#box/daniel",
+    "https://example.org/prayer-box/#box/jordan",
   ]);
   assert.equal(
     new Set(codes.map((qr) => Array.from(qr.data).join(""))).size,
-    3,
+    boxes.length,
   );
 });
 

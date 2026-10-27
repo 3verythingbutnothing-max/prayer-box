@@ -6,6 +6,15 @@ import { PreferenceSwitch } from "../ui";
 import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
 import { parseContributionAmount } from "../donation-amount";
 import type { ContributionAmount } from "../donation-amount";
+import {
+  buildFundingWindow,
+  fundingContributionCap,
+  fundingToday,
+  monthlyFundingDates,
+  validateFundingContribution,
+  withFundingContribution,
+} from "../funding-window";
+import type { FundingInput, FundingWindow } from "../funding-window";
 import "../donation-refinements.css";
 
 type AccountPage = "donations" | "donation-history" | "settings";
@@ -51,7 +60,7 @@ const money = (amount: number) =>
     amount,
   );
 type ContributionFrequency = "one-time" | "monthly";
-const AS_OF = "2026-10-24";
+const AS_OF = "2026-10-27";
 const records = [
   {
     date: "2026-10-20",
@@ -205,7 +214,10 @@ function AccountDialog({
   );
 }
 
-function FundingMeter({ example }: { example: boolean }) {
+function FundingMeter({ window }: { window: FundingWindow }) {
+  const ratio =
+    window.costCents === 0 ? 1 : 1 - window.remainingCents / window.costCents;
+  const positiveCost = window.costCents > 0;
   const gradientId = useId().replaceAll(":", "");
   const goldId = `${gradientId}-gold`;
   const goldBevelId = `${gradientId}-gold-bevel`;
@@ -232,16 +244,16 @@ function FundingMeter({ example }: { example: boolean }) {
       document.removeEventListener("visibilitychange", updateVisibility);
     };
   }, []);
-  const angle = Math.PI * (1 - 0.6);
+  const angle = Math.PI * (1 - ratio);
   return (
     <figure
       ref={meterRef}
-      className={`account-meter donation-meter${example ? "" : " account-meter-no-cost"}`}
+      className={`account-meter donation-meter${positiveCost ? "" : " account-meter-no-cost"}`}
       data-motion={onScreen && pageVisible ? "running" : "paused"}
       aria-label={
-        example
-          ? "Fictional funding example: 60 dollars available toward 100 dollars of hosting need. 40 dollars remaining."
-          : "No hosting costs this month. Actual hosting need: zero dollars. The full rainbow with a gold edge is decorative; no funding percentage applies."
+        positiveCost
+          ? `Fictional three-month funding: ${money(window.receivedAppliedCents / 100)} received and ${money(window.expectedAppliedCents / 100)} expected toward ${money(window.costCents / 100)} of hosting need. ${money(window.remainingCents / 100)} remaining. Expected funds are not guaranteed.`
+          : "No hosting costs in this three-month window. The full rainbow with a gold edge is decorative; no funding percentage applies."
       }
     >
       <div className="donation-meter-art">
@@ -325,7 +337,7 @@ function FundingMeter({ example }: { example: boolean }) {
                 strokeWidth="20"
                 strokeLinecap="round"
                 strokeDasharray="100 100"
-                strokeDashoffset={example ? 40 : 0}
+                strokeDashoffset={100 * (1 - ratio)}
               />
             </mask>
             <mask
@@ -417,7 +429,7 @@ function FundingMeter({ example }: { example: boolean }) {
               </g>
             ))}
           </g>
-          {example && (
+          {positiveCost && ratio < 1 && (
             <circle
               cx={160 + 125 * Math.cos(angle)}
               cy={150 - 125 * Math.sin(angle)}
@@ -430,11 +442,13 @@ function FundingMeter({ example }: { example: boolean }) {
         </svg>
         <div className="account-meter-center">
           <span className="account-meter-kicker">
-            {example ? "Available for hosting" : "Monthly hosting need"}
+            {positiveCost ? "Three-month coverage" : "Three-month hosting need"}
           </span>
-          <strong>{example ? "$60" : "$0"}</strong>
+          <strong>{positiveCost ? `${Math.floor(ratio * 100)}%` : "$0"}</strong>
           <span>
-            {example ? "of $100.00 USD needed" : "No hosting costs this month."}
+            {positiveCost
+              ? `${money(window.remainingCents / 100)} USD still needed`
+              : "No hosting costs this month."}
           </span>
         </div>
       </div>
@@ -521,7 +535,38 @@ export default function AccountPages({
   onOrganizationWebsiteChange,
 }: AccountPagesProps) {
   const feedback = useActionFeedback();
-  const [example, setExample] = useState(false);
+  const [fundingScenario, setFundingScenario] = useState("zero");
+  const [fundingAsOf] = useState(() => fundingToday());
+  const [simulatedReceived, setSimulatedReceived] = useState(0);
+  const [simulatedMonthly, setSimulatedMonthly] = useState(0);
+  const fundingDates = monthlyFundingDates(fundingAsOf);
+  const scenarioCost = fundingScenario === "zero" ? 0 : 10_000;
+  const scenarioGross =
+    fundingScenario === "partial"
+      ? 6_500
+      : fundingScenario === "covered"
+        ? 10_500
+        : 0;
+  const scenarioFees =
+    fundingScenario === "partial" || fundingScenario === "covered" ? 500 : 0;
+  const scenarioRenewal =
+    fundingScenario === "partial"
+      ? 4_000
+      : fundingScenario === "covered"
+        ? 10_000
+        : 0;
+  const fundingInput: FundingInput = {
+    asOf: fundingAsOf,
+    costsCents: [scenarioCost, scenarioCost, scenarioCost],
+    receivedGrossCents: scenarioGross + simulatedReceived,
+    feesCents: scenarioFees,
+    refundsCents: 0,
+    expected: fundingDates.slice(1).flatMap((due, index) => [
+      { id: `fixture-renewal-${index}`, due, cents: scenarioRenewal },
+      { id: `personal-renewal-${index}`, due, cents: simulatedMonthly },
+    ]),
+  };
+  const fundingWindow = buildFundingWindow(fundingInput);
   const [frequency, setFrequency] = useState<ContributionFrequency>("one-time");
   const [amountChoice, setAmountChoice] = useState<number | "custom">(10);
   const [customAmount, setCustomAmount] = useState("");
@@ -532,6 +577,9 @@ export default function AccountPages({
     amountChoice === "custom"
       ? parseContributionAmount(customAmount)
       : { cents: amountChoice * 100 };
+  const contributionCap = fundingContributionCap(fundingInput, frequency);
+  const monthlyHasNoRoom =
+    !fundingWindow.locked && frequency === "monthly" && contributionCap === 0;
   const amount =
     selectedAmount.cents === undefined ? null : selectedAmount.cents / 100;
   const [contributionPreview, setContributionPreview] = useState<{
@@ -595,6 +643,21 @@ export default function AccountPages({
         tone: "error",
         title: "Please check your contribution amount.",
         message: selectedAmount.error,
+      });
+      return;
+    }
+    const fundingError = validateFundingContribution(
+      fundingInput,
+      selectedAmount.cents,
+      frequency,
+    );
+    if (fundingError) {
+      setAmountError(fundingError);
+      customAmountField.current?.focus();
+      feedback.respond({
+        tone: "error",
+        title: "Please check the remaining need.",
+        message: fundingError,
       });
       return;
     }
@@ -796,209 +859,407 @@ export default function AccountPages({
               <div className="account-section-top">
                 <div>
                   <span className="account-kicker">
-                    {example
-                      ? "Fictional positive-cost example"
-                      : "Initial hosting need"}
+                    Three months, thoughtfully covered
                   </span>
                   <h2 id="account-funding-title">
-                    October 2026 <span>· USD</span>
+                    {fundingWindow.months[0].key.slice(0, 4) ===
+                    fundingWindow.months[2].key.slice(0, 4)
+                      ? fundingWindow.months[0].label.split(" ")[0]
+                      : fundingWindow.months[0].label}
+                    –{fundingWindow.months[2].label} <span>· USD</span>
                   </h2>
                 </div>
                 <span className="account-soft-icon">
-                  <AccountIcon name="heart" size={21} />
+                  <AccountIcon name="heart" size={25} />
                 </span>
               </div>
-              <FundingMeter example={example} />
+              <FundingMeter window={fundingWindow} />
               <p className="account-funding-caption">
-                {example
-                  ? "A little help goes a long way."
-                  : "A little space, without a hosting bill."}
+                {fundingWindow.locked
+                  ? "A little space, with room to keep praying."
+                  : "A little help goes a long way."}
               </p>
+              <div
+                className="donation-months"
+                aria-label="Rolling three-month hosting plan"
+              >
+                {fundingWindow.months.map((month) => (
+                  <article
+                    key={month.key}
+                    className={month.remainingCents === 0 ? "is-covered" : ""}
+                  >
+                    <h3>{month.label}</h3>
+                    <p>
+                      <strong>{money(month.costCents / 100)}</strong> hosting
+                      need
+                    </p>
+                    <dl>
+                      <div>
+                        <dt>Received</dt>
+                        <dd>{money(month.receivedCents / 100)}</dd>
+                      </div>
+                      <div>
+                        <dt>Expected</dt>
+                        <dd>{money(month.expectedCents / 100)}</dd>
+                      </div>
+                      <div>
+                        <dt>Still needed</dt>
+                        <dd>{money(month.remainingCents / 100)}</dd>
+                      </div>
+                    </dl>
+                    <span className="donation-month-status">
+                      {month.costCents === 0
+                        ? "No hosting cost"
+                        : month.remainingCents === 0
+                          ? month.expectedCents > 0
+                            ? "Covered with expected funds"
+                            : "Covered by received funds"
+                          : "Room to help"}
+                    </span>
+                  </article>
+                ))}
+              </div>
               <dl className="account-funding-lines">
                 <div>
-                  <dt>Actual hosting cost{example ? " (example)" : ""}</dt>
-                  <dd>{money(example ? 100 : 0)}</dd>
+                  <dt>Three-month hosting need</dt>
+                  <dd>{money(fundingWindow.costCents / 100)}</dd>
                 </div>
                 <div>
-                  <dt>Contributions received · gross</dt>
-                  <dd>{money(example ? 65 : 0)}</dd>
+                  <dt>Received · gross</dt>
+                  <dd>{money(fundingInput.receivedGrossCents / 100)}</dd>
                 </div>
                 <div>
-                  <dt>Processing fees</dt>
-                  <dd>{money(example ? 5 : 0)}</dd>
+                  <dt>Processing fees / refunds</dt>
+                  <dd>
+                    {money(fundingInput.feesCents / 100)} / {money(0)}
+                  </dd>
                 </div>
                 <div>
-                  <dt>Refunds</dt>
-                  <dd>{money(0)}</dd>
+                  <dt>Received · net available</dt>
+                  <dd>{money(fundingWindow.receivedNetCents / 100)}</dd>
+                </div>
+                <div>
+                  <dt>Expected renewals applied</dt>
+                  <dd>{money(fundingWindow.expectedAppliedCents / 100)}</dd>
                 </div>
                 <div className="account-total-line">
-                  <dt>Available toward hosting</dt>
-                  <dd>{money(example ? 60 : 0)}</dd>
-                </div>
-                <div>
-                  <dt>Remaining hosting need</dt>
-                  <dd>{money(example ? 40 : 0)}</dd>
+                  <dt>Remaining three-month need</dt>
+                  <dd>{money(fundingWindow.remainingCents / 100)}</dd>
                 </div>
               </dl>
               <p className="account-small">
-                Cost information dated October 24, 2026.{" "}
-                {example
-                  ? "All amounts in this example are fictional."
-                  : "This is the founder’s initial stated hosting need. No payments have been accepted."}
+                Planning date {fundingAsOf} · USD. The window rolls to the
+                current month and the following two months. Received funds are
+                net of fees and refunds. Expected renewals are separate,
+                uncollected commitments, not guaranteed income; failed or
+                canceled renewals reopen the need. Future renewals cannot cover
+                an earlier month. Renewal estimates in these fictional scenarios
+                assume no additional fees or refunds; real net estimates would
+                need reconciliation.
               </p>
-              <label className="account-example-toggle">
-                <input
-                  type="checkbox"
-                  checked={example}
-                  onChange={(event) => setExample(event.target.checked)}
-                />
-                <span>
-                  Preview a funded month{" "}
-                  <small>Fictional $100 cost example</small>
-                </span>
+              <label className="field donation-scenario-control">
+                Funding preview
+                <select
+                  value={fundingScenario}
+                  onChange={(event) => {
+                    setFundingScenario(event.target.value);
+                    setSimulatedReceived(0);
+                    setSimulatedMonthly(0);
+                    setAmountError("");
+                  }}
+                >
+                  <option value="zero">Initial need · $0 hosting costs</option>
+                  <option value="open">
+                    Fictional · $100 needed each month
+                  </option>
+                  <option value="partial">
+                    Fictional · received + expected, need remains
+                  </option>
+                  <option value="covered">
+                    Fictional · covered by received + expected
+                  </option>
+                </select>
               </label>
+              <p className="account-small">
+                Only the initial $0 need reflects the founder’s stated cost.
+                Other costs, received amounts, and renewal commitments are
+                clearly fictional scenarios. Simulations reset when the scenario
+                changes.
+              </p>
             </section>
             <div className="account-donation-side">
               <section
                 className="account-contribute panel"
                 aria-labelledby="account-contribute-title"
               >
-                <p className="eyebrow">An optional contribution</p>
-                <h2 id="account-contribute-title">Made with care.</h2>
-                <p>
-                  Try the contribution flow with example amounts. No money will
-                  be collected.
-                </p>
+                {fundingWindow.locked ? (
+                  <div className="donation-lock-message" role="status">
+                    <svg
+                      className="donation-drawn-lock"
+                      viewBox="0 0 180 160"
+                      aria-hidden="true"
+                    >
+                      <ellipse cx="90" cy="143" rx="55" ry="8" fill="#dce2e8" />
+                      <path
+                        d="M57 70V48C57 9 121 10 123 48V70"
+                        fill="none"
+                        stroke="#617188"
+                        strokeWidth="15"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M59 69V47C59 15 116 16 118 48V68"
+                        fill="none"
+                        stroke="#f2f5f7"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M43 63Q90 58 136 65L141 127Q90 145 39 128Z"
+                        fill="#e4c985"
+                        stroke="#9d7d42"
+                        strokeWidth="3"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="m48 71 80-1M47 79l1 40"
+                        fill="none"
+                        stroke="#fff5cb"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M95 90c9 0 12 13 3 17l3 13H85l3-13c-8-5-4-17 7-17Z"
+                        fill="#807052"
+                      />
+                      <path
+                        d="m24 45 3 7 7 3-7 3-3 7-3-7-7-3 7-3ZM151 82l2 5 6 2-6 2-2 6-2-6-5-2 5-2Z"
+                        fill="#c5b0e6"
+                      />
+                    </svg>
+                    <p className="eyebrow">Enough for this little space</p>
+                    <h2 id="account-contribute-title">
+                      Our cup is overflowing!
+                    </h2>
+                    <p>
+                      The next three months’ hosting need has been met, so
+                      donations are disabled for now. Contributions can reopen
+                      when that rolling three-month need is no longer covered.
+                    </p>
+                    {fundingWindow.expectedAppliedCents > 0 && (
+                      <p className="account-small">
+                        Some coverage is expected from recurring commitments.
+                        Those funds have not been received; a failed or canceled
+                        renewal may reopen donations.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <p className="eyebrow">An optional contribution</p>
+                    <h2 id="account-contribute-title">Made with care.</h2>
+                    <p>
+                      Try the contribution flow within the remaining need. No
+                      money will be collected.
+                    </p>
+                  </>
+                )}
                 <form
                   className="donation-contribution-form"
                   noValidate
                   onSubmit={reviewContribution}
                 >
-                  <fieldset className="account-segment-field">
+                  <fieldset
+                    className="donation-form-fields"
+                    disabled={fundingWindow.locked}
+                  >
                     <legend className="account-sr-only">
-                      Contribution frequency
+                      Contribution preview controls
                     </legend>
-                    <div
-                      className="account-segments"
-                      data-selection={frequency}
-                    >
-                      <span
-                        className="account-segment-indicator"
-                        aria-hidden="true"
-                      />
-                      {(["one-time", "monthly"] as const).map((value) => (
+                    <fieldset className="account-segment-field">
+                      <legend className="account-sr-only">
+                        Contribution frequency
+                      </legend>
+                      <div
+                        className="account-segments"
+                        data-selection={frequency}
+                      >
+                        <span
+                          className="account-segment-indicator"
+                          aria-hidden="true"
+                        />
+                        {(["one-time", "monthly"] as const).map((value) => (
+                          <label
+                            key={value}
+                            className={frequency === value ? "is-selected" : ""}
+                          >
+                            <input
+                              type="radio"
+                              name="contribution-frequency"
+                              value={value}
+                              checked={frequency === value}
+                              onChange={() => {
+                                setFrequency(value);
+                                setAmountError("");
+                              }}
+                            />
+                            <span>
+                              {value === "one-time" ? "One-time" : "Monthly"}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <fieldset className="account-amount-field">
+                      <legend>Example amount · USD</legend>
+                      <div className="account-amounts">
+                        {[5, 10, 25].map((value) => (
+                          <label
+                            key={value}
+                            className={
+                              amountChoice === value ? "is-selected" : ""
+                            }
+                          >
+                            <input
+                              type="radio"
+                              name="contribution-amount"
+                              checked={amountChoice === value}
+                              disabled={value * 100 > contributionCap}
+                              onChange={() => {
+                                setAmountChoice(value);
+                                setAmountError("");
+                              }}
+                            />
+                            <span>${value}</span>
+                          </label>
+                        ))}
                         <label
-                          key={value}
-                          className={frequency === value ? "is-selected" : ""}
-                        >
-                          <input
-                            type="radio"
-                            name="contribution-frequency"
-                            value={value}
-                            checked={frequency === value}
-                            onChange={() => setFrequency(value)}
-                          />
-                          <span>
-                            {value === "one-time" ? "One-time" : "Monthly"}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                  <fieldset className="account-amount-field">
-                    <legend>Example amount · USD</legend>
-                    <div className="account-amounts">
-                      {[5, 10, 25].map((value) => (
-                        <label
-                          key={value}
-                          className={
-                            amountChoice === value ? "is-selected" : ""
-                          }
+                          className={`donation-custom-choice${amountChoice === "custom" ? " is-selected" : ""}`}
                         >
                           <input
                             type="radio"
                             name="contribution-amount"
-                            checked={amountChoice === value}
+                            checked={amountChoice === "custom"}
                             onChange={() => {
-                              setAmountChoice(value);
+                              setAmountChoice("custom");
                               setAmountError("");
                             }}
                           />
-                          <span>${value}</span>
+                          <span>Custom</span>
                         </label>
-                      ))}
-                      <label
-                        className={`donation-custom-choice${amountChoice === "custom" ? " is-selected" : ""}`}
-                      >
-                        <input
-                          type="radio"
-                          name="contribution-amount"
-                          checked={amountChoice === "custom"}
-                          onChange={() => {
-                            setAmountChoice("custom");
-                            setAmountError("");
-                          }}
-                        />
-                        <span>Custom</span>
-                      </label>
-                    </div>
-                    {amountChoice === "custom" && (
-                      <div className="donation-custom-amount">
-                        <label className="field" htmlFor={`${amountId}-custom`}>
-                          Custom amount · USD
-                        </label>
-                        <div className="donation-custom-input">
-                          <span aria-hidden="true">$</span>
-                          <input
-                            ref={customAmountField}
-                            id={`${amountId}-custom`}
-                            type="text"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            required
-                            value={customAmount}
-                            placeholder="12.50"
-                            aria-invalid={!!amountError}
-                            aria-describedby={`${amountId}-amount-help${amountError ? ` ${amountId}-amount-error` : ""}`}
-                            onChange={(event) => {
-                              setCustomAmount(event.target.value);
-                              setAmountError("");
-                            }}
-                          />
-                        </div>
-                        <p
-                          className="account-small"
-                          id={`${amountId}-amount-help`}
-                        >
-                          For this demo: $0.01–$10,000.00 USD, with up to two
-                          decimal places.
-                        </p>
-                        {amountError && (
-                          <p
-                            className="donation-amount-error"
-                            role="alert"
-                            id={`${amountId}-amount-error`}
-                          >
-                            {amountError}
-                          </p>
-                        )}
                       </div>
+                      {amountChoice === "custom" && (
+                        <div className="donation-custom-amount">
+                          <label
+                            className="field"
+                            htmlFor={`${amountId}-custom`}
+                          >
+                            Custom amount · USD
+                          </label>
+                          <div className="donation-custom-input">
+                            <span aria-hidden="true">$</span>
+                            <input
+                              ref={customAmountField}
+                              id={`${amountId}-custom`}
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              required
+                              value={customAmount}
+                              placeholder="12.50"
+                              aria-invalid={!!amountError}
+                              aria-describedby={`${amountId}-amount-help${amountError ? ` ${amountId}-amount-error` : ""}`}
+                              onChange={(event) => {
+                                setCustomAmount(event.target.value);
+                                setAmountError("");
+                              }}
+                            />
+                          </div>
+                          <p
+                            className="account-small"
+                            id={`${amountId}-amount-help`}
+                          >
+                            {contributionCap > 0
+                              ? `Up to ${money(contributionCap / 100)} USD${frequency === "monthly" ? " per month" : " once"}; minimum $0.01, up to two decimal places.`
+                              : fundingWindow.locked
+                                ? "No contribution can be previewed while this need is covered."
+                                : `There is still ${money(fundingWindow.remainingCents / 100)} USD to cover, but three equal monthly payments will not fit. Choose One-time to help with the remaining need.`}
+                          </p>
+                        </div>
+                      )}
+                    </fieldset>
+                    {amountError && (
+                      <p
+                        className="donation-amount-error"
+                        role="alert"
+                        id={`${amountId}-amount-error`}
+                      >
+                        {amountError}
+                      </p>
                     )}
+                    <p className="donation-cap-note">
+                      {monthlyHasNoRoom
+                        ? `The remaining ${money(fundingWindow.remainingCents / 100)} USD can be covered with one-time support. There is no room for three equal monthly payments.`
+                        : frequency === "monthly"
+                          ? `Three equal payments: today, ${fundingDates[1]}, and ${fundingDates[2]}. The current cap is ${money(contributionCap / 100)} USD per payment.`
+                          : `Current one-time cap: ${money(contributionCap / 100)} USD.`}
+                    </p>
+                    <p className="account-frequency-note">
+                      {monthlyHasNoRoom
+                        ? "Choose One-time above or below to preview a contribution within the remaining need."
+                        : amount === null
+                          ? `Enter your custom USD amount to preview a ${frequency === "monthly" ? "monthly contribution" : "one-time contribution"}.`
+                          : frequency === "monthly"
+                            ? `${money(amount)} USD every month. Review billing dates and cancellation before simulating.`
+                            : `${money(amount)} USD once. No recurring contribution.`}
+                    </p>
+                    {monthlyHasNoRoom && (
+                      <button
+                        type="button"
+                        className="button secondary account-wide-button donation-switch-once"
+                        onClick={() => {
+                          setFrequency("one-time");
+                          setAmountChoice("custom");
+                          setCustomAmount(
+                            (
+                              fundingContributionCap(fundingInput, "one-time") /
+                              100
+                            ).toFixed(2),
+                          );
+                          setAmountError("");
+                          requestAnimationFrame(() =>
+                            customAmountField.current?.focus(),
+                          );
+                        }}
+                      >
+                        Choose one-time support{" "}
+                        <AccountIcon name="arrow" size={19} />
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className="button account-wide-button"
+                      disabled={contributionCap === 0}
+                    >
+                      {fundingWindow.locked
+                        ? "Donations are resting for now"
+                        : monthlyHasNoRoom
+                          ? "Monthly preview unavailable"
+                          : "Preview contribution"}{" "}
+                      <AccountIcon
+                        name={fundingWindow.locked ? "lock" : "arrow"}
+                        size={19}
+                      />
+                    </button>
                   </fieldset>
-                  <p className="account-frequency-note">
-                    {amount === null
-                      ? `Enter your custom USD amount to preview a ${frequency === "monthly" ? "monthly contribution" : "one-time contribution"}.`
-                      : frequency === "monthly"
-                        ? `${money(amount)} USD every month. Review billing dates and cancellation before simulating.`
-                        : `${money(amount)} USD once. No recurring contribution.`}
-                  </p>
-                  <button type="submit" className="button account-wide-button">
-                    Preview contribution <AccountIcon name="arrow" size={17} />
-                  </button>
                 </form>
                 <p className="account-small">
-                  The receiving entity, payment provider and use of excess funds
-                  need approval before contributions can open.
+                  Preview only. No real payment, subscription, or tax receipt is
+                  created. Real charges would be rechecked against the remaining
+                  need before every renewal and paused or reduced when covered,
+                  with clear consent before any later increase. Provider,
+                  receiving entity, and final billing rules still require
+                  approval.
                 </p>
               </section>
               <p className="account-donation-footnote">
@@ -1196,7 +1457,11 @@ export default function AccountPages({
                     <p>
                       Next example billing date
                       <br />
-                      <strong>November {planNextDay}, 2026 · USD</strong>
+                      <strong>
+                        {fundingWindow.months[1].label.split(" ")[0]}{" "}
+                        {planNextDay},{" "}
+                        {fundingWindow.months[1].label.split(" ")[1]} · USD
+                      </strong>
                     </p>
                     <button
                       className="text-link"
@@ -1944,20 +2209,26 @@ export default function AccountPages({
             </div>
             <div>
               <dt>First example billing</dt>
-              <dd>October 24, 2026</dd>
+              <dd>{fundingAsOf}</dd>
             </div>
             {contributionPreview.frequency === "monthly" ? (
               <div>
                 <dt>Next example billing</dt>
-                <dd>November 24, 2026</dd>
+                <dd>{fundingDates[1]}</dd>
               </div>
             ) : null}
           </dl>
           {contributionPreview.frequency === "monthly" ? (
             <p>
               You would authorize {money(contributionPreview.cents / 100)} USD
-              each month until canceled. You can cancel from My donations at any
-              time, including if posting is restricted.
+              per month. This three-month preview includes today and{" "}
+              {fundingDates[1]} and {fundingDates[2]}:{" "}
+              {money((contributionPreview.cents * 3) / 100)} USD total. On
+              confirmation, the first simulated payment is added to received
+              funds; the next two remain expected. A real renewal would need a
+              fresh rolling-window check and pause or reduction when no need
+              remains. You can cancel from My donations at any time, including
+              if posting is restricted.
             </p>
           ) : (
             <p>
@@ -1981,10 +2252,39 @@ export default function AccountPages({
               className="button"
               onClick={() => {
                 feedback.prepare();
+                const currentError = validateFundingContribution(
+                  fundingInput,
+                  contributionPreview.cents,
+                  contributionPreview.frequency,
+                );
+                if (currentError) {
+                  setDialog(null);
+                  setAmountError(currentError);
+                  feedback.respond({
+                    tone: "error",
+                    title: "The remaining need changed.",
+                    message: currentError,
+                  });
+                  return;
+                }
+                // Model amounts only, never a real payment or financial record.
+                const simulated = withFundingContribution(
+                  fundingInput,
+                  contributionPreview.cents,
+                  contributionPreview.frequency,
+                );
+                setSimulatedReceived(
+                  simulated.receivedGrossCents - scenarioGross,
+                );
                 if (contributionPreview.frequency === "monthly") {
+                  setSimulatedMonthly(
+                    (previous) => previous + contributionPreview.cents,
+                  );
                   setPlanActive(true);
-                  setPlanAmount(contributionPreview.cents / 100);
-                  setPlanNextDay(24);
+                  setPlanAmount(
+                    (simulatedMonthly + contributionPreview.cents) / 100,
+                  );
+                  setPlanNextDay(Number(fundingAsOf.slice(-2)));
                 }
                 setDialog(null);
                 onNotice(
@@ -2014,8 +2314,9 @@ export default function AccountPages({
         >
           <p>
             The fictional {money(planAmount)} USD monthly plan will end
-            immediately. Its November {planNextDay}, 2026 example renewal will
-            not occur.
+            immediately. Its {fundingWindow.months[1].label.split(" ")[0]}{" "}
+            {planNextDay}, {fundingWindow.months[1].label.split(" ")[1]} example
+            renewal will not occur.
           </p>
           <p>
             Your private contribution records remain available. No real
@@ -2033,9 +2334,10 @@ export default function AccountPages({
               onClick={() => {
                 feedback.prepare();
                 setPlanActive(false);
+                setSimulatedMonthly(0);
                 setDialog(null);
                 onNotice(
-                  "Example monthly plan canceled effective October 24, 2026. No future example renewals. No real billing was changed.",
+                  `Example monthly plan canceled effective ${fundingAsOf}. No future example renewals. No real billing was changed.`,
                 );
                 feedback.respond({
                   tone: "success",

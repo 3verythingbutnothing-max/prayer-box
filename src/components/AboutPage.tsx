@@ -275,16 +275,17 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
           <p className="eyebrow">Your own heart matters</p>
           <h2 id="about-personal-title">Bring your own heart to God</h2>
           <p>
-            You are welcome to ask others to pray with you. You also do not need
-            a creator, ministry, or large audience to speak to God. Come to the
-            Father through Jesus Christ, with the help of the Holy Spirit, and
-            bring your gratitude, needs, confession, questions, and hopes
-            honestly.
+            Let the prayers of others accompany your own relationship with God.
+            We encourage you to grow in that relationship through prayer and
+            reading your Bible to hear God’s word. Come to the Father through
+            Jesus Christ, with the help of the Holy Spirit, and bring your
+            gratitude, needs, confession, questions, and hopes honestly.
           </p>
           <p>
-            Let the prayers of others accompany your own relationship with God.
-            If you feel overwhelmed or cannot find the words, you are still
-            welcome to ask for prayer.
+            You are welcome to ask others to pray with you. You do not need a
+            content creator, ministry, or large audience to speak to God. If you
+            feel overwhelmed or cannot find the words, you are still welcome to
+            ask for prayer.
           </p>
           <p className="about-context">
             Scripture context:{" "}

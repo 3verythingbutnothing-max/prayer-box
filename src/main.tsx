@@ -6,6 +6,7 @@ import "./styles.css";
 import "./card-surfaces.css";
 import "./control-feedback.css";
 import "./mobile-shell.css";
+import "./founder-refinements.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -36,7 +36,7 @@ function qrCardDimensions(qr: Qr | null) {
     top,
     square,
     width: square + border * 2,
-    height: top + square + 126,
+    height: top + square + 164,
   };
 }
 
@@ -51,8 +51,12 @@ export function PrayerBoxQrCard({
   elementRef?: RefObject<SVGSVGElement | null>;
 }) {
   const { cell, border, top, square, width, height } = qrCardDimensions(qr);
-  const title = `${boxName}’s Prayer Box`;
+  const title =
+    ["Prayer Box", "Prayer Box team"].includes(boxName)
+      ? "Prayer Box team"
+      : `${boxName}’s Prayer Box`;
   const printedUrl = new URL(qr.url);
+  const titleFontSize = title.length > 22 ? 30 : 34;
   return (
     <svg
       ref={elementRef}
@@ -98,36 +102,11 @@ export function PrayerBoxQrCard({
         fill="#233D56"
         shapeRendering="crispEdges"
       />
-      {/* The small badge occupies data cells only; functional patterns stay intact. */}
-      <g
-        data-qr-logo="Prayer Box"
-        aria-hidden="true"
-        transform={`translate(${border + (qr.quietZone + qr.logo.column) * cell} ${top + (qr.quietZone + qr.logo.row) * cell})`}
-      >
-        <rect
-          width={qr.logo.size * cell}
-          height={qr.logo.size * cell}
-          fill="#FFFFFF"
-        />
-        <rect
-          x={cell * 0.25}
-          y={cell * 0.25}
-          width={(qr.logo.size - 0.5) * cell}
-          height={(qr.logo.size - 0.5) * cell}
-          rx={cell}
-          fill="#FFFBF5"
-          stroke="#C6D9E9"
-          strokeWidth="1.25"
-        />
-        <g transform={`translate(${cell * 0.5} ${cell * 0.5})`}>
-          <PrayerBoxMark size={(qr.logo.size - 1) * cell} />
-        </g>
-      </g>
       <text
         x={width / 2}
-        y={top + square + 29}
+        y={top + square + 39}
         textAnchor="middle"
-        fontSize="26"
+        fontSize={titleFontSize}
         fontWeight="700"
         fill="#2F4B68"
       >
@@ -135,18 +114,18 @@ export function PrayerBoxQrCard({
       </text>
       <text
         x={width / 2}
-        y={top + square + 56}
+        y={top + square + 78}
         textAnchor="middle"
-        fontSize="19"
+        fontSize="29"
         fill="#293545"
       >
         Scan to leave a prayer request
       </text>
       <text
         x={width / 2}
-        y={top + square + 82}
+        y={top + square + 111}
         textAnchor="middle"
-        fontSize="14"
+        fontSize="22"
         fill="#5C6876"
       >
         {printedUrl.host}
@@ -154,9 +133,9 @@ export function PrayerBoxQrCard({
       </text>
       <text
         x={width / 2}
-        y={top + square + 101}
+        y={top + square + 140}
         textAnchor="middle"
-        fontSize="14"
+        fontSize="22"
         fill="#5C6876"
       >
         {printedUrl.hash} · Fictional demo
@@ -335,7 +314,7 @@ export default function SharePrayerBoxQr({
             <Icon name="download" size={18} /> Download SVG
           </button>
           <p className="quiet-copy">
-            Logo included · PNG for slides · SVG for crisp printing
+            Clear QR code · PNG for slides · SVG for crisp printing
           </p>
           {exportError ? (
             <p className="qr-share-error" role="alert">

@@ -6,6 +6,9 @@ const boxes = {
   maria: "Maria’s Prayer Box",
   grace: "Grace Church’s Prayer Box",
   mine: "Elena’s Prayer Box",
+  prayerbox: "Prayer Box team",
+  daniel: "Daniel’s Prayer Box",
+  jordan: "Jordan’s Prayer Box",
 };
 
 export default function DeleteRequests({

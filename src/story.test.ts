@@ -176,6 +176,7 @@ test("only a new published author post reactivates a prayer, independently for e
   assert.equal(hasPrayedForLatest(changed[1], "maria"), true);
   changed[0].replies.push({
     id: "new-prayer",
+    testimonyId: "new-post",
     actorId: "maria",
     name: "Maria",
     text: "Continuing to pray.",
@@ -184,6 +185,7 @@ test("only a new published author post reactivates a prayer, independently for e
   assert.equal(hasPrayedForLatest(changed[0], "maria"), true);
   changed[0].replies.push({
     id: "another-viewer",
+    testimonyId: "new-post",
     actorId: "member",
     name: "Samuel",
     text: "Kindness.",
@@ -194,6 +196,19 @@ test("only a new published author post reactivates a prayer, independently for e
     true,
     "another human reply does not reactivate the request",
   );
+});
+
+test("replying to the original or an older update does not clear the latest update from the active box", () => {
+  const request = example({ posts: [
+    { id: "older-update", ...publication },
+    { id: "latest-update", ...publication, createdAt: "2026-10-27T12:00:00Z" },
+  ] });
+  for (const testimonyId of [undefined, "older-update", "missing-post"]) {
+    request.replies = [{ id: "earlier-prayer", actorId: "maria", name: "Maria", text: "I am still praying.", testimonyId, storyRevision: storyRevision(request) }];
+    assert.equal(hasPrayedForLatest(request, "maria"), false);
+  }
+  request.replies = [{ id: "latest-prayer", actorId: "maria", name: "Maria", text: "Praying about this update.", testimonyId: "latest-update", storyRevision: storyRevision(request) }];
+  assert.equal(hasPrayedForLatest(request, "maria"), true);
 });
 
 test("withdrawing a selected delivery removes its linked material without touching another box", () => {

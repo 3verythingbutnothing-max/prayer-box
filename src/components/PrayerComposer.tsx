@@ -11,6 +11,9 @@ import { buildPlatformAcknowledgment, hasSupportLanguage } from "../care";
 import CareResources from "./CareResources";
 import { PlatformAcknowledgment } from "./CareFlow";
 import { useActionFeedback } from "../action-feedback";
+import RecipientPicker from "./RecipientPicker";
+import { recipientNames as names, recipientActor } from "../recipients";
+import "../request-refinements.css";
 
 type Props = {
   recipient: BoxId;
@@ -19,6 +22,9 @@ type Props = {
   automatic: Partial<Record<BoxId, boolean>>;
   automaticMessages?: Partial<Record<BoxId, string>>;
   offerGrace?: boolean;
+  friends?: readonly string[];
+  mariaVisible?: boolean;
+  blockedActors?: readonly string[];
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
   onClose: () => void;
@@ -31,11 +37,6 @@ type Outcome = {
   status: "sent" | "pending" | "changes" | "failed";
   id?: string;
   reason: string;
-};
-const names: Record<BoxId, string> = {
-  maria: "Maria",
-  grace: "Grace Church",
-  mine: "Elena",
 };
 const examples = [
   {
@@ -67,6 +68,9 @@ export default function PrayerComposer({
   automatic,
   automaticMessages,
   offerGrace = true,
+  friends = [],
+  mariaVisible = true,
+  blockedActors = [],
   boxCeilings,
   initial,
   onClose,
@@ -75,18 +79,19 @@ export default function PrayerComposer({
   onSignIn,
 }: Props) {
   const feedback = useActionFeedback();
-  const [recipient, setRecipient] = useState(initialRecipient);
+  const [selected, setSelected] = useState<BoxId[]>([initialRecipient]);
+  const recipient = selected[0] ?? initialRecipient;
   const [step, setStep] = useState<
     "write" | "support" | "preview" | "checking" | "result"
   >("write");
   const [text, setText] = useState(initial?.text ?? examples[0].text);
   const [topic, setTopic] = useState(initial?.topic ?? examples[0].label);
-  const [personal, setPersonal] = useState(recipient !== "grace");
-  const [church, setChurch] = useState(recipient === "grace");
-  const [anonymous, setAnonymous] = useState(initial?.anonymous ?? false);
-  const [churchAnonymous, setChurchAnonymous] = useState(true);
-  const [audience, setAudience] = useState<Audience>("private");
-  const [churchAudience, setChurchAudience] = useState<Audience>("private");
+  const [preferences, setPreferences] = useState<Partial<Record<BoxId, { anonymous: boolean; audience: Audience }>>>({});
+  const preference = (target: BoxId) => preferences[target] ?? {
+    anonymous: initial?.anonymous ?? (target === "grace"), audience: "private" as Audience,
+  };
+  const setPreference = (target: BoxId, next: Partial<{ anonymous: boolean; audience: Audience }>) =>
+    setPreferences(previous => ({ ...previous, [target]: { ...preference(target), ...next } }));
   const [media, setMedia] = useState<"photo" | "video" | "audio" | undefined>(
     initial?.media?.status === "approved" ? initial.media.kind : undefined,
   );
@@ -118,13 +123,8 @@ export default function PrayerComposer({
     if (step === "write") draftField.current?.focus();
     else stepHeading.current?.focus();
   }, [step]);
-  const personRecipient = recipient === "grace" ? "maria" : recipient;
-  const personalAllowed = !isOwnPrayerBox(viewer, personRecipient);
-  const churchAllowed = !isOwnPrayerBox(viewer, "grace");
-  const destinations: BoxId[] = [
-    ...(personal && personalAllowed ? [personRecipient] : []),
-    ...(church && churchAllowed ? ["grace" as const] : []),
-  ];
+  const destinations = selected.filter(target => !isOwnPrayerBox(viewer, target) && !blockedActors.includes(target === "mine" ? "elena" : target === "prayerbox" ? "team" : target === "grace" ? "owner" : target));
+  const church = destinations.includes("grace");
   const signedIn = viewer !== "guest";
 
   function submit(retryOnly = false) {
@@ -135,7 +135,7 @@ export default function PrayerComposer({
     if (
       !signedIn ||
       !targets.length ||
-      targets.some((target) => isOwnPrayerBox(viewer, target))
+      targets.some((target) => isOwnPrayerBox(viewer, target) || blockedActors.includes(recipientActor(target)))
     ) {
       feedback.prepare();
       feedback.respond({
@@ -176,18 +176,19 @@ export default function PrayerComposer({
                   ? "Grace Church owner"
                   : viewer === "operator"
                     ? "Safety reviewer"
-                    : "Elena",
+                    : viewer === "team" ? "Prayer Box team" : "Elena",
           recipient: target,
-          anonymous: isChurch ? churchAnonymous : anonymous,
+          anonymous: preference(target).anonymous,
           audience: getEffectiveAudience(
-            isChurch ? churchAudience : audience,
+            preference(target).audience,
             privacy,
-            boxCeilings?.[target] ?? (target === "mine" ? "private" : "public"),
+            boxCeilings?.[target] ?? (target === "mine" || target === "prayerbox" ? "private" : "public"),
           ),
           authorCeiling: privacy,
           text,
           topic,
           createdAt: "Just now · example",
+          postedAt: new Date().toISOString(),
           media: media ? { kind: media, status: "pending" } : undefined,
           platformAcknowledgment:
             check.state === "approved"
@@ -201,9 +202,7 @@ export default function PrayerComposer({
                     actorId:
                       target === "grace"
                         ? "owner"
-                        : target === "maria"
-                          ? "maria"
-                          : "elena",
+                        : target === "mine" ? "elena" : target === "prayerbox" ? "team" : target,
                     name: names[target],
                     automatic: true,
                     official: isChurch,
@@ -300,11 +299,11 @@ export default function PrayerComposer({
 
   function destinationPreview(target: BoxId) {
     const isChurch = target === "grace";
-    const chosen = isChurch ? churchAudience : audience;
+    const chosen = preference(target).audience;
     const effective = getEffectiveAudience(
       chosen,
       privacy,
-      boxCeilings?.[target] ?? (target === "mine" ? "private" : "public"),
+      boxCeilings?.[target] ?? (target === "mine" || target === "prayerbox" ? "private" : "public"),
     );
     return (
       <div key={target} className="delivery-preview">
@@ -314,10 +313,10 @@ export default function PrayerComposer({
         <div>
           <strong>
             {names[target]}
-            {isChurch ? " · prayer community" : " · personal box"}
+            {isChurch ? " · prayer community" : target === "prayerbox" ? " · prayer team" : " · personal box"}
           </strong>
           <p>
-            {(isChurch ? churchAnonymous : anonymous)
+            {preference(target).anonymous
               ? "Anonymous · no profile link, flag, or association"
               : "Your display name is shown"}
           </p>
@@ -383,16 +382,14 @@ export default function PrayerComposer({
                 here; choose a different destination to continue.
               </p>
               <div className="modal-actions">
-                {(["maria", "grace"] as const)
-                  .filter((target) => !isOwnPrayerBox(viewer, target))
+                {(["prayerbox", "maria", "grace", "daniel", "jordan"] as const)
+                  .filter((target) => !isOwnPrayerBox(viewer, target) && !blockedActors.includes(recipientActor(target)))
                   .map((target) => (
                     <button
                       className="button secondary compact"
                       key={target}
                       onClick={() => {
-                        setRecipient(target);
-                        setPersonal(target !== "grace");
-                        setChurch(target === "grace");
+                        setSelected([target]);
                         setStep("write");
                       }}
                     >
@@ -521,139 +518,32 @@ export default function PrayerComposer({
               </p>
             </div>
           )}
-          <fieldset className="destination-fieldset">
-            <legend>Where this request will go</legend>
-            {recipient !== "grace" && personalAllowed && (
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={personal}
-                  onChange={(event) => setPersonal(event.target.checked)}
-                />
-                <span>
-                  <strong>{names[personRecipient]}’s personal box</strong>
-                  <small>
-                    A separate conversation with {names[personRecipient]}.
-                  </small>
-                </span>
-              </label>
-            )}
-            {recipient === "maria" && offerGrace && churchAllowed && (
-              <p className="quiet-copy">
-                Maria publicly displays her approved Grace Church association.
-                You can choose an additional delivery.
-              </p>
-            )}
-            {churchAllowed &&
-              (recipient === "grace" ||
-                (recipient === "maria" && offerGrace)) && (
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={church}
-                    onChange={(event) => setChurch(event.target.checked)}
-                  />
-                  <span>
-                    <strong>
-                      {recipient === "grace"
-                        ? "Grace Church prayer community"
-                        : "Also send a separate request to Grace Church"}
-                    </strong>
-                    <small>
-                      {recipient === "grace"
-                        ? "Address the organization directly."
-                        : "Optional. This does not forward Maria’s conversation."}
-                    </small>
-                  </span>
-                </label>
-              )}
-          </fieldset>
-          {personal && personalAllowed && (
-            <div className="audience-options">
-              <h3>{names[personRecipient]} · personal delivery</h3>
-              <label className="field">
-                Identity
-                <select
-                  value={anonymous ? "anonymous" : "name"}
-                  onChange={(event) =>
-                    setAnonymous(event.target.value === "anonymous")
-                  }
-                >
-                  <option value="name">Show my name / username</option>
-                  <option value="anonymous">Post anonymously</option>
+          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} />
+          {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnPrayerBox(viewer, "grace") && (
+            <p className="quiet-copy">Maria publicly displays her Grace Church association. Search @gracechurch if you would like to add a separate church delivery. Nothing is added automatically.</p>
+          )}
+          {destinations.map(target => (
+            <div className={`audience-options ${target === "grace" || target === "prayerbox" ? "sage-wash" : ""}`} key={target}>
+              <h3>{names[target]} · {target === "grace" ? "church delivery" : target === "prayerbox" ? "prayer-team delivery" : "personal delivery"}</h3>
+              <label className="field">Identity for {names[target]}
+                <select value={preference(target).anonymous ? "anonymous" : "name"} onChange={event => setPreference(target, { anonymous: event.target.value === "anonymous" })}>
+                  <option value="name">Show my name / username</option><option value="anonymous">Post anonymously</option>
                 </select>
               </label>
-              <label className="field">
-                Who can see this?
-                <select
-                  value={audience}
-                  onChange={(event) =>
-                    setAudience(event.target.value as Audience)
-                  }
-                >
-                  <option value="private">
-                    Only me and {names[personRecipient]}
-                  </option>
-                  <option value="friends">My Church · accepted friends</option>
-                  <option value="public">Everyone</option>
+              {target !== "prayerbox" && <label className="field">{target === "grace" ? "Outside the organization" : "Who can see this?"}
+                <select value={preference(target).audience} onChange={event => setPreference(target, { audience: event.target.value as Audience })}>
+                  <option value="private">{target === "grace" ? "Organization-only" : `Only me and ${names[target]}`}</option>
+                  <option value="friends">My Church · accepted friends</option><option value="public">Everyone</option>
                 </select>
-              </label>
+              </label>}
+              {target === "prayerbox" && <p className="group-disclosure"><Icon name="people" size={20} /><span>Only you and the Prayer Box prayer team can read this delivery. It stays separate from your friends’ and churches’ boxes. Anonymous hides your account identity from the team. This is a demo of the intended team inbox; no real team is contacted.</span></p>}
+              {target === "grace" && <>
+                <p className="group-disclosure"><Icon name="people" size={20} /><span>This request will be visible to <strong>all active members approved by Grace Church</strong>, not just its pastor, prayer leader or assignee. {preference(target).audience === "private" ? "It will not appear publicly." : "The outside audience does not narrow that group."}</span></p>
+                <p className="quiet-copy"><strong>Proposed history policy:</strong> Members approved later may also read retained organization requests. Group delivery cannot guarantee confidentiality from someone who belongs to the group.</p>
+              </>}
             </div>
-          )}
-          {church && churchAllowed && (
-            <div className="audience-options sage-wash">
-              <h3>Grace Church · separate delivery</h3>
-              <label className="field">
-                Identity for Grace Church
-                <select
-                  value={churchAnonymous ? "anonymous" : "name"}
-                  onChange={(event) =>
-                    setChurchAnonymous(event.target.value === "anonymous")
-                  }
-                >
-                  <option value="anonymous">Post anonymously</option>
-                  <option value="name">Show my name / username</option>
-                </select>
-              </label>
-              <label className="field">
-                Outside the organization
-                <select
-                  value={churchAudience}
-                  onChange={(event) =>
-                    setChurchAudience(event.target.value as Audience)
-                  }
-                >
-                  <option value="private">Organization-only</option>
-                  <option value="friends">My Church · accepted friends</option>
-                  <option value="public">Everyone</option>
-                </select>
-              </label>
-              <p className="group-disclosure">
-                <Icon name="people" size={18} />
-                <span>
-                  This request will be visible to{" "}
-                  <strong>all active members approved by Grace Church</strong>,
-                  not just its pastor, prayer leader, or assignee.{" "}
-                  {churchAudience === "private"
-                    ? "It will not appear publicly."
-                    : "The outside audience you choose does not narrow that group."}
-                </span>
-              </p>
-              <p className="quiet-copy">
-                <strong>Proposed history policy:</strong> Members approved later
-                may also read retained organization requests. A group delivery
-                cannot guarantee confidentiality from someone who belongs to the
-                group.
-              </p>
-            </div>
-          )}
-          {(anonymous || (church && churchAnonymous)) && (
-            <p className="notice butter">
-              Anonymous hides your account identity from recipients. Your words,
-              photos, video, or voice may still identify you. Review what you
-              share.
-            </p>
-          )}
+          ))}
+          {destinations.some(target => preference(target).anonymous) && <p className="notice butter">Anonymous hides your account identity from recipients. Your words, photos, video or voice may still identify you. Review what you share.</p>}
           <p className="quiet-copy">
             Prayer requests only. Please remove payment handles and fundraising
             links. For financial support, refer to your local church or a
@@ -768,7 +658,7 @@ export default function PrayerComposer({
       )}
       {step === "result" && (
         <>
-          <div className="confirmation">
+          <div className={`confirmation ${allSent ? "request-sent-pop" : ""}`}>
             <span className={`confirmation-icon ${allSent ? "success" : ""}`}>
               <Icon name={allSent ? "check" : "info"} size={28} />
             </span>
@@ -787,6 +677,12 @@ export default function PrayerComposer({
               Simulated result · no actual delivery
             </p>
           </div>
+          {allSent && <div className="request-sent-encouragement">
+            <p>Prayer Box is actively praying for you, and we’re glad you took this step of faith in asking for prayer.</p>
+            <p>Let the prayers of others accompany your own relationship with God. We encourage you to pray personally and keep pursuing Him through prayer and reading your Bible.</p>
+            <p>You’ll find new replies and updates in your in-app notifications.</p>
+            <small>Preview of the planned welcome. No real delivery, prayer-team alert or notification was sent.</small>
+          </div>}
           {acknowledgments[0] && (
             <PlatformAcknowledgment
               request={acknowledgments[0]}

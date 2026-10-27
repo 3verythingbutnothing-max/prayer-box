@@ -6,7 +6,7 @@
 .story-trail-label {
   display: block;
   margin-bottom: 10px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--muted);
 }
@@ -46,10 +46,10 @@
 }
 .story-trail a > span {
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
 }
 .story-trail time {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 .story-original,
 .story-post,
@@ -67,7 +67,7 @@
   align-items: center;
   min-height: 44px;
   color: var(--plum);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -98,7 +98,7 @@
 .story-author-actions > span {
   max-width: 280px;
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
   line-height: 1.7;
 }
 .story-author-actions .story-delete {
@@ -107,12 +107,24 @@
   align-items: center;
   gap: 7px;
   color: #844553;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 .story-posts {
-  border-left: 2px dashed #d5c7e0;
-  margin: 22px 0 27px 9px;
-  padding-left: 21px;
+  --timeline-x: 8px;
+  --timeline-indent: 30px;
+  position: relative;
+  margin: 22px 0 27px;
+  padding-left: var(--timeline-indent);
+}
+.story-posts::before {
+  content: "";
+  position: absolute;
+  left: var(--timeline-x);
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed #bca4cc;
+  transform: translateX(-50%);
 }
 .story-post {
   position: relative;
@@ -129,9 +141,11 @@
   content: "";
   position: absolute;
   top: 36px;
-  left: -28px;
-  width: 10px;
-  height: 10px;
+  left: calc(var(--timeline-x) - var(--timeline-indent) - 1px);
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
   border: 2px solid var(--paper, #fffbf5);
   border-radius: 50%;
   background: #9276af;
@@ -156,7 +170,7 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
 }
 .story-post h2 {
   margin: 2px 0 10px;
@@ -168,7 +182,7 @@
 .story-post-byline {
   margin: 0 0 18px;
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   line-height: 1.7;
 }
 .story-post .prayer-text {
@@ -192,18 +206,18 @@
   align-items: center;
   gap: 6px;
   min-height: 44px;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
 }
 .story-post-footer > .button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   min-height: 44px;
 }
 .story-conversation .story-scope-field {
   margin: 25px 0 10px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 .story-selected-scope {
   display: flex;
@@ -211,7 +225,7 @@
   gap: 7px;
   margin: 12px 0 5px;
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 .story-selected-scope > svg {
@@ -220,7 +234,7 @@
 }
 .story-reply-date {
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 @media (max-width: 600px) {
@@ -243,14 +257,13 @@
     flex-wrap: wrap;
   }
   .story-posts {
-    padding-left: 16px;
-    margin-left: 5px;
+    --timeline-x: 7px;
+    --timeline-indent: 23px;
   }
   .story-post {
     padding: 20px 18px;
   }
   .story-post::before {
-    left: -23px;
     top: 33px;
   }
   .story-post h2 {
@@ -265,10 +278,100 @@
   }
   .story-post-heading .story-date-link {
     min-height: 44px;
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
   }
   .story-post-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+.story-conversation-toggle,
+.story-read-prayers,
+.story-reply-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.6;
+}
+.story-read-prayers > svg,
+.story-reply-actions > button > svg {
+  flex-shrink: 0;
+}
+.story-post-footer .story-read-prayers {
+  flex-basis: 100%;
+  border-top: 1px solid rgb(114 90 133 / 15%);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+.story-conversation .replies {
+  margin-block: 16px 26px;
+}
+.story-conversation .reply-heading {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.story-conversation .reply-heading .icon-button {
+  flex-shrink: 0;
+}
+.story-reply-thread {
+  min-width: 0;
+}
+.story-conversation .reply-note {
+  overflow-wrap: anywhere;
+  padding: 20px;
+  margin-block: 12px;
+}
+.story-conversation .story-nested-reply {
+  margin-left: 18px;
+  border-left: 3px solid #b6cbd9;
+  background: #f0f6fa;
+}
+.story-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(114 90 133 / 15%);
+}
+.story-reply-actions > button {
+  font-size: 0.8125rem;
+}
+.story-reply-actions > button[aria-pressed="true"] {
+  color: #35654b;
+}
+.story-replying-to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 18px;
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border: 1px solid #c2d5e2;
+  border-radius: 12px;
+  background: #edf5fb;
+  font-size: 0.875rem;
+}
+.story-empty-prayers,
+.story-private-agreement {
+  line-height: 1.8;
+}
+@media (max-width: 600px) {
+  .story-conversation .reply-note {
+    padding: 16px;
+  }
+  .story-conversation .story-nested-reply {
+    margin-left: 10px;
+  }
+  .story-reply-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 }

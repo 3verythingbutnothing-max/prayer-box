@@ -1,0 +1,8 @@
+/* A small dimensional confirmation, rather than a heavyweight 3D runtime. */
+.request-sent-pop { perspective: 650px; }
+.request-sent-pop .confirmation-icon { animation: prayer-sent-pop 250ms var(--ease-out) both; }
+@keyframes prayer-sent-pop { from { opacity: 0; transform: translateY(12px) rotateX(-18deg) scale(.93); } to { opacity: 1; transform: translateY(0) rotateX(0) scale(1); } }
+.request-sent-encouragement { padding: 22px; border: 1px solid #c2d8c9; border-radius: 17px; background: #edf5ee; margin: 0 0 22px; }
+.request-sent-encouragement p { font-size: .85rem; line-height: 1.8; }
+.request-sent-encouragement small { display: block; color: var(--muted); font-size: .7rem; line-height: 1.7; }
+@media(prefers-reduced-motion: reduce) { .request-sent-pop .confirmation-icon { animation: none; } }

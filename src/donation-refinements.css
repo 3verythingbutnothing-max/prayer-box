@@ -235,3 +235,123 @@
     animation: none;
   }
 }
+
+/* A three-month plan remains readable on narrow phones and larger type scales. */
+.donation-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 24px 0;
+}
+.donation-months article {
+  min-width: 0;
+  border: 1px solid #d8dce5;
+  border-radius: 17px;
+  padding: 16px 12px;
+  background: linear-gradient(145deg, #f1f5fc, #fbf9ff);
+}
+.donation-months article.is-covered {
+  background: linear-gradient(145deg, #edf4ed, #fcfbf3);
+  border-color: #d0dfce;
+}
+.donation-months h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.donation-months p {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.donation-months dl {
+  margin: 0;
+}
+.donation-months dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin: 8px 0;
+  font-size: 0.8125rem;
+}
+.donation-months dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.donation-month-status {
+  display: block;
+  margin-top: 14px;
+  color: #426247;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.donation-scenario-control {
+  margin-top: 26px;
+}
+.donation-scenario-control select {
+  width: 100%;
+  min-width: 0;
+}
+.donation-form-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.donation-form-fields:disabled {
+  opacity: 0.58;
+  filter: grayscale(1);
+}
+.donation-form-fields:disabled .button {
+  background: #dfe3e7;
+  color: #425067;
+  border-color: #bac3ce;
+  cursor: not-allowed;
+}
+.donation-form-fields:disabled label,
+.donation-form-fields:disabled span {
+  cursor: default;
+}
+.donation-lock-message {
+  text-align: center;
+  padding: 2px 0 20px;
+}
+.donation-lock-message h2 {
+  font-size: clamp(1.7rem, 2.2vw, 2.2rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.donation-lock-message > p:not(.eyebrow) {
+  max-width: 38ch;
+  margin-inline: auto;
+}
+.donation-drawn-lock {
+  display: block;
+  width: min(190px, 65%);
+  margin: 0 auto 16px;
+}
+.donation-cap-note {
+  font-size: 0.875rem;
+  color: var(--ink);
+  line-height: 1.6;
+  margin: 20px 0 10px;
+}
+@media (max-width: 1100px) and (min-width: 701px) {
+  .donation-months {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .donation-months {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .donation-months article {
+    padding: 18px;
+  }
+  .donation-months dl > div {
+    font-size: 0.9375rem;
+  }
+}

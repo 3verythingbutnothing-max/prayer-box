@@ -4,14 +4,17 @@
  * content screening, church verification, storage, or production security.
  */
 export type Viewer =
-  "elena" | "maria" | "member" | "owner" | "guest" | "operator";
-export type BoxId = "maria" | "grace" | "mine";
+  "elena" | "maria" | "member" | "owner" | "guest" | "operator" | "team";
+export type BoxId = "maria" | "grace" | "mine" | "daniel" | "jordan" | "prayerbox";
 /** Prototype ownership only; future submission authorization belongs on a server. */
 export function isOwnPrayerBox(actor: string, box: BoxId): boolean {
   return (
     (box === "mine" && actor === "elena") ||
     (box === "maria" && actor === "maria") ||
-    (box === "grace" && actor === "owner")
+    (box === "grace" && actor === "owner") ||
+    (box === "daniel" && actor === "daniel") ||
+    (box === "jordan" && actor === "jordan") ||
+    (box === "prayerbox" && actor === "team")
   );
 }
 export function prayerBoxUrl(pageUrl: string, box: BoxId): string {
@@ -36,6 +39,9 @@ export function getEffectiveAudience(
 export type Moderation = "approved" | "pending" | "changes" | "appeal";
 
 export interface Reply {
+  parentReplyId?: string;
+  /** Private per-viewer agreement state; no public counts or rankings. */
+  agreedBy?: string[];
   testimonyId?: string;
   postedAt?: string;
   storyRevision?: string;
@@ -332,6 +338,9 @@ const defaultBoxCeilings: Record<BoxId, Audience> = {
   maria: "public",
   grace: "public",
   mine: "private",
+  daniel: "public",
+  jordan: "public",
+  prayerbox: "private",
 };
 
 /** Trusted root-owned fictional state, never browser-derived production authority. */
@@ -372,6 +381,7 @@ function isIntendedRecipient(
   return (
     (request.recipient === "mine" && viewer === "elena") ||
     (request.recipient === "maria" && viewer === "maria") ||
+    (request.recipient === "prayerbox" && viewer === "team") ||
     (request.recipient === "grace" &&
       ((viewer === "member" && context.memberActive !== false) ||
         viewer === "owner" ||
@@ -409,6 +419,10 @@ export function canViewRequest(
         ? "maria"
         : request.recipient === "mine"
           ? "elena"
+          : request.recipient === "daniel"
+            ? "daniel"
+            : request.recipient === "jordan"
+              ? "jordan"
           : null;
     // Grace's separate outsider circle is not modeled in these fixtures. Deny
     // outsider access instead of inheriting a member's personal friend list.
@@ -440,9 +454,11 @@ export function getAudienceLabel(audience: Audience, recipient: BoxId): string {
   if (audience === "public") return "Everyone";
   if (audience === "friends") return "My Church · accepted friends";
   if (recipient === "grace") return "Organization-only";
-  return recipient === "maria"
-    ? "Sender and Maria only"
-    : "Sender and Elena only";
+  const names: Record<BoxId, string> = {
+    maria: "Maria", mine: "Elena", grace: "Grace Church",
+    daniel: "Daniel", jordan: "Jordan", prayerbox: "the Prayer Box prayer team",
+  };
+  return `Sender and ${names[recipient]} only`;
 }
 
 /** Limited demo cue for explicit outward intent; never a full safety classifier. */

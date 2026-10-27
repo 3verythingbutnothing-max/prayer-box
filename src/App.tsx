@@ -48,6 +48,9 @@ import {
 import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
 import "./story-list.css";
+import { recipientNames, prayerRecipients, recipientActor } from "./recipients";
+
+const initialUpdateText = "The story is still unfolding. I am thankful for a little more peace today, and I am still asking for wisdom for the next step.";
 
 function FeedbackUnavailable() {
   return (
@@ -117,12 +120,9 @@ const viewerNames: Record<Viewer, string> = {
   owner: "Grace owner",
   guest: "Visitor",
   operator: "Safety reviewer",
+  team: "Prayer Box team",
 };
-const boxNames: Record<BoxId, string> = {
-  maria: "Maria",
-  grace: "Grace Church",
-  mine: "Elena",
-};
+const boxNames = recipientNames;
 const withPlatformAcknowledgment = (row: PrayerRequest): PrayerRequest =>
   row.moderation === "approved" && !row.platformAcknowledgment
     ? {
@@ -167,11 +167,11 @@ function PrayerCard({
         </span>
       </div>
       <h3>
-        <button onClick={() => onNavigate(`request/${row.id}`)}>
+        <button onClick={() => onNavigate(latest ? `request/${row.id}/post/${encodeURIComponent(latest.id)}` : `request/${row.id}`)}>
           {row.topic}
         </button>
       </h3>
-      <p className="card-prayer-text">{row.text}</p>
+      <p className="card-prayer-text">{latest?.text ?? row.text}</p>
       {latest && (
         <div className="card-latest-post">
           <Icon name={latest.kind === "testimony" ? "sun" : "link"} size={15} />
@@ -193,7 +193,7 @@ function PrayerCard({
         </span>
         <button
           className="text-link"
-          onClick={() => onNavigate(`request/${row.id}`)}
+          onClick={() => onNavigate(latest ? `request/${row.id}/post/${encodeURIComponent(latest.id)}` : `request/${row.id}`)}
         >
           {latest ? "Read the whole story" : "Read & pray"}{" "}
           <Icon name="arrow" size={16} />
@@ -323,25 +323,31 @@ export default function App() {
   const [dialog, setDialog] = useState<
     "demo" | "notifications" | "blocked" | "share" | "support" | null
   >(null);
-  const [scenario, setScenario] = useState<Scenario>("normal");
+  const [requestSearch, setRequestSearch] = useState("");
   const [deleteStory, setDeleteStory] = useState<string | null>(null);
   const [resetVersion, setResetVersion] = useState(0);
   const [updateStory, setUpdateStory] = useState<string | null>(null);
   const [updateKind, setUpdateKind] = useState<"testimony" | "update">(
     "update",
   );
-  const [updateText, setUpdateText] = useState(
-    "The story is still unfolding. I am thankful for a little more peace today, and I am still asking for wisdom for the next step.",
-  );
+  const [updateText, setUpdateText] = useState(initialUpdateText);
   const [updateDestinations, setUpdateDestinations] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationRead, setNotificationRead] = useState(false);
+  const [storyReadByViewer, setStoryReadByViewer] = useState<Partial<Record<Viewer, string[]>>>({});
+  const readStoryNoticeIds = storyReadByViewer[viewer] ?? [];
+  function setReadStoryNoticeIds(update: string[] | ((previous: string[]) => string[])) {
+    setStoryReadByViewer(previous => ({ ...previous, [viewer]: typeof update === "function" ? update(previous[viewer] ?? []) : update }));
+  }
   const mainRef = useRef<HTMLElement>(null);
   const cleanRoute = route.split("?")[0];
-  const [page, resource] = cleanRoute.split("/");
+  const [page, resource, postSegment, postResource] = cleanRoute.split("/");
+  const focusedPostId = (() => {
+    if (postSegment !== "post" || !postResource) return undefined;
+    try { return decodeURIComponent(postResource); } catch { return undefined; }
+  })();
   const isAbout = aboutAnchors.includes(page);
   const box: BoxId =
-    resource === "grace" ? "grace" : resource === "mine" ? "mine" : "maria";
+    prayerRecipients.some(person => person.id === resource) ? resource as BoxId : "maria";
   const roleActive = viewer === "member" ? memberActive : true;
   const groupMember =
     viewer === "owner" ||
@@ -364,6 +370,7 @@ export default function App() {
       maria: privacyByViewer.maria ?? "public",
       mine: "private",
       grace: "public",
+      daniel: "public", jordan: "public", prayerbox: "private",
     } as Record<BoxId, Audience>,
   };
   const canRead = (row: PrayerRequest) =>
@@ -376,8 +383,10 @@ export default function App() {
       row.authorCeiling,
       accessContext.boxCeilings[row.recipient],
     );
+  const storyNotices = requests.filter(row => row.moderation === "approved" && canRead(row)).flatMap(row => getStoryPosts(row).map(post => ({ row, post, key: `${row.id}/${post.id}` }))).sort((a,b) => Date.parse(b.post.createdAt) - Date.parse(a.post.createdAt));
+  const notificationRead = storyNotices.every(notice => readStoryNoticeIds.includes(notice.key));
   const ownBox: BoxId =
-    viewer === "owner" ? "grace" : viewer === "maria" ? "maria" : "mine";
+    viewer === "team" ? "prayerbox" : viewer === "owner" ? "grace" : viewer === "maria" ? "maria" : "mine";
   const canSeeMariaProfile =
     viewer === "maria" ||
     (privacyByViewer.maria ?? "public") === "public" ||
@@ -404,6 +413,14 @@ export default function App() {
   }
   function changeViewer(next: Viewer) {
     feedback.clear();
+    setRequestSearch("");
+    if (next !== viewer) {
+      setUpdateStory(null);
+      setUpdateText(initialUpdateText);
+      setUpdateKind("update");
+      setUpdateDestinations([]);
+    }
+    if (next !== viewer && viewer !== "guest") setComposer(null);
     setViewer(next);
   }
   function navigate(destination: string) {
@@ -412,7 +429,6 @@ export default function App() {
         ? `box/${ownBox}`
         : destination.replace(/^testimony\//, "request/");
     setMenuOpen(false);
-    setScenario("normal");
     if (window.location.hash.slice(1) === target) {
       window.scrollTo({ top: 0, behavior: "instant" });
       return;
@@ -427,7 +443,11 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    if (aboutAnchors.includes(page) && page !== "about") {
+    const storyTarget = requests.find(row => row.id === resource);
+    const detailOwnsFocus = (page === "request" || page === "testimony") && focusedPostId && storyTarget && canRead(storyTarget) && (focusedPostId === "original" || getStoryPosts(storyTarget).some(post => post.id === focusedPostId));
+    if (detailOwnsFocus) {
+      // The detail view focuses and scrolls the exact notified post.
+    } else if (aboutAnchors.includes(page) && page !== "about") {
       requestAnimationFrame(() => {
         const element = document.getElementById(page);
         if (element instanceof HTMLDetailsElement) element.open = true;
@@ -441,7 +461,6 @@ export default function App() {
   }, [route]);
   useEffect(() => {
     setMenuOpen(false);
-    setScenario("normal");
     setDeleteStory(null);
     setUpdateStory(null);
   }, [viewer]);
@@ -636,6 +655,7 @@ export default function App() {
       rows.some(
         (row) =>
           row.authorId !== viewer ||
+          blockedActors.includes(recipientActor(row.recipient)) ||
           isOwnPrayerBox(row.authorId, row.recipient),
       )
     )
@@ -781,8 +801,7 @@ export default function App() {
               </div>
             </div>
             <h1 id="box-title">
-              {box === "grace" ? "Grace Church’s" : `${boxNames[box]}’s`} Prayer
-              Box<span className="hero-dot">.</span>
+              {box === "prayerbox" ? "Prayer Box is here for you" : `${box === "grace" ? "Grace Church" : boxNames[box]}’s Prayer Box`}<span className="hero-dot">.</span>
             </h1>
             <p className="hero-intro">
               {box === "grace"
@@ -934,20 +953,10 @@ export default function App() {
               together inside.
             </p>
             <div id="request-list" className="request-list">
-              {inaccessible || scenario === "denied" ? (
+              {inaccessible ? (
                 <EmptyState
                   kind="denied"
                   onAction={() => navigate("box/maria")}
-                />
-              ) : scenario !== "normal" ? (
-                <EmptyState
-                  kind={scenario}
-                  receivingOwnBox={receivingOwnBox}
-                  onAction={() =>
-                    scenario === "empty"
-                      ? emptyBoxAction()
-                      : setScenario("normal")
-                  }
                 />
               ) : displayedRows.length ? (
                 displayedRows.map((row) => (
@@ -970,7 +979,7 @@ export default function App() {
               <Icon name="heart" size={14} />
               Small words, shared with care.
             </p>
-            {!inaccessible && scenario === "normal" && viewer !== "guest" && (
+            {!inaccessible && viewer !== "guest" && (
               <section
                 className="my-prayers-section"
                 aria-labelledby="box-my-prayers-title"
@@ -1075,7 +1084,7 @@ export default function App() {
   function renderMyRequests() {
     if (viewer === "guest")
       return <EmptyState kind="denied" onAction={() => navigate("signup")} />;
-    const own = requests.filter((r) => r.authorId === viewer);
+    const own = requests.filter((r) => r.authorId === viewer && (!requestSearch.trim() || [r.topic, r.text, ...getStoryPosts(r).map(post => post.text)].join(" ").toLowerCase().includes(requestSearch.trim().toLowerCase())));
     const sourceIds = [...new Set(own.map((r) => r.sourceId))];
     return (
       <div className="my-requests-page">
@@ -1094,19 +1103,12 @@ export default function App() {
         </header>
         <div className="page-toolbar">
           <button
-            className="button"
-            onClick={() => openComposer(viewer === "maria" ? "grace" : "maria")}
+            className="button new-request-button"
+            onClick={() => openComposer(viewer === "team" ? "maria" : "prayerbox")}
           >
-            <Icon name="note" size={18} />A new prayer request
+            <Icon name="note" size={22} />Add a new prayer request
           </button>
-          {own.length > 0 && (
-            <button
-              className="button secondary"
-              onClick={() => setDeleteStory("all")}
-            >
-              Delete requests
-            </button>
-          )}
+          <label className="request-search-field"><Icon name="search" size={22} /><span className="sr-only">Search my prayer requests</span><input type="search" value={requestSearch} onChange={event => setRequestSearch(event.target.value)} placeholder="Search your prayer requests" /></label>
           <span className="quiet-copy">
             An update can be hopeful, difficult, or still unfinished.
           </span>
@@ -1124,6 +1126,7 @@ export default function App() {
                     <h2>{first.topic}</h2>
                     <span className="chip">Your authored request</span>
                   </div>
+                  <time className="own-request-date" dateTime={first.postedAt}>Requested {formatStoryDate(first.postedAt ?? "")}</time>
                   <p>{first.text}</p>
                   <div className="delivery-list">
                     {copies.map((copy) => (
@@ -1194,11 +1197,17 @@ export default function App() {
               );
             })}
           </div>
+        ) : requestSearch.trim() ? (
+          <div className="panel empty-state">
+            <h2>No requests match your search</h2>
+            <p>Try another word from your request or its updates.</p>
+            <button className="button secondary" onClick={() => setRequestSearch("")}>Clear search</button>
+          </div>
         ) : (
           <EmptyState
             kind="empty"
             onAction={() =>
-              openComposer(viewer === "maria" ? "grace" : "maria")
+              openComposer(viewer === "team" ? "maria" : "prayerbox")
             }
           />
         )}
@@ -1519,7 +1528,8 @@ export default function App() {
       );
     return (
       <PrayerDetail
-        key={`${row.id}-${viewer}`}
+        key={`${row.id}-${viewer}-${focusedPostId ?? "latest"}`}
+        focusedPostId={focusedPostId}
         request={row}
         viewer={viewer}
         groupMember={groupMember}
@@ -1541,16 +1551,14 @@ export default function App() {
           )
         }
         onNavigate={navigate}
-        onReport={(reason, actor) =>
-          removeActor(
-            actor,
-            reason,
-            actor === row.authorId
-              ? row.text
-              : (row.replies.find((r) => r.actorId === actor)?.text ??
-                  "Reported reply fixture"),
-          )
-        }
+        onReport={(reason, actor, replyId) => {
+          const reply = row.replies.find((r) => r.actorId === actor && (!replyId || r.id === replyId));
+          if (replyId && !reply) {
+            notify("That reply is no longer available. Please reopen the story.");
+            return;
+          }
+          removeActor(actor, reason, replyId ? reply!.text : actor === row.authorId ? row.text : (reply?.text ?? "Reported reply fixture"));
+        }}
         onBlock={(actor) => removeActor(actor)}
         onCareConcern={() => raiseCareConcern(row.id)}
         onSupport={() => setDialog("support")}
@@ -1572,13 +1580,7 @@ export default function App() {
     if (page === "prayers") return renderMyPrayers();
     if (page === "app")
       return (
-        <Suspense
-          fallback={
-            <p className="quiet-copy" role="status">
-              Opening the mobile app guide…
-            </p>
-          }
-        >
+        <Suspense fallback={null}>
           <MobileAppPage
             app={appInstall}
             widgetPreferences={widgetPreferences}
@@ -1590,13 +1592,7 @@ export default function App() {
       );
     if (page === "feedback")
       return (
-        <Suspense
-          fallback={
-            <p className="quiet-copy" role="status">
-              Opening the feedback form…
-            </p>
-          }
-        >
+        <Suspense fallback={null}>
           <FeedbackPage key={resetVersion} />
         </Suspense>
       );
@@ -1643,6 +1639,8 @@ export default function App() {
             membershipStatus={membership}
             onMembershipChange={setMembership}
             friends={friends}
+            discoverableMaria={canSeeMariaProfile}
+            blockedActors={blockedActors}
             onFriendsChange={setFriends}
             memberActive={memberActive}
             onMemberActiveChange={setMemberActive}
@@ -1837,15 +1835,9 @@ export default function App() {
       >
         Skip to content
       </a>
-      <div className="demo-banner">
-        <span>
-          <span className="demo-dot" />
-          Fictional prototype{" "}
-          <span className="banner-detail">· Nothing is sent or charged.</span>
-        </span>
-        <button onClick={() => setDialog("demo")}>
-          Preview options <Icon name="settings" size={14} />
-        </button>
+      <div className="demo-banner demo-preview-bar">
+        <a href="#signup">Create your prayer box <Icon name="arrow" size={17} /></a>
+        <button onClick={() => setDialog("demo")}>Preview options <Icon name="settings" size={18} /></button>
       </div>
       <header className="app-header">
         <div className="header-inner">
@@ -1884,7 +1876,7 @@ export default function App() {
                 aria-current={item.active ? "page" : undefined}
                 key={item.label}
               >
-                <Icon name={item.icon} size={18} />
+                <Icon name={item.icon} size={24} />
                 {item.label}
               </a>
             ))}
@@ -1892,7 +1884,7 @@ export default function App() {
           <div className="header-utilities">
             <button
               className="icon-button notification-button"
-              aria-label="Open fictional notifications"
+              aria-label="Open notifications"
               onClick={() => {
                 setReadSupportNotes((previous) => [
                   ...new Set([
@@ -1903,10 +1895,8 @@ export default function App() {
                 setDialog("notifications");
               }}
             >
-              <Icon name="bell" />
-              {(!notificationRead || unreadSupport) && (
-                <span className="notification-dot" />
-              )}
+              <span className="notification-bell"><Icon name="bell" size={27} />
+              {(!notificationRead || unreadSupport) && <span className="notification-dot" />}</span>
             </button>
             <div className="account-menu-wrap">
               <button
@@ -1920,7 +1910,7 @@ export default function App() {
                   {viewerNames[viewer].slice(0, 1)}
                 </span>
                 <span className="header-name">{viewerNames[viewer]}</span>
-                <Icon name="chevron" size={15} />
+                <Icon name="chevron" size={18} />
               </button>
               {menuOpen && (
                 <>
@@ -1985,7 +1975,7 @@ export default function App() {
                       Switch demo viewer
                     </button>
                     <a href="#signup" onClick={() => setMenuOpen(false)}>
-                      Try signup & recovery
+                      Create a prayer box · signup
                     </a>
                   </nav>
                 </>
@@ -2323,6 +2313,9 @@ export default function App() {
           automatic={automatic}
           automaticMessages={automaticMessages}
           offerGrace={offerGrace}
+          friends={viewer === "elena" ? friends : viewer === "maria" && friends.includes("maria") ? ["elena"] : []}
+          mariaVisible={canSeeMariaProfile}
+          blockedActors={blockedActors}
           boxCeilings={accessContext.boxCeilings}
           onClose={() => setComposer(null)}
           onCommit={commitRequests}
@@ -2349,7 +2342,7 @@ export default function App() {
         >
           <p className="form-intro">
             Everything resets when this page reloads. These controls let you
-            compare roles and boundary states.
+            explore the pages and sample accounts.
           </p>
           <label className="field">
             View as
@@ -2368,22 +2361,10 @@ export default function App() {
               </option>
               <option value="owner">Grace Church owner</option>
               <option value="guest">Visitor · no account</option>
+              <option value="team">Prayer Box prayer team · its own inbox only</option>
               <option value="operator">
                 Platform reviewer · no general private inbox access
               </option>
-            </select>
-          </label>
-          <label className="field">
-            Box-list scenario
-            <select
-              value={scenario}
-              onChange={(event) => setScenario(event.target.value as Scenario)}
-            >
-              <option value="normal">Normal fictional content</option>
-              <option value="empty">Empty</option>
-              <option value="loading">Loading</option>
-              <option value="error">Interrupted / retry</option>
-              <option value="denied">Access denied</option>
             </select>
           </label>
           <div className="prototype-boundary">
@@ -2395,6 +2376,8 @@ export default function App() {
             </p>
           </div>
           <div className="demo-route-grid">
+            <button className="button secondary compact" onClick={() => { navigate("signup"); setDialog(null); }}>Open signup</button>
+            <button className="button secondary compact" onClick={() => { changeViewer("team"); navigate("box/prayerbox"); setDialog(null); }}>Prayer Box team inbox</button>
             <button
               className="button secondary compact"
               onClick={() => {
@@ -2416,6 +2399,7 @@ export default function App() {
             <button
               className="button secondary compact"
               onClick={() => {
+                changeViewer("member");
                 navigate("inbox");
                 setDialog(null);
               }}
@@ -2455,6 +2439,7 @@ export default function App() {
                 setSupportNotes([]);
                 setDismissedSupportNotes([]);
                 setReadSupportNotes([]);
+                setStoryReadByViewer({});
                 setRestricted([]);
                 setMembership("none");
                 setMemberActive(true);
@@ -2470,7 +2455,6 @@ export default function App() {
                 setLanguage("en");
                 setWidgetPreferences(defaultWidgetPreferences);
                 setResetVersion((version) => version + 1);
-                setScenario("normal");
                 notify(
                   "Fictional requests, memberships, reports and safety choices reset.",
                 );
@@ -2485,51 +2469,20 @@ export default function App() {
         </Modal>
       )}
       {dialog === "notifications" && (
-        <Modal title="A quiet little update" onClose={() => setDialog(null)}>
-          <p className="quiet-copy">
-            In-app fictional notices. No sensitive prayer text, identity, or
-            media appears in a preview.
-          </p>
-          <PrivateSupportNotifications
-            notes={privateSupportNotes}
-            onOpen={() => setDialog("support")}
-            onDismiss={(id) =>
-              setDismissedSupportNotes((previous) => [...previous, id])
-            }
-          />
-          <button
-            className="notification-item"
-            onClick={() => {
-              setNotificationRead(true);
-              setDialog(null);
-              navigate("requests");
-            }}
-          >
-            <span className="side-icon">
-              <Icon name="note" />
-            </span>
-            <span>
-              <strong>You have a new Prayer Box update.</strong>
-              <small>
-                Open My Requests to see only deliveries your account can access.
-              </small>
-            </span>
-            <Icon name="arrow" />
-          </button>
-          <p className="quiet-copy">
-            Contact is optional. Email prayer, SMS prayer, email marketing, and
-            SMS marketing consent are separate. No external notifications are
-            connected.
-          </p>
-          <button
-            className="button secondary"
-            onClick={() => {
-              setNotificationRead(true);
-              setDialog(null);
-            }}
-          >
-            Mark example as read
-          </button>
+        <Modal title="Your prayer updates" onClose={() => setDialog(null)} wide>
+          <p className="quiet-copy">These in-app updates are visible only when your account can read the original delivery. No external notification has been sent.</p>
+          <PrivateSupportNotifications notes={privateSupportNotes} onOpen={() => setDialog("support")} onDismiss={id => setDismissedSupportNotes(previous => [...previous,id])} />
+          <div className="story-notifications">
+            {storyNotices.map(({row,post,key}) => <article className="story-notification" key={key}>
+              <p className="eyebrow">{post.kind === "testimony" ? "Testimony shared" : "Update shared"} · <time dateTime={post.createdAt}>{formatStoryDate(post.createdAt)}</time></p>
+              <h3>{row.topic}</h3>
+              <p className="story-notification-author">{authorLabel(row)} · {boxNames[row.recipient]}</p>
+              <p>{post.text}</p>
+              <button className="text-link" onClick={() => { setReadStoryNoticeIds(previous => [...new Set([...previous,key])]); setDialog(null); navigate(`request/${row.id}/post/${encodeURIComponent(post.id)}`); }}>Read & respond to this {post.kind} <Icon name="arrow" size={19} /></button>
+            </article>)}
+            {!storyNotices.length && <p className="notice sage">You’re all caught up. Updates to prayer stories you can read will appear here.</p>}
+          </div>
+          <button className="button secondary" onClick={() => { setReadStoryNoticeIds(storyNotices.map(notice => notice.key)); setDialog(null); }}>Mark updates as read</button>
         </Modal>
       )}
       {dialog === "support" && (

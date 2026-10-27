@@ -12,6 +12,7 @@ import {
 } from "../localization";
 import type { UiLanguage } from "../localization";
 import "../community.css";
+import { findPrayerRecipients } from "../recipients";
 
 type MembershipStatus = "none" | "pending" | "invited" | "approved";
 type CommunityPage = "church" | "members" | "signup" | "review";
@@ -30,6 +31,8 @@ interface CommunityPagesProps {
   membershipStatus: MembershipStatus;
   onMembershipChange: (status: MembershipStatus) => void;
   friends: string[];
+  discoverableMaria?: boolean;
+  blockedActors?: readonly string[];
   onFriendsChange: (ids: string[]) => void;
   memberActive: boolean;
   onMemberActiveChange: (active: boolean) => void;
@@ -110,6 +113,7 @@ function AccessNotice({
 
 function ChurchPage(props: CommunityPagesProps) {
   const feedback = useActionFeedback();
+  const [search, setSearch] = useState("");
   const [invitation, setInvitation] = useState<
     "pending" | "accepted" | "declined"
   >("pending");
@@ -129,7 +133,8 @@ function ChurchPage(props: CommunityPagesProps) {
         />
       </div>
     );
-  const accepted = people.filter((person) => props.friends.includes(person.id));
+  const accepted = people.filter((person) => props.friends.includes(person.id) && (!search.trim() || `${person.name} @${person.id}`.toLowerCase().includes(search.trim().toLowerCase())));
+  const discoveries = findPrayerRecipients(search, props.viewer, props.friends, { mariaVisible: props.discoverableMaria, blocked: props.blockedActors }).filter(person => search.trim() || person.kind === "platform");
   const removed = people.filter(
     (person) => person.id !== "jordan" && !props.friends.includes(person.id),
   );
@@ -143,6 +148,15 @@ function ChurchPage(props: CommunityPagesProps) {
         A small circle of accepted friends. A place for familiar names, gentle
         encouragement, and prayer beyond the screen.
       </Heading>
+      <label className="request-search-field church-search"><Icon name="search" size={23} /><span className="sr-only">Find people by @username</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Find someone by @username" autoComplete="off" /></label>
+      <div className="church-search-results" aria-label="Available prayer boxes">
+        {discoveries.map(person => <article className="church-directory-card" key={person.id}>
+          <Icon name={person.kind === "platform" ? "box" : "people"} size={29} />
+          <div><h3>{person.name}</h3><p>@{person.username}{person.kind === "platform" ? " · Always here for prayer" : " · Sample prayer box"}</p></div>
+          <button className="text-link" onClick={() => props.onNavigate(`box/${person.id}`)}>Open box <Icon name="arrow" size={18} /></button>
+        </article>)}
+        {search.trim() && !discoveries.length && <p className="quiet-copy" role="status">No available matching box in this demo. Try @maria, @daniel, @jordan or @prayerbox.</p>}
+      </div>
       <div className="community-layout">
         <div className="community-main">
           <section aria-labelledby="accepted-friends-heading">
@@ -949,8 +963,7 @@ function SignupPage(props: CommunityPagesProps) {
                   />
                 </label>
                 <label className="field">
-                  Display name{" "}
-                  <span className="community-optional">optional</span>
+                  <span>Display name <span className="community-optional">optional</span></span>
                   <input
                     readOnly
                     value={kind === "individual" ? "Elena" : "Church owner"}

@@ -6,8 +6,8 @@
   font-display: swap;
 }
 :root {
-  /* A gentle 12.5% reading-size increase, relative to browser font preferences. */
-  font-size: 112.5%;
+  /* Comfortable reading size, relative to the reader's browser preference. */
+  font-size: 125%;
   font-family: Rubik, ui-rounded, system-ui, sans-serif;
   font-weight: 400;
   color: var(--ink);

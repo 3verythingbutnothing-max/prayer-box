@@ -75,6 +75,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     ),
     back: <path d="M19 12H5m5-5-5 5 5 5" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
+    plus: <path d="M12 5v14M5 12h14" />,
     check: <path d="m5 12 4 4L19 6" />,
     more: (
       <>

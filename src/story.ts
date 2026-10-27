@@ -48,10 +48,12 @@ export function hasPrayedForLatest(
     return false;
   const revision = storyRevision(request);
   const originalOnly = getStoryPosts(request).length === 0;
+  const latestPost = getStoryPosts(request).at(-1);
   return request.replies.some(
     (reply) =>
       reply.actorId === viewer &&
       !reply.automatic &&
+      (originalOnly || reply.testimonyId === latestPost?.id) &&
       (reply.storyRevision === revision ||
         (!reply.storyRevision && originalOnly && !reply.testimonyId)),
   );
