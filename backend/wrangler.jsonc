@@ -1,0 +1,43 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "prayer-box-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "dev": { "ip": "127.0.0.1", "port": 8787 },
+  "vars": {
+    "APP_ENV": "local",
+    "APP_ORIGIN": "http://localhost:8787",
+    "TURNSTILE_HOSTNAMES": "localhost,127.0.0.1"
+  },
+  "assets": {
+    "directory": "../dist-backend",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*", "/media", "/media/*"]
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "prayer-box-local",
+    "database_id": "00000000-0000-0000-0000-000000000001",
+    "migrations_dir": "migrations",
+    "remote": false
+  }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "prayer-box-local-private", "remote": false }],
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "prayer-box-local-jobs" }],
+    "consumers": [{
+      "queue": "prayer-box-local-jobs", "max_batch_size": 10,
+      "max_batch_timeout": 5, "max_retries": 3,
+      "dead_letter_queue": "prayer-box-local-dead"
+    }, { "queue": "prayer-box-local-dead", "max_batch_size": 10, "max_retries": 3 }]
+  },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  }
+}

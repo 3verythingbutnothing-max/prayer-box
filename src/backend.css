@@ -1,0 +1,72 @@
+.backend-app { min-height: 100vh; color: var(--ink, #2d3848); }
+.backend-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px max(24px, calc((100vw - 1100px) / 2)); background: #fffbf5; border-bottom: 1px solid #d2dfeb; }
+.backend-header nav { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.backend-header .brand > span { font-size: inherit; color: inherit; }
+.backend-stage { color: #385770; background: #e3eff8; border: 1px solid #c7dbe9; border-radius: 99px; padding: 7px 14px; font-size: .85rem; }
+.backend-main { max-width: 920px; margin: 0 auto; padding: 52px 24px 64px; display: grid; gap: 26px; outline: none; }
+.backend-intro { max-width: 680px; margin-bottom: 8px; }
+.backend-intro h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.14; letter-spacing: -.035em; margin: 12px 0 18px; }
+.backend-intro > p:last-child { color: #5a6c7e; font-size: 1.125rem; line-height: 1.65; }
+.backend-card { min-width: 0; padding: clamp(22px, 4vw, 38px); background-color: #fffdfa; background-image: repeating-linear-gradient(120deg, transparent 0 5px, #e8d8c311 5px 6px); border: 1px solid #d3deea; border-radius: 26px; box-shadow: 0 6px 0 -3px #dae4ee70, 0 18px 32px -24px #49617a3b; }
+.backend-card h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); letter-spacing: -.025em; line-height: 1.2; margin: 0 0 16px; }
+.backend-card p { line-height: 1.7; }
+.backend-card-heading { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 28px; align-items: center; margin-bottom: 24px; }
+.backend-card-heading .feedback-bug { width: 140px; height: auto; }
+.backend-card-heading p:last-child { color: #5a6c7e; }
+.backend-feedback form { display: grid; gap: 12px; }
+.backend-feedback label { font-weight: 650; margin-top: 12px; font-size: 1rem; }
+.backend-feedback select, .backend-feedback textarea, .backend-feedback input[type=file] { width: 100%; min-width: 0; font: inherit; font-size: 1rem; color: #2d3848; border: 1px solid #bcccdc; border-radius: 14px; background: #fff; padding: 14px 16px; }
+.backend-feedback textarea { resize: vertical; min-height: 150px; line-height: 1.6; }
+.backend-feedback input[type=file] { padding: 12px; }
+.backend-feedback input[type=file]::file-selector-button { border: 0; border-radius: 8px; background: #e3eff8; color: #2f4b68; padding: 9px 12px; font: inherit; margin-right: 10px; cursor: pointer; }
+.backend-feedback :is(input,select,textarea):focus-visible { outline: 3px solid #8aa9cb; outline-offset: 3px; }
+.backend-feedback :is(input,select,textarea):disabled { color: #576777; background-color: #f3f4f5; opacity: 1; }
+.backend-helper, .backend-optional { color: #5b6b7c; font-size: .9rem; font-weight: 400; }
+.backend-feedback .backend-helper { margin: 0 0 8px; }
+.backend-verification { margin: 16px 0; padding: 20px; border: 1px solid #cbddeb; border-radius: 18px; background: #eff6fb; }
+.backend-verification h3 { display: flex; align-items: center; gap: 10px; font-size: 1rem; line-height: 1.45; margin: 0 0 12px; }
+.backend-verification h3 svg { flex-shrink: 0; }
+.backend-verification p { margin: 10px 0 16px; font-size: .95rem; }
+.backend-bot-check { max-width: 100%; overflow: hidden; }
+.backend-inline-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+.backend-submit { width: 100%; min-height: 56px; font-size: 1.1rem; margin-top: 10px; background: #dbeafa; color: #294b6b; border-color: #a9c2dc; }
+.backend-picture-list, .backend-notifications { list-style: none; margin: 0; padding: 0; }
+.backend-picture-list li { display: flex; align-items: start; gap: 16px; padding: 14px 0; border-bottom: 1px solid #dce4ed; }
+.backend-picture-list li > div { flex: 1; min-width: 0; }
+.backend-picture-list :is(strong,span) { display: block; overflow-wrap: anywhere; }
+.backend-picture-list span { margin-top: 5px; color: #607083; font-size: .9rem; }
+.backend-result { display: flex; align-items: start; gap: 12px; background: #eef4fa; border-radius: 16px; padding: 18px; overflow-wrap: anywhere; }
+.backend-result-success { background: #e4f0e2; color: #345242; }
+.backend-result svg { flex-shrink: 0; margin-top: 4px; }
+.backend-reference { overflow-wrap: anywhere; }
+.backend-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-bottom: 20px; border-radius: 50%; background: #e5edf7; color: #4f6c8a; }
+.backend-connection { max-width: 700px; }
+.backend-connection > p { margin-bottom: 24px; }
+.backend-signed-in { margin: 0; color: #52687e; }
+.backend-section-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.backend-section-top h2 { display: flex; align-items: center; gap: 12px; margin: 0; }
+.backend-notifications li { padding: 18px 0; border-bottom: 1px solid #dce4ed; }
+.backend-notifications p { margin: 0 0 6px; }
+.backend-notifications time { color: #607083; font-size: .9rem; }
+.backend-help { scroll-margin-top: 24px; background-color: #edf4f8; }
+.backend-help p + p { margin-top: 14px; }
+.backend-footer { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 24px; border-top: 1px solid #d3deea; color: #5a6c7e; }
+.backend-footer p { font-size: .9rem; }
+@media (max-width: 600px) {
+  .backend-header { padding: 18px 20px; gap: 16px; flex-wrap: wrap; }
+  .backend-header .brand { font-size: 1.45rem; }
+  .backend-header nav { width: 100%; justify-content: space-between; gap: 12px; }
+  .backend-main { padding: 34px 16px 44px; gap: 22px; }
+  .backend-card { border-radius: 22px; padding: 22px 20px; }
+  .backend-card-heading { grid-template-columns: minmax(0,1fr) 72px; gap: 12px; align-items: start; }
+  .backend-card-heading .feedback-bug { width: 72px; margin-top: 26px; }
+  .backend-card-heading h2 { font-size: 1.5rem; }
+  .backend-verification { padding: 16px; }
+  .backend-footer { align-items: start; text-align: center; }
+}
+@media (max-width: 360px) {
+  .backend-card-heading { display: block; }
+  .backend-card-heading .feedback-bug { width: 90px; display: block; margin: 12px auto 0; }
+  .backend-card { padding: 20px 16px; }
+  .backend-header .brand > span { display: inline; }
+}

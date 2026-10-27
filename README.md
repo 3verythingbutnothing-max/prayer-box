@@ -1,14 +1,16 @@
-# Prayer Box frontend prototype
+# Prayer Box
 
 This is the approved design direction expressed as a responsive React frontend for public design review. Every name, prayer, membership, media state, notification, report and donation is fictional. Demo input stays in browser memory and is cleared on reload. The prototype is not production security.
 
 Demo: [Prayer Box on GitHub Pages](https://3verythingbutnothing-max.github.io/prayer-box/).
 
+Backend development has started in a separate local build using Cloudflare Workers, D1, private R2, Queues and server-validated Turnstile. The first connected flow is private feedback with quarantined screenshots and durable receipt notifications. No real sign-in provider or public intake is enabled. See the [integration and launch plan](docs/BACKEND_INTEGRATION_AND_LAUNCH.md) for implemented scope, local commands, verification and remaining launch gates.
+
 Reading text, headings, labels and controls use a 125% root type scale while keeping the rounded Rubik face. Text sizes follow browser font preferences; the miniature decorative phone artwork keeps its own proportions. Larger navigation icons, aligned notification badges and pastel new-request buttons follow the same visual system.
 
 ## Run locally
 
-Use Node.js 20.19+ or 22.12+ and npm:
+Use Node.js 24 and npm:
 
 ```sh
 npm ci
@@ -23,7 +25,7 @@ npm run test:stress
 npm run build
 ```
 
-The domain tests exercise fictional audience intersections, anonymous labels, independent deliveries, church approval/removal, friendship changes, actor blocks, limited screening examples and links under the hosted project path. They cannot prove server authorization or abuse protection. The founder's separate backend/stress-test plan has not been executed.
+The domain tests exercise fictional audience intersections, anonymous labels, independent deliveries, church approval/removal, friendship changes, actor blocks, limited screening examples and links under the hosted project path. They cannot prove server authorization or abuse protection. The backend now has separate local runtime tests; those do not prove production capacity or complete the launch plan.
 
 `test:stress` runs two independently authored, deterministic local frontend-model harnesses. They check privacy tightening, revocations, blocks, selected-copy story operations, private acknowledgments/care notes, bounded Unicode input and independently decoded QR payloads. Their JSON evidence is written under the ignored `output/qa/mobile-swarm/` directory. These bounded assertions are not browser test counts, provider validation, API authorization or production load/security results. Both harnesses run in the static-site workflow before deployment.
 
@@ -136,7 +138,7 @@ Organizations can optionally add their own website during the fictional ministry
 
 The demo accepts ordinary HTTP/HTTPS addresses, adds HTTPS to a bare domain, and rejects executable schemes, credential-bearing/local addresses and known payment-solicitation examples. It does not fetch previews, import posts, verify site ownership or establish reliable live URL/content screening. A blank value removes the link. Changes remain in React memory and reset on reload.
 
-GitHub Pages serves the static frontend. There is no backend, database, real authentication, contact verification, working CAPTCHA, bot protection, media upload/recording/transcription, AI moderation, model training, email/SMS, payment processor or real financial transaction. Audio/video states and transcripts are UI simulations; no voice is recorded or played. Donation exports are fictional personal records, not tax receipts; entity status and deductibility are unverified.
+GitHub Pages serves the static frontend. That public demo has no connected backend, database, real authentication, contact verification, working CAPTCHA, bot protection, media upload/recording/transcription, AI moderation, model training, email/SMS, payment processor or real financial transaction. Audio/video states and transcripts are UI simulations; no voice is recorded or played. Donation exports are fictional personal records, not tax receipts; entity status and deductibility are unverified.
 
 The signup screen omits repeated implementation/demo instructions. **Preview options**, also opened by the footer's **Prototype details**, remains the central disclosure: all data is fictional, each browser receives the fixture source, account/bot verification is disconnected and state resets on reload. Natural presentation labels do not establish real delivery, authentication or screening.
 
@@ -144,7 +146,7 @@ Before real requests, the minimum implementation is a server application and dat
 
 Confirmed requirements are in revision 4 and the founder’s subsequent additions, including English and NIV selection. Exact editorial wording, NIV quotation rights, native widget packaging, future-member retained-history policy, precise block/group confidentiality policy, retention, age/region rules, human review operations, providers, payment eligibility and surplus policy still require production decisions. Current NIV links and the historical WEB source audit are documented in `public/scripture-source-notes.md`.
 
-The founder authorized hosting this fictional frontend on GitHub. Stop for separate explicit founder approval before a backend or real service integration, real accounts, submissions or payments. Production authorization must protect every request, reply, attachment, linked testimony, export and notification at the server; browser visibility is insufficient.
+The founder authorized GitHub hosting and has now authorized backend implementation. This increment is local and synthetic; real accounts, public intake, production deployment and payments remain gated by the integration and launch plan. Production authorization must protect every request, reply, attachment, linked testimony, export and notification at the server; browser visibility is insufficient.
 
 ## Design and source material
 
@@ -152,4 +154,4 @@ The founder's revision-4 brief controls; companion copy is proposed. The supplie
 
 Applied available local skills: Sites (local-only workflow), web-design-taste, Emil design engineering, React best practices and animate. The brief’s `frontend-design` and `web-design-guidelines` skills remain unavailable locally; their official upstream instructions were inspected earlier. No unrelated skill bundle was installed. Rubik is bundled locally with its OFL license. Icons are SVGs; the logo, favicon and hero share a vector redrawing of the founder’s supplied open-box and heart-note motif. The donation rainbow/glint uses CSS transforms and star opacity, with automatic offscreen/hidden-page pausing and a static reduced-motion fallback. Its layered gold rim uses sharp reflective bands and beveled edges.
 
-The app uses React, TypeScript and Vite without routing, animation, database or service infrastructure packages. The small QR encoder is loaded on demand, with jsQR used only for development tests. All state is in React memory. Donation CSV downloads use a controlled schema with spreadsheet-formula neutralization; QR PNG/SVG downloads contain only the branded box-link card.
+The frontend uses React, TypeScript and Vite. The separate backend uses the pinned Cloudflare toolchain and local runtime test integration. The small QR encoder is loaded on demand, with jsQR used only for development tests. All state is in React memory. Donation CSV downloads use a controlled schema with spreadsheet-formula neutralization; QR PNG/SVG downloads contain only the branded box-link card.
