@@ -318,6 +318,12 @@
   text-align: center;
   padding: 2px 0 20px;
 }
+.account-donation-layout > * {
+  min-width: 0;
+}
+.account-funding .account-section-top > div {
+  min-width: 0;
+}
 .donation-lock-message h2 {
   font-size: clamp(1.7rem, 2.2vw, 2.2rem);
   line-height: 1.2;
@@ -326,6 +332,33 @@
 .donation-lock-message > p:not(.eyebrow) {
   max-width: 38ch;
   margin-inline: auto;
+}
+.donation-overflow-heading {
+  display: grid;
+  grid-template-columns: clamp(62px, 7vw, 88px) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  max-width: 390px;
+  width: 100%;
+  min-width: 0;
+  margin: 16px auto 20px;
+  text-align: left;
+}
+.donation-lock-message .donation-overflow-heading h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.2vw, 1.9rem);
+  line-height: 1.2;
+}
+.donation-overflow-cup {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+@media (max-width: 360px) {
+  .donation-lock-message .donation-overflow-heading h2 {
+    font-size: 1.2rem;
+  }
 }
 .donation-drawn-lock {
   display: block;

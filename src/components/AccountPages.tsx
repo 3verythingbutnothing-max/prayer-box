@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { Viewer } from "../domain";
 import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
 import { PreferenceSwitch } from "../ui";
+import OverflowingCup from "./OverflowingCup";
 import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
 import { parseContributionAmount } from "../donation-amount";
 import type { ContributionAmount } from "../donation-amount";
@@ -1038,9 +1039,10 @@ export default function AccountPages({
                       />
                     </svg>
                     <p className="eyebrow">Enough for this little space</p>
-                    <h2 id="account-contribute-title">
-                      Our cup is overflowing!
-                    </h2>
+                    <div className="donation-overflow-heading">
+                      <OverflowingCup />
+                      <h2 id="account-contribute-title">Our cup is overflowing!</h2>
+                    </div>
                     <p>
                       The next three months’ hosting need has been met, so
                       donations are disabled for now. Contributions can reopen
