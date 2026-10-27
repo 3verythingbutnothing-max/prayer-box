@@ -124,7 +124,7 @@ Enable structured metrics for error categories, latency, verification failures, 
 ## Primary technical references
 
 - [Turnstile server-side validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/): server validation, token lifetime/reuse and result fields.
-- [Workers static-asset SPA routing](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/): explicit Worker-first API/media paths with SPA assets.
+- [Workers static-asset SPA routing](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/): Worker-first routing applies the local-host guard, canonical-origin redirect and security headers before API/media handling or SPA assets.
 - [Workers local development](https://developers.cloudflare.com/workers/local-development/): local bindings and execution boundaries.
 - [Workers Vitest integration](https://developers.cloudflare.com/workers/testing/vitest-integration/): actual Workers-runtime tests and local resource bindings.
 - [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/), [read replication and sessions](https://developers.cloudflare.com/d1/best-practices/read-replication/), and [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/).
