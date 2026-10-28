@@ -169,7 +169,7 @@ function PrayerCard({
   const posts = getStoryPosts(row);
   const latest = posts.at(-1);
   return (
-    <article className={`prayer-card panel ${posts.some(post => post.kind === "testimony") ? "testimony-card" : ""}`}>
+    <article className={`prayer-card panel ${latest ? "testimony-card" : ""}`}>
       <div className="card-topline">
         <div className="request-byline">
           <span
