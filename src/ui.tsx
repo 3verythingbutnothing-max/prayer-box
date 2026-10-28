@@ -193,13 +193,18 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  closeOnBackdrop = false,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  closeOnBackdrop?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdropPress = useRef(false);
   const heading = useId();
   useEffect(() => {
     const previous =
@@ -216,8 +221,21 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className={`modal ${wide ? "modal-wide" : ""}`}
+      className={`modal ${wide ? "modal-wide" : ""} ${className}`.trim()}
       aria-labelledby={heading}
+      onPointerDown={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        backdropPress.current = event.target === event.currentTarget &&
+          (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom);
+      }}
+      onPointerCancel={() => { backdropPress.current = false; }}
+      onClick={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const outside = event.target === event.currentTarget &&
+          (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom);
+        if (closeOnBackdrop && backdropPress.current && outside) onClose();
+        backdropPress.current = false;
+      }}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

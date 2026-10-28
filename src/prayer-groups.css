@@ -20,6 +20,19 @@
 .group-search { display:flex; align-items:center; gap:.7rem; background:#fff; border:1px solid #b5c4d3; border-radius:1rem; padding:.65rem 1rem; }
 .group-search input { flex:1; min-width:0; border:0; background:transparent; font:inherit; padding:.45rem 0; }
 .group-form { display:grid; gap:1.1rem; min-width:0; }
+.group-form[hidden] { display:none; }
+.group-editor-dialog[open] { display:flex; flex-direction:column; overflow:clip; }
+.group-editor-dialog > .modal-header { position:relative; flex-shrink:0; }
+.group-editor-dialog > .modal-body { min-height:0; overflow-y:auto; }
+.group-live-preview { position:sticky; top:0; z-index:1; padding:.8rem; border:1px solid #d1d6e5; border-radius:1rem; background:#f8f6fc; box-shadow:0 3px 10px #4d5d7612; }
+.group-editor-dialog .group-icons .group-picture, .group-editor-dialog .group-color-swatch { scroll-margin-top:8rem; }
+.group-live-preview > div { min-width:0; }
+.group-live-preview strong { display:block; margin-bottom:.2rem; }
+.group-live-preview p { font-size:.9rem; overflow-wrap:anywhere; }
+.group-live-preview .text-link { margin-top:.35rem; min-height:2rem; }
+.group-exit-confirmation { display:grid; gap:1.2rem; }
+.group-exit-confirmation > p { margin:0; }
+.group-exit-confirmation .text-link { min-height:2.75rem; }
 .group-form p { margin:0; }
 .group-form label { display:grid; gap:.45rem; font-weight:600; min-width:0; }
 .group-form input:not([type=file]), .group-form select { width:100%; min-width:0; box-sizing:border-box; background:#fff; border:1px solid #b8bfd0; border-radius:.7rem; padding:.8rem; font:inherit; color:inherit; }

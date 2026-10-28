@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Icon, Modal } from '../ui';
 import { useActionFeedback } from '../action-feedback';
@@ -42,19 +42,55 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
   const [color, setColor] = useState<GroupColor>(group?.color ?? 'lavender');
   const [error, setError] = useState(''); const [reading, setReading] = useState(false);
   const imageSequence = useRef(0);
+  const initial = useRef({ name: group?.name ?? '', username: group?.username ?? '', website: group?.website ?? '', icon: group?.icon ?? 'heart', image: group?.image, color: group?.color ?? 'lavender' });
+  const form = useRef<HTMLFormElement>(null);
+  const keepEditingButton = useRef<HTMLButtonElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  const submitFrame = useRef<number | null>(null);
+  const [confirmExit, setConfirmExit] = useState(false);
+  const changed = name !== initial.current.name || username !== initial.current.username || website !== initial.current.website || icon !== initial.current.icon || image !== initial.current.image || color !== initial.current.color;
+  useEffect(() => () => {
+    imageSequence.current++;
+    if (submitFrame.current !== null) cancelAnimationFrame(submitFrame.current);
+  }, []);
+  useEffect(() => {
+    if (confirmExit) keepEditingButton.current?.focus();
+    else if (previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
+  }, [confirmExit]);
+  const requestClose = () => {
+    if (confirmExit) { setConfirmExit(false); return; }
+    if (!changed && !reading) { onClose(); return; }
+    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setConfirmExit(true);
+  };
+  const saveAndExit = () => {
+    setConfirmExit(false);
+    // Restore the form before native validation, so invalid fields stay visible.
+    submitFrame.current = requestAnimationFrame(() => { submitFrame.current = null; form.current?.requestSubmit(); });
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const result = normalizeOrganizationWebsite(website);
     if (!result.valid) { setError(result.error); return; }
     try { onSave({ name, username, website: result.url, icon, image, color }); } catch (error) { setError(error instanceof Error ? error.message : 'Please check the details.'); }
   };
-  return <Modal title={group ? 'Edit prayer group' : 'Create a prayer group'} onClose={onClose}>
-    <form className="group-form" onSubmit={submit}>
+  return <Modal title={confirmExit ? 'Save your changes?' : group ? 'Edit prayer group' : 'Create a prayer group'} onClose={requestClose} closeOnBackdrop className="group-editor-dialog">
+    {confirmExit && <div className="group-exit-confirmation">
+      <p>You have unsaved changes to this prayer group. Would you like to save them before leaving?</p>
+      {reading && <p className="quiet-copy" role="status">Your picture is still being prepared. You can keep editing or discard these changes.</p>}
+      <div className="group-actions"><button className="button primary" disabled={reading} onClick={saveAndExit}>Save changes</button><button className="button secondary" onClick={onClose}>Discard changes</button><button ref={keepEditingButton} className="text-link" onClick={() => setConfirmExit(false)}>Keep editing</button></div>
+    </div>}
+    <form ref={form} hidden={confirmExit} className="group-form" onSubmit={submit}>
       <p>A small place to pray together. Every person uses their own account, and members join only after approval.</p>
       <label>Group name<input value={name} onChange={event => setName(event.target.value)} maxLength={80} required autoComplete="off" /></label>
       <label>Unique username<input value={username} onChange={event => setUsername(event.target.value)} required disabled={Boolean(group)} maxLength={33} autoComplete="off" placeholder="@your-prayer-group" /></label>
       <p className="quiet-copy">{group ? 'Your username stays the same so shared links keep working.' : 'Use 3–32 letters, numbers, or hyphens. This is how others find your group.'}</p>
       <label>Website <span className="quiet-copy">(optional)</span><input value={website} onChange={event => setWebsite(event.target.value)} type="text" inputMode="url" maxLength={2048} placeholder="https://yourchurch.org" /></label>
+      <div className="group-preview group-live-preview" role="group" aria-label="Live group picture preview">
+        <GroupPicture group={{name,icon,image,color}} />
+        <div><strong>Your group picture</strong><p className="quiet-copy" aria-live="polite">{image ? 'Uploaded picture' : `${icon === 'prayer-hands' ? 'Praying hands' : icon.charAt(0).toUpperCase() + icon.slice(1)} icon`} · {color} background</p>
+        {image && <button type="button" className="text-link" onClick={() => { imageSequence.current++; setImage(undefined); setReading(false); }}>Remove custom picture</button>}</div>
+      </div>
       <fieldset className="group-icon-field"><legend>Choose a little picture</legend><div className="group-icons">
         <label className={`group-picture group-upload-tile ${image ? 'selected' : ''}`}><Icon name="upload" size={26}/><span>Upload</span><input className="sr-only" aria-label="Upload group image" type="file" accept="image/png,image/jpeg,image/webp" onChange={async event => {
         const file = event.target.files?.[0]; if (!file) return;
@@ -67,11 +103,9 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
       </div></fieldset>
 
       <fieldset className="group-color-field"><legend>Icon background</legend><div className="group-color-options">{groupColors.map(value => <button type="button" key={value} className={`group-color-swatch group-tone-${value}`} aria-label={`${value} gradient background`} aria-pressed={color === value} onClick={() => setColor(value)}>{color === value && <Icon name="check" size={18}/>}</button>)}</div></fieldset>
-      <div className="group-preview"><GroupPicture group={{name,icon,image,color}} /><span className="quiet-copy">Your group picture</span></div>
       <p className="quiet-copy">PNG, JPEG, or WebP, up to 2 MB. Custom pictures stay in this browser preview; publication will require screening.</p>
-      {image && <div className="group-preview"><GroupPicture group={{ name, icon, image, color }} /><button type="button" className="text-link" onClick={() => { imageSequence.current++; setImage(undefined); setReading(false); }}>Remove custom picture</button></div>}
       {error && <p className="group-error" role="alert">{error}</p>}
-      <div className="group-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={reading}>{reading ? 'Preparing picture…' : group ? 'Save changes' : 'Create prayer group'}<Icon name="check" /></button></div>
+      <div className="group-actions"><button type="button" className="button secondary" onClick={requestClose}>Cancel</button><button className="button primary" disabled={reading}>{reading ? 'Preparing picture…' : group ? 'Save changes' : 'Create prayer group'}</button></div>
     </form>
   </Modal>;
 }
