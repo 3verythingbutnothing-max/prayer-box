@@ -2,8 +2,8 @@ import type { Database } from './data.ts';
 import type { BackendEnv } from './env.ts';
 import type { Actor } from './policy.ts';
 import { HttpError, jsonResponse, readJsonObject } from './http.ts';
-import { applyGroupCommand, createPrayerGroup, GroupError, groupIcons, isGroupAdmin, canModerateGroup, groupNoticesForCommand, normalizeGroupUsername } from '../../src/prayer-groups.ts';
-import type { GroupCommand, GroupIcon, GroupMember, GroupPerson, PrayerGroup } from '../../src/prayer-groups.ts';
+import { applyGroupCommand, createPrayerGroup, GroupError, groupColors, groupIcons, isGroupAdmin, canModerateGroup, groupNoticesForCommand, normalizeGroupUsername } from '../../src/prayer-groups.ts';
+import type { GroupCommand, GroupColor, GroupIcon, GroupMember, GroupPerson, PrayerGroup } from '../../src/prayer-groups.ts';
 
 const sessionSql = `EXISTS(SELECT 1 FROM sessions s JOIN users u ON u.id = s.user_id
   WHERE s.id = ? AND s.user_id = ? AND s.revoked_at IS NULL AND s.session_epoch = u.session_epoch
@@ -41,7 +41,8 @@ function website(value: unknown): string {
 function details(input: Record<string, unknown>) {
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.trim().length > 80 || typeof input.icon !== 'string' || !groupIcons.includes(input.icon as GroupIcon))
     throw new HttpError(400, 'invalid_group', 'Enter a group name of up to 80 characters and choose an icon.');
-  return { name: input.name.trim(), website: website(input.website ?? ''), icon: input.icon as GroupIcon };
+  if (input.color !== undefined && (typeof input.color !== 'string' || !groupColors.includes(input.color as GroupColor))) throw new HttpError(400,'invalid_group','Choose an available icon background.');
+  return { color: input.color as GroupColor | undefined, name: input.name.trim(), website: website(input.website ?? ''), icon: input.icon as GroupIcon };
 }
 async function rateLimit(db: Database, actor: Actor, action: string, now: number) {
   const window = Math.floor(now / 3_600_000) * 3_600_000;
@@ -53,9 +54,9 @@ async function rateLimit(db: Database, actor: Actor, action: string, now: number
 
 async function loadGroup(db: Database, id: string): Promise<PrayerGroup | null> {
   const row = await db.prepare(`SELECT b.id,b.owner_id,b.slug,b.display_name,b.status,b.created_at,
-    g.website,g.icon,g.version,g.archived_at,g.updated_at,g.deletion_proposal FROM boxes b JOIN group_settings g ON g.box_id = b.id
+    g.website,g.icon,g.color,g.version,g.archived_at,g.updated_at,g.deletion_proposal FROM boxes b JOIN group_settings g ON g.box_id = b.id
     WHERE b.id = ? AND b.kind = 'organization' AND b.status = 'active' AND g.archived_at IS NULL`).bind(id)
-    .first<{ id: string; owner_id: string; slug: string; display_name: string; created_at: number; website: string; icon: GroupIcon; version: number; archived_at: number | null; updated_at: number; deletion_proposal: string | null }>();
+    .first<{ id: string; owner_id: string; slug: string; display_name: string; created_at: number; website: string; icon: GroupIcon; color: GroupColor; version: number; archived_at: number | null; updated_at: number; deletion_proposal: string | null }>();
   if (!row) return null;
   const members = await db.prepare(`SELECT m.*,u.username,u.display_name,u.status AS user_status,
     EXISTS(SELECT 1 FROM box_blocks x WHERE x.box_id = m.box_id AND x.user_id = m.user_id) AS blocked
@@ -63,7 +64,7 @@ async function loadGroup(db: Database, id: string): Promise<PrayerGroup | null> 
     .all<{ user_id: string; status: string; role: string; is_admin: number; is_moderator: number; moderator_since: number | null; official_reply: number; joined_at: number | null; approved_at: number | null; revoked_at: number | null; invited_at: number | null; invited_by: string | null; username: string; display_name: string; user_status: string; blocked: number }>();
   if (members.results.length > 500) throw new HttpError(409, 'group_capacity', 'This group needs an administrator review before further membership changes.');
   const now = Date.now();
-  return { id: row.id, ownerId: row.owner_id, username: row.slug, name: row.display_name, website: row.website, icon: row.icon, version: row.version, createdAt: row.created_at, updatedAt: row.updated_at, archivedAt: row.archived_at, deletionProposal: row.deletion_proposal ? JSON.parse(row.deletion_proposal) as PrayerGroup['deletionProposal'] : undefined,
+  return { id: row.id, ownerId: row.owner_id, username: row.slug, name: row.display_name, website: row.website, icon: row.icon, color: row.color, version: row.version, createdAt: row.created_at, updatedAt: row.updated_at, archivedAt: row.archived_at, deletionProposal: row.deletion_proposal ? JSON.parse(row.deletion_proposal) as PrayerGroup['deletionProposal'] : undefined,
     members: members.results.map(member => ({ id: member.user_id, name: member.display_name, username: member.username,
       active: member.user_status === 'active' && (member.status !== 'approved' || member.revoked_at === null && member.approved_at !== null && member.approved_at <= now),
       status: member.blocked ? 'blocked' : member.status === 'revoked' ? 'left' : member.status as GroupMember['status'],
@@ -73,7 +74,7 @@ async function loadGroup(db: Database, id: string): Promise<PrayerGroup | null> 
 function dto(group: PrayerGroup, actor: Actor) {
   const self = group.members.find(member => member.id === actor.id);
   const staff = canModerateGroup(group, actor.id);
-  return { id: group.id, name: group.name, username: group.username, website: group.website, icon: group.icon,
+  return { id: group.id, name: group.name, username: group.username, website: group.website, icon: group.icon, color: group.color ?? 'lavender',
     version: group.version, createdAt: group.createdAt, updatedAt: group.updatedAt, archivedAt: group.archivedAt,
     ...(isGroupAdmin(group, actor.id) && group.deletionProposal ? { deletionProposal: group.deletionProposal } : {}),
     verifiedOrganization: false, membership: self ? { status: self.status, role: self.role, moderatorSince: self.moderatorSince, joinedAt: self.joinedAt, officialReply: self.officialReply === true } : null,
@@ -125,7 +126,7 @@ export async function handleGroupRoute(request: Request, _env: BackendEnv, actor
   if (request.method === 'POST' && url.pathname === '/api/groups') {
     stepUp(actor, now); await rateLimit(db, actor, 'create', now);
     const input = await readJsonObject(request);
-    if (Object.keys(input).some(key => !['name', 'username', 'website', 'icon'].includes(key)) || typeof input.username !== 'string') throw new HttpError(400, 'invalid_group', 'Choose a name, username, optional website, and icon.');
+    if (Object.keys(input).some(key => !['name', 'username', 'website', 'icon', 'color'].includes(key)) || typeof input.username !== 'string') throw new HttpError(400, 'invalid_group', 'Choose a name, username, optional website, and icon.');
     const values = { ...details(input), username: input.username };
     let group: PrayerGroup;
     try { group = createPrayerGroup([], person(actor), values, now); } catch (error) { throw new HttpError(400, 'invalid_group', error instanceof Error ? error.message : 'Check the group details.'); }
@@ -137,7 +138,7 @@ export async function handleGroupRoute(request: Request, _env: BackendEnv, actor
           SELECT ?,'organization',?,?,?,'everyone',? WHERE ${sessionSql}
           AND EXISTS(SELECT 1 FROM sessions WHERE id=? AND assurance='mfa' AND authenticated_at>=?)`)
           .bind(group.id, actor.id, group.username, group.name, now, ...sessionValues(actor, now),actor.sessionId,now-300_000),
-        db.prepare(`INSERT INTO group_settings(box_id,website,icon,updated_at) SELECT id,?,?,? FROM boxes WHERE id = ?`).bind(group.website, group.icon, now, group.id),
+        db.prepare(`INSERT INTO group_settings(box_id,website,icon,color,updated_at) SELECT id,?,?,?,? FROM boxes WHERE id = ?`).bind(group.website, group.icon, group.color ?? 'lavender', now, group.id),
         db.prepare(`INSERT INTO memberships(box_id,user_id,status,role,approved_by,approved_at,is_admin,joined_at)
           SELECT id,?,'approved','owner',?,?,1,? FROM boxes WHERE id = ?`).bind(actor.id, actor.id, now, now, group.id),
         db.prepare(`INSERT INTO group_events(id,box_id,actor_id,action,previous_version,version,created_at)
@@ -172,7 +173,7 @@ export async function handleGroupRoute(request: Request, _env: BackendEnv, actor
   const moderatorAction = ['approve','deny','remove'].includes(raw.type);
   if (!own && !(moderatorAction ? canModerateGroup(group, actor.id) : isGroupAdmin(group, actor.id))) throw new HttpError(403, 'admin_required', 'Only active group admins can make that change.');
   const deletionAction = ['request_deletion','approve_deletion','cancel_deletion'].includes(raw.type);
-  const fields = deletionAction ? (raw.type === 'request_deletion' ? ['type'] : ['type','proposalId']) : raw.type === 'edit' ? ['type','name','website','icon'] : raw.type === 'leave' ? ['type','successorId'] : raw.type === 'set_role' ? ['type','targetId','role'] : raw.type === 'set_official_reply' ? ['type','targetId','allowed'] : own ? ['type'] : ['type','targetId'];
+  const fields = deletionAction ? (raw.type === 'request_deletion' ? ['type'] : ['type','proposalId']) : raw.type === 'edit' ? ['type','name','website','icon','color'] : raw.type === 'leave' ? ['type','successorId'] : raw.type === 'set_role' ? ['type','targetId','role'] : raw.type === 'set_official_reply' ? ['type','targetId','allowed'] : own ? ['type'] : ['type','targetId'];
   if (Object.keys(raw).some(key => !fields.includes(key)) || (!own && !deletionAction && raw.type !== 'edit' && typeof raw.targetId !== 'string') || (raw.successorId !== undefined && typeof raw.successorId !== 'string') || raw.type === 'set_official_reply' && typeof raw.allowed !== 'boolean' || raw.type === 'set_role' && !['admin','moderator','member'].includes(String(raw.role)) || deletionAction && raw.type !== 'request_deletion' && (typeof raw.proposalId !== 'string' || raw.proposalId.length > 250)) throw new HttpError(400, 'invalid_group_action', 'Check this group action and try again.');
   const command = (raw.type === 'edit' ? { type: 'edit', ...details(raw) } : raw) as GroupCommand;
   await rateLimit(db, actor, command.type === 'invite' || command.type === 'request_join' ? 'invitation' : 'change', now);
@@ -197,13 +198,13 @@ export async function handleGroupRoute(request: Request, _env: BackendEnv, actor
   const activeAdmin = next.members.find(member => member.id === next.ownerId && member.active && member.status === 'approved' && member.role === 'admin');
   // Membership/privilege mutations serialize through the group version in this same D1 transaction.
   const statements = [
-    db.prepare(`UPDATE group_settings SET website = ?,icon = ?,version = ?,mutation_token = ?,archived_at = ?,updated_at = ?,deletion_proposal = ?
+    db.prepare(`UPDATE group_settings SET website = ?,icon = ?,color = ?,version = ?,mutation_token = ?,archived_at = ?,updated_at = ?,deletion_proposal = ?
       WHERE box_id = ? AND version = ? AND archived_at IS NULL AND ${sessionSql} AND ${fingerprintSql} = ?
       ${!own || command.type === 'leave' && isGroupAdmin(group, actor.id) ? `AND EXISTS(SELECT 1 FROM memberships m JOIN sessions s ON s.user_id = m.user_id WHERE m.box_id = group_settings.box_id AND m.user_id = ? AND m.status = 'approved' AND m.revoked_at IS NULL AND (m.is_admin = 1 OR m.role = 'owner' ${moderatorAction ? 'OR m.is_moderator = 1' : ''}) AND s.id = ? AND s.assurance = 'mfa' AND s.authenticated_at >= ?)` : ''}
       ${invitePeer ? `AND EXISTS(SELECT 1 FROM users WHERE id=? AND status='active')
         AND NOT EXISTS(SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?))
         AND NOT EXISTS(SELECT 1 FROM box_blocks WHERE box_id=? AND user_id=?)` : ''}`)
-      .bind(next.website, next.icon, next.version, mutation, next.archivedAt, now, next.deletionProposal ? JSON.stringify(next.deletionProposal) : null, group.id, group.version, ...sessionValues(actor, now), group.id, fingerprint?.value ?? '', ...(!own || command.type === 'leave' && isGroupAdmin(group, actor.id) ? [actor.id, actor.sessionId, now - 300_000] : []), ...(invitePeer ? [invitePeer,actor.id,invitePeer,invitePeer,actor.id,group.id,invitePeer] : [])),
+      .bind(next.website, next.icon, next.color ?? 'lavender', next.version, mutation, next.archivedAt, now, next.deletionProposal ? JSON.stringify(next.deletionProposal) : null, group.id, group.version, ...sessionValues(actor, now), group.id, fingerprint?.value ?? '', ...(!own || command.type === 'leave' && isGroupAdmin(group, actor.id) ? [actor.id, actor.sessionId, now - 300_000] : []), ...(invitePeer ? [invitePeer,actor.id,invitePeer,invitePeer,actor.id,group.id,invitePeer] : [])),
     db.prepare(`UPDATE boxes SET display_name = ?,owner_id = COALESCE(?,owner_id),status = ? WHERE id = ? AND ${guard}`)
       .bind(next.name, activeAdmin?.id ?? null, next.archivedAt ? 'deleted' : 'active', group.id, ...guardValues),
   ];

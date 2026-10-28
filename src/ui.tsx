@@ -52,6 +52,9 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
         <path d="M3 21v-3a6 6 0 0 1 12 0v3m2-17a3 3 0 0 1 0 6m2 4a5 5 0 0 1 2 4v3" />
       </>
     ),
+    cross: <path d="M9 3h6v5h5v6h-5v7H9v-7H4V8h5Z" />,
+    'prayer-hands': <><path d="m12 17-2-5V4a1.5 1.5 0 0 0-3 0v6l-3 7 4 4 4-4Zm0 0 2-5V4a1.5 1.5 0 0 1 3 0v6l3 7-4 4-4-4Z"/><path d="m4 17-2 2 4 4 2-2m12-4 2 2-4 4-2-2"/></>,
+    upload: <><path d="M12 16V3m-5 5 5-5 5 5M4 16v4h16v-4"/></>,
     heart: <path d="M12 20 4 12C-3 5 7-1 12 6c5-7 15-1 8 6Z" />,
     lock: (
       <>

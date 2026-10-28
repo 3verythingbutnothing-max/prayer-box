@@ -33,10 +33,10 @@ export function findPrayerRecipients(
   query: string,
   viewer: Viewer,
   friends: readonly string[],
-  options: { selected?: readonly BoxId[]; mariaVisible?: boolean; blocked?: readonly string[]; organizationOwnerId?: string } = {},
+  options: { selected?: readonly BoxId[]; mariaVisible?: boolean; blocked?: readonly string[]; organizationOwnerId?: string; usernames?: Readonly<Record<string, string>> } = {},
 ): PrayerRecipient[] {
   const needle = query.trim().replace(/^@/, "").normalize("NFKC").toLowerCase();
-  return prayerRecipients.map(person => person.id === 'grace' && options.organizationOwnerId ? { ...person, actorId: options.organizationOwnerId } : person).filter(person => {
+  return prayerRecipients.map(person => person.id === 'grace' && options.organizationOwnerId ? { ...person, actorId: options.organizationOwnerId } : person).map(person => person.kind === 'personal' && options.usernames?.[person.actorId] ? {...person, username:options.usernames[person.actorId]} : person).filter(person => {
     if (isOwnPrayerBox(viewer, person.id, options.organizationOwnerId) || options.selected?.includes(person.id)) return false;
     if (options.blocked?.includes(person.actorId)) return false;
     if (person.id === "mine" && (viewer === "guest" || !friends.includes("elena"))) return false;

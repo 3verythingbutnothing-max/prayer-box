@@ -26,6 +26,7 @@ type Props = {
   mariaVisible?: boolean;
   blockedActors?: readonly string[];
   organizationOwnerId?: string;
+  usernames?: Readonly<Record<string, string>>;
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
   onClose: () => void;
@@ -73,6 +74,7 @@ export default function PrayerComposer({
   mariaVisible = true,
   blockedActors = [],
   organizationOwnerId = "owner",
+  usernames,
   boxCeilings,
   initial,
   onClose,
@@ -521,7 +523,7 @@ export default function PrayerComposer({
               </p>
             </div>
           )}
-          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} />
+          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} usernames={usernames} />
           {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnDestination(viewer, "grace") && (
             <p className="quiet-copy">Maria publicly displays her Grace Church association. Search @gracechurch if you would like to add a separate church delivery. Nothing is added automatically.</p>
           )}

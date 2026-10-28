@@ -308,3 +308,17 @@ test("new personal and Prayer Box canonical box URLs preserve the project path a
     );
   }
 });
+
+
+test('edited account usernames are validated without changing stable identity or privacy rules', async () => {
+  const {normalizeAccountUsername} = await import('./account-username.ts');
+  assert.equal(normalizeAccountUsername(' @Elena_Prays ', ['maria','prayerbox'], 'elena'), 'elena_prays');
+  for (const value of ['ma','123name','name-','bad name','maria','PRAYERBOX','admin','a'.repeat(33),'ℯlena']) assert.throws(() => normalizeAccountUsername(value,['maria','prayerbox'],'elena'));
+  assert.equal(normalizeAccountUsername('@elena',['elena'],'elena'),'elena');
+  const options={usernames:{maria:'maria_prays'},mariaVisible:true};
+  const match=findPrayerRecipients('@maria_prays','elena',[],options)[0];
+  assert.equal(match?.id,'maria'); assert.equal(match.actorId,'maria');
+  assert.equal(findPrayerRecipients('@maria_prays','elena',[],{...options,mariaVisible:false}).length,0);
+  assert.equal(findPrayerRecipients('@maria_prays','elena',[],{...options,blocked:['maria']}).length,0);
+  assert.equal(findPrayerRecipients('@maria_prays','maria',[],options).length,0);
+});
