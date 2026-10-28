@@ -23,3 +23,9 @@ October 28, 2026. All walkthroughs use fictional browser data; real identity, pa
 - Document widths match viewport widths at **320, 390, 768, 1010 and 1280** pixels for the box, My Church, settings and organization pages. Dialogs and mobile/desktop screenshots were also inspected. Temporary viewport overrides are reset after testing.
 
 Local screenshots are stored under ignored `output/community-ui/`. Production username reservation/rename audit, published profile pictures, real screening, signup and service delivery still require the existing launch gates.
+
+## Live-preview and save-confirmation follow-up
+
+The group picture preview now precedes the icon choices and stays visible while the editor body scrolls. It updates immediately for the chosen icon, gradient or uploaded image; the duplicate custom-image preview was removed. Unsaved name, username, website, icon, image and color changes (including an in-progress image preparation) are protected on Close, Cancel, Escape and backdrop clicks. The prompt offers Save changes, Discard changes and Keep editing; unchanged or reverted drafts close directly. Saving through the prompt returns to the real form for native validation, and an invalid required field keeps the editor open. Other dialogs retain their previous backdrop behavior.
+
+Removed the check from the group save button and the arrows from Pray with others and the box Invitations tab. Browser walkthroughs verified save/discard/keep, Escape/backdrop/Cancel, clean and reverted drafts, preserved picture choices after save, and required-field validation. Editor and prompt widths were checked at 320/390/768/1010/1280 pixels with no horizontal overflow. Mobile screenshots were inspected and the browser reported no console errors. No identity, payment or provider integration changed.

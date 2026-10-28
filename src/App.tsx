@@ -912,7 +912,7 @@ export default function App() {
                   })
                 }
               >
-                Pray with others <Icon name="arrow" size={17} />
+                Pray with others
               </button>
               {viewer !== 'guest' && !receivingOwnBox && <BoxConnectionButton key={`${viewer}/${box}`} viewer={viewer} target={box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}} name={boxNames[box]} context={eventContext} onChange={setConnections} onNavigate={navigate} />}
             </div>
@@ -946,7 +946,7 @@ export default function App() {
             </button>
           </section>
         )}
-        {box === ownBox && viewer !== 'guest' && <nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`} aria-current="page">Prayers & testimonies</a><a className="button secondary" href="#invitations">Invitations <Icon name="arrow" size={18} /></a></nav>}
+        {box === ownBox && viewer !== 'guest' && <nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`} aria-current="page">Prayers & testimonies</a><a className="button secondary" href="#invitations">Invitations</a></nav>}
 
         <div className="box-layout">
           <section
