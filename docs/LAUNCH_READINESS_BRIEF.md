@@ -5,6 +5,7 @@ Updated October 28, 2026. This is an implementation sequence, not a production-r
 ## What this increment provides
 
 - The prototype lets authors edit the exact request, update or testimony, preserving the original time and displaying an edited time. Human prayers and encouragement show posting times; authors can edit or remove their own encouragement. A held revision does not silently replace the previously approved text.
+- Personal profile pictures are optional after signup, under Profile & settings. The account owner can choose, preview, save, replace or remove a locally normalized picture. Signup adds no photo step. The current picture is owner-only and session-only; no original file is uploaded or published.
 - Signed-in example accounts can create prayer groups, choose a rounded-square icon or locally normalized custom picture, edit the name/optional website, invite people, accept/decline invitations, request/withdraw membership, and approve/deny applications. Admins can promote/demote, remove/block/unblock members. Group handles stay stable so shared links continue working.
 - Leaving the last admin role offers an explicit successor or the oldest continuously approved, active member, with a stable ID tie-break. Pending, invited, blocked and inactive accounts are excluded. With no eligible successor, the confirmation closes the group. A rejoining member starts a new membership interval. A group cannot lose its last admin through ordinary demotion.
 - Local Worker APIs persist group commands with server authorization, recent admin MFA, session rechecks, revision conflicts and an audit record. Creating a group does not verify church authority or enable private intake. The edit endpoint durably holds author-only proposals for manual review; it does not publish them.
@@ -44,6 +45,8 @@ Build assignment, claim/lease expiry, handoff, escalation, resolution, appeal an
 
 Use private R2 quarantine, unpredictable keys, current authorization on every fetch, and separately named immutable approved derivatives. For images: byte/signature checks, safe decoding, pixel limits, metadata removal, malware/content checks and provenance of the source revision and scanner. No SVG uploads or unscreened original delivery. The current local image preview is not a substitute for any server check.
 
+Apply this same pipeline to optional personal profile pictures and group pictures. Replacing a picture requires a new review; retain the previous approved picture until replacement approval, while allowing immediate removal. Only publish an approved derivative within the account's profile visibility. Anonymous content must omit the picture and its identifying URL entirely, including from API output. A profile picture must never be required to finish signup. Production upload, persistence, removal and revocation still need to be connected to the current owner-only preview.
+
 Keep video/audio disabled until duration, frame, transcription, processing-time and spending limits are enforced and tested. Confirm the processor's terms, private-content handling, retention and data regions before sending prayer material. Reconcile D1 records with R2 objects after partial failures; an ambiguous write result must not delete a potentially committed object.
 
 ### 5. Rehearse production recovery, then authorize a limited launch
@@ -67,7 +70,7 @@ Test separate application rollback and data restore, a lost secret, failed migra
 | Admin change or departure | Promote/demote; chosen/oldest active successor; confirmed closure when empty | Production notices, organization authority recovery and staff-run inactive-admin procedure |
 | Remove/block/rejoin | Admin controls; immediate approved-membership removal; unblock requires fresh approval | Settle group-wide block/history consent policy before intake |
 | Individual friendships | Private accept/decline/remove flow, username discovery and pending send/cancel controls | Full per-account server lifecycle, invitation delivery and blocking symmetry |
-| Profile/account | Existing privacy, language, safety and recovery-design controls | Real name/handle change rules, account deletion, contact/recovery/MFA management |
+| Profile/account | Optional personal picture choose/preview/save/replace/remove; existing privacy, language, safety and recovery-design controls | Screened picture persistence/publication, real name/handle change rules, account deletion, contact/recovery/MFA management |
 | Other people’s requests/comments | Existing report/block/help controls in prototype | Server enforcement, audited case queue and staffed resolution |
 
 The backend integration specification remains in [BACKEND_INTEGRATION_AND_LAUNCH.md](BACKEND_INTEGRATION_AND_LAUNCH.md). This brief records what is usable locally and the evidence needed to move to real accounts.

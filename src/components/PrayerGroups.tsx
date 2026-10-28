@@ -6,6 +6,7 @@ import { normalizeOrganizationWebsite } from '../organization';
 import { applyGroupCommand, createPrayerGroup, groupIcons, groupPeople, isGroupAdmin, planGroupDeparture } from '../prayer-groups';
 import type { GroupCommand, GroupIcon, GroupState, PrayerGroup } from '../prayer-groups';
 import '../prayer-groups.css';
+import { makePicturePreview } from '../picture-preview';
 
 type Props = { standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
 const date = (time: number) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(time);
@@ -13,26 +14,6 @@ function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | '
   return <span className="group-picture">{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
 }
 
-/** Decode and re-encode locally: original bytes/metadata never become the preview. */
-export async function makeGroupImagePreview(file: File): Promise<string> {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024)
-    throw new Error('Choose a PNG, JPEG, or WebP image smaller than 2 MB.');
-  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  const valid = file.type === 'image/png' ? bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71
-    : file.type === 'image/jpeg' ? bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
-      : String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
-  if (!valid) throw new Error('That file does not match a supported image format.');
-  const image = await createImageBitmap(file);
-  try {
-    if (!image.width || !image.height || image.width > 8000 || image.height > 8000 || image.width * image.height > 24_000_000)
-      throw new Error('Choose an image smaller than 8,000 pixels per side and 24 megapixels.');
-    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
-    const context = canvas.getContext('2d'); if (!context) throw new Error('Image preview is unavailable. Please choose an icon instead.');
-    const edge = Math.min(image.width, image.height);
-    context.drawImage(image, (image.width - edge) / 2, (image.height - edge) / 2, edge, edge, 0, 0, 256, 256);
-    return canvas.toDataURL('image/png');
-  } finally { image.close(); }
-}
 
 function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: (values: { name: string; username: string; website: string; icon: GroupIcon; image?: string }) => void; onClose: () => void }) {
   const [name, setName] = useState(group?.name ?? '');
@@ -61,7 +42,7 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
       <label className="group-upload">Or choose your own image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async event => {
         const file = event.target.files?.[0]; if (!file) return;
         const sequence = ++imageSequence.current; setReading(true); setError('');
-        try { const preview = await makeGroupImagePreview(file); if (sequence === imageSequence.current) setImage(preview); }
+        try { const preview = await makePicturePreview(file); if (sequence === imageSequence.current) setImage(preview); }
         catch (error) { if (sequence === imageSequence.current) setError(error instanceof Error ? error.message : 'That image could not be opened.'); }
         finally { if (sequence === imageSequence.current) setReading(false); event.target.value = ''; }
       }} /></label>

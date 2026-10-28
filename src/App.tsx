@@ -13,6 +13,7 @@ import { BoxArt, CountryFlag, Icon, Modal, PrayerBoxMark } from "./ui";
 import PrayerComposer from "./components/PrayerComposer";
 import PrayerDetail from "./components/PrayerDetail";
 import AccountPages from "./components/AccountPages";
+import ProfilePictureSettings from "./components/ProfilePictureSettings";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
 import { PrayerGroups } from "./components/PrayerGroups";
@@ -302,6 +303,7 @@ export default function App() {
   const [privacyByViewer, setPrivacyByViewer] = useState<
     Partial<Record<Viewer, Audience>>
   >({ elena: "private", maria: "public" });
+  const [profilePicturesByViewer, setProfilePicturesByViewer] = useState<Partial<Record<Viewer, string>>>({});
   const [countryByViewer, setCountryByViewer] = useState<
     Partial<Record<Viewer, { country: string; show: boolean }>>
   >({ maria: { country: "us", show: true } });
@@ -779,7 +781,9 @@ export default function App() {
                 {box === "grace" ? (
                   graceGroup.image ? <img src={graceGroup.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : <Icon name={graceGroup.icon} size={27} />
                 ) : (
-                  boxNames[box].slice(0, 1)
+                  mine && profilePicturesByViewer[viewer]
+                    ? <img className="account-avatar-image" src={profilePicturesByViewer[viewer]} alt="" />
+                    : boxNames[box].slice(0, 1)
                 )}
               </span>
               <div>
@@ -1875,7 +1879,7 @@ export default function App() {
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 <span className="avatar header-avatar">
-                  {viewerNames[viewer].slice(0, 1)}
+                  {profilePicturesByViewer[viewer] ? <img className="account-avatar-image" src={profilePicturesByViewer[viewer]} alt="" /> : viewerNames[viewer].slice(0, 1)}
                 </span>
                 <span className="header-name">{viewerNames[viewer]}</span>
                 <Icon name="chevron" size={18} />
@@ -1914,7 +1918,7 @@ export default function App() {
                       </a>
                     )}
                     <a href="#settings" onClick={() => setMenuOpen(false)}>
-                      Settings
+                      Profile & settings
                     </a>
                     <a
                       href="#donation-history"
@@ -2008,6 +2012,12 @@ export default function App() {
                   : "settings"
             }
             viewer={viewer}
+            profilePictureControl={page === "settings" && viewer !== "guest" ? <ProfilePictureSettings
+              key={viewer}
+              name={viewerNames[viewer]}
+              picture={profilePicturesByViewer[viewer]}
+              onChange={picture => setProfilePicturesByViewer(previous => ({ ...previous, [viewer]: picture }))}
+            /> : null}
             approvedMember={groupMember}
             organizationMemberships={prayerGroups.filter(group => !group.archivedAt && group.members.some(member => member.id === viewer && member.status === 'approved' && member.active)).map(group => ({ name: group.name, username: group.username, admin: isGroupAdmin(group, viewer) }))}
             organizationName={graceGroup.name}
@@ -2416,6 +2426,7 @@ export default function App() {
                 setOutgoingFriendRequests([]);
                 setFriendInvitationStatus("pending");
                 setPrivacyByViewer({ elena: "private", maria: "public" });
+                setProfilePicturesByViewer({});
                 setCountryByViewer({ maria: { country: "us", show: true } });
                 setAssociationByViewer({ maria: true });
                 setHeldStories([]);

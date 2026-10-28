@@ -31,6 +31,7 @@ const defaultAutomaticPreference: AutomaticPreference = {
 };
 type AccountPagesProps = {
   page: AccountPage;
+  profilePictureControl?: ReactNode;
   onNavigate: (route: string) => void;
   onManageBlocked: () => void;
   onNotice: (message: string) => void;
@@ -517,6 +518,7 @@ function csvCell(value: string | number) {
 
 export default function AccountPages({
   page,
+  profilePictureControl,
   onNavigate,
   onManageBlocked,
   onNotice,
@@ -1589,6 +1591,7 @@ export default function AccountPages({
           </header>
           <div className="account-settings-layout">
             <div className="account-settings-main">
+              {profilePictureControl}
               <FeedbackPreferences />
               {organizationMemberships.map(group => (
                 <section className="account-settings-section panel" key={group.username}>
