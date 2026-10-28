@@ -16,6 +16,7 @@ import type {
   FeedbackTone,
 } from "./feedback-cues";
 import { Icon, PreferenceSwitch } from "./ui";
+import SuccessSparkle from "./components/SuccessSparkle";
 import "./action-feedback.css";
 
 export type ActionFeedback = {
@@ -262,6 +263,7 @@ function FeedbackToast({
           data-motion={current.animate ? "gentle" : "instant"}
         >
           <span className="action-feedback-icon" aria-hidden="true">
+            {current.tone === "success" && current.animate && <SuccessSparkle key={current.id} />}
             <Icon
               name={
                 current.tone === "success"

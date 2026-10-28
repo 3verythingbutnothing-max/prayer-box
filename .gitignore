@@ -1,5 +1,10 @@
 node_modules/
 dist/
+dist-backend/
+.wrangler/
+.dev.vars*
+backend/.dev.vars*
+coverage/
 .env
 .env.*
 *.log
@@ -16,3 +21,4 @@ dist/
 /PROTOTYPE_QA.md
 /MOBILE_APP_DESIGN.md
 /output/
+/backend/output/

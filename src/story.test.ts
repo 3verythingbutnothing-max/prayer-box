@@ -294,7 +294,7 @@ test("bulk withdrawal cannot remove anyone else's request or restore a deleted c
 });
 
 test("dated story fixtures use recorded dates and unknown legacy dates are labeled honestly", () => {
-  assert.equal(formatStoryDate("2026-10-24T11:00:00Z"), "Oct 24, 2026");
+  assert.match(formatStoryDate("2026-10-24T11:00:00Z"), /^Oct 24, 2026, \d{1,2}:\d{2}/);
   assert.equal(formatStoryDate(""), "Date not recorded");
   for (const request of seedRequests) {
     assert.notEqual(

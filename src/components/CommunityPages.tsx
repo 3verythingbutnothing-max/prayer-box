@@ -30,6 +30,10 @@ interface CommunityPagesProps {
   membershipStatus: MembershipStatus;
   onMembershipChange: (status: MembershipStatus) => void;
   friends: string[];
+  outgoingFriendRequests: string[];
+  onOutgoingFriendRequestsChange: (ids: string[]) => void;
+  friendInvitationStatus: "pending" | "accepted" | "declined";
+  onFriendInvitationChange: (status: "pending" | "accepted" | "declined") => void;
   discoverableMaria?: boolean;
   blockedActors?: readonly string[];
   onFriendsChange: (ids: string[]) => void;
@@ -113,10 +117,36 @@ function AccessNotice({
 function ChurchPage(props: CommunityPagesProps) {
   const feedback = useActionFeedback();
   const [search, setSearch] = useState("");
-  const [invitation, setInvitation] = useState<
-    "pending" | "accepted" | "declined"
-  >("pending");
+  const invitation = props.friendInvitationStatus;
+  const setInvitation = props.onFriendInvitationChange;
   const [removeId, setRemoveId] = useState<string | null>(null);
+  // Local walkthrough state only. Sending a request never grants friendship access.
+  // Durable delivery, recipient acceptance and cross-account sync need the future API.
+  const outgoingRequests = props.outgoingFriendRequests;
+  useEffect(() => {
+    if (props.viewer !== 'elena') return;
+    const next = outgoingRequests.filter(id => !props.friends.includes(id) && !props.blockedActors?.includes(id));
+    if (next.length !== outgoingRequests.length) props.onOutgoingFriendRequestsChange(next);
+  }, [outgoingRequests, props.viewer, props.friends, props.blockedActors, props.onOutgoingFriendRequestsChange]);
+  function toggleFriendRequest(id: string, name: string) {
+    if (props.viewer !== "elena" || id === props.viewer || props.friends.includes(id)
+      || props.blockedActors?.includes(id) || id === "jordan" && invitation === "pending"
+      || id === "maria" && props.discoverableMaria === false || !people.some(person => person.id === id)) return;
+    feedback.prepare();
+    const cancelling = outgoingRequests.includes(id);
+    props.onOutgoingFriendRequestsChange(cancelling ? outgoingRequests.filter(value => value !== id) : [...new Set([...outgoingRequests, id])]);
+    feedback.respond({
+      tone: cancelling ? "info" : "success",
+      title: cancelling ? "Your friend request was cancelled." : "Your friend request is pending.",
+      message: cancelling ? "No friendship access was added."
+        : `${name} will need to accept before you become friends. This preview saves the request until the browser is refreshed; nothing is delivered to a real account.`,
+    });
+  }
+  function friendRequestButton(id: string, name: string) {
+    const pending = outgoingRequests.includes(id);
+    return <button className="button secondary compact" aria-label={`${pending ? "Cancel" : "Send"} friend request to ${name}`}
+      onClick={() => toggleFriendRequest(id, name)}>{pending ? "Cancel request" : "Send friend request"}<Icon name={pending ? "close" : "people"} size={17} /></button>;
+  }
   if (props.viewer !== "elena")
     return (
       <div className="community-page">
@@ -132,10 +162,12 @@ function ChurchPage(props: CommunityPagesProps) {
         />
       </div>
     );
-  const accepted = people.filter((person) => props.friends.includes(person.id) && (!search.trim() || `${person.name} @${person.id}`.toLowerCase().includes(search.trim().toLowerCase())));
+  const accepted = people.filter((person) => props.friends.includes(person.id) && !props.blockedActors?.includes(person.id) && (!search.trim() || `${person.name} @${person.id}`.toLowerCase().includes(search.trim().toLowerCase())));
   const discoveries = findPrayerRecipients(search, props.viewer, props.friends, { mariaVisible: props.discoverableMaria, blocked: props.blockedActors }).filter(person => search.trim() || person.kind === "platform");
   const removed = people.filter(
-    (person) => person.id !== "jordan" && !props.friends.includes(person.id),
+    (person) => !props.friends.includes(person.id) && !props.blockedActors?.includes(person.id)
+      && !(person.id === "jordan" && invitation === "pending")
+      && !(person.id === "maria" && props.discoverableMaria === false),
   );
   const removePerson = people.find((person) => person.id === removeId);
   return (
@@ -149,10 +181,16 @@ function ChurchPage(props: CommunityPagesProps) {
       </Heading>
       <label className="request-search-field church-search"><Icon name="search" size={23} /><span className="sr-only">Find people by @username</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Find someone by @username" autoComplete="off" /></label>
       <div className="church-search-results" aria-label="Available prayer boxes">
-        {discoveries.map(person => <article className="church-directory-card" key={person.id}>
+        {discoveries.map(person => <article className="church-directory-card" key={person.id} style={{ flexWrap: "wrap" }}>
           <Icon name={person.kind === "platform" ? "box" : "people"} size={29} />
           <div><h3>{person.name}</h3><p>@{person.username}{person.kind === "platform" ? " · Always here for prayer" : " · Sample prayer box"}</p></div>
-          <button className="text-link" onClick={() => props.onNavigate(`box/${person.id}`)}>Open box <Icon name="arrow" size={18} /></button>
+          <div className="community-actions" style={{ flexBasis: "100%", marginTop: 0 }}>
+            <button className="text-link" onClick={() => props.onNavigate(`box/${person.id}`)}>Open box <Icon name="arrow" size={18} /></button>
+            {person.kind === "personal" && person.actorId !== props.viewer && !props.friends.includes(person.actorId) && !props.blockedActors?.includes(person.actorId)
+              && (person.actorId === "jordan" && invitation === "pending"
+                ? <span className="community-small">Invitation awaiting your choice below</span>
+                : friendRequestButton(person.actorId, person.name))}
+          </div>
         </article>)}
         {search.trim() && !discoveries.length && <p className="quiet-copy" role="status">No available matching box in this demo. Try @maria, @daniel, @jordan or @prayerbox.</p>}
       </div>
@@ -199,7 +237,7 @@ function ChurchPage(props: CommunityPagesProps) {
               )}
             </div>
           </section>
-          {invitation === "pending" && !props.friends.includes("jordan") && (
+          {invitation === "pending" && !props.friends.includes("jordan") && !props.blockedActors?.includes("jordan") && (
             <section
               className="panel community-invitation"
               aria-labelledby="friend-invitation-heading"
@@ -269,58 +307,19 @@ function ChurchPage(props: CommunityPagesProps) {
               </div>
             </section>
           )}
-          {invitation === "declined" && (
-            <div className="community-reset">
-              <p>Jordan’s sample invitation was declined.</p>
-              <button
-                className="text-link"
-                onClick={() => {
-                  feedback.prepare();
-                  setInvitation("pending");
-                  feedback.respond({
-                    tone: "info",
-                    title: "The example invitation is reset.",
-                    message: "Nothing was sent to another person.",
-                  });
-                }}
-              >
-                Reset fictional invitation
-              </button>
-            </div>
+          {invitation === "declined" && !props.blockedActors?.includes("jordan") && (
+            <p className="quiet-copy">Jordan’s invitation was declined. A future friendship still needs mutual acceptance.</p>
           )}
           {removed.length > 0 && (
-            <section
-              className="community-reset"
-              aria-label="Restore fictional friendships"
-            >
-              <p>Removed during this walkthrough</p>
-              {removed.map((person) => (
-                <button
-                  key={person.id}
-                  className="text-link"
-                  onClick={() => {
-                    feedback.prepare();
-                    props.onFriendsChange([
-                      ...new Set([...props.friends, person.id]),
-                    ]);
-                    props.onNotice(
-                      `${person.name}’s fictional friendship was restored for this walkthrough.`,
-                    );
-                    feedback.respond({
-                      tone: "info",
-                      title: "Your fictional friendship is restored.",
-                      message:
-                        "This resets the walkthrough. Real friendship would require mutual consent.",
-                    });
-                  }}
-                >
-                  Restore {person.name} demo
-                </button>
-              ))}
-              <small>
-                These buttons reset fictional examples. A real friendship would
-                require mutual consent.
-              </small>
+            <section className="panel community-invitation" aria-label="People outside your accepted circle">
+              <h2>A little room to reconnect</h2>
+              <p>Sending a friend request invites someone to reconnect. Access changes only after they accept.</p>
+              {removed.map(person => <div className="community-person-row" key={person.id} style={{ flexWrap: "wrap" }}>
+                <span className={`community-avatar community-${person.color}`} aria-hidden="true">{person.initial}</span>
+                <div><h3>{person.name}</h3><p className="community-small">{outgoingRequests.includes(person.id) ? "Your request is pending" : "Not in your accepted circle"}</p></div>
+                {friendRequestButton(person.id, person.name)}
+              </div>)}
+              <p className="community-small">Requests in this preview last until the browser is refreshed. Real delivery and acceptance will be connected before launch.</p>
             </section>
           )}
         </div>

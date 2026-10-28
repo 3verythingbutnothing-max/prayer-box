@@ -1,0 +1,81 @@
+.profile-picture-settings {
+  background: linear-gradient(135deg, #f2f8fd 0%, #fffcf7 82%);
+}
+.profile-picture-settings .account-section-top {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.profile-picture-settings > p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.profile-picture-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.profile-picture-preview {
+  display: grid;
+  place-items: center;
+  flex: 0 0 104px;
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  border: 2px solid #bed1e1;
+  border-radius: 28px;
+  background: repeating-linear-gradient(135deg, #e8f1fa, #e8f1fa 6px, #e4eef8 6px, #e4eef8 7px);
+  box-shadow: 0 4px 0 #dce6ef, 0 9px 20px #38577b0a;
+  color: #395674;
+  font-size: 2.5rem;
+}
+.profile-picture-preview img,
+.account-avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.profile-picture-controls { min-width: 0; }
+.profile-picture-controls p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .9375rem;
+  line-height: 1.6;
+}
+.profile-picture-controls .button {
+  white-space: normal;
+  text-align: center;
+}
+.profile-picture-status:not(:empty) {
+  margin: 20px 0 12px;
+  color: var(--muted);
+  font-size: 1rem;
+}
+.profile-picture-settings .profile-picture-error {
+  margin: 18px 0 12px;
+  color: #8d373e;
+}
+.profile-picture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.profile-picture-actions:not(:empty) { margin-top: 18px; }
+.profile-picture-actions .text-link { min-height: 44px; }
+.profile-picture-settings .profile-picture-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 22px 0 0;
+  font-size: .9375rem;
+}
+.profile-picture-note svg { flex-shrink: 0; margin-top: 4px; }
+@media (max-width: 430px) {
+  .profile-picture-row { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .profile-picture-controls { width: 100%; }
+  .profile-picture-controls .button { width: 100%; }
+  .profile-picture-actions .button { flex: 1 1 100%; }
+}

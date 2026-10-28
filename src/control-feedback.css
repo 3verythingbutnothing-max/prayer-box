@@ -69,7 +69,8 @@
   min-height: 44px;
   touch-action: manipulation;
 }
-.account-page .preference-switch > input {
+.account-page .preference-switch > input,
+.notification-preferences .preference-switch > input {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -79,7 +80,8 @@
   opacity: 0;
   cursor: pointer;
 }
-.account-page .preference-switch > input:disabled {
+.account-page .preference-switch > input:disabled,
+.notification-preferences .preference-switch > input:disabled {
   cursor: not-allowed;
 }
 .preference-switch-track {

@@ -481,3 +481,30 @@
     white-space: normal;
   }
 }
+
+
+.story-edited-date {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: .875rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.story-edit-pending { margin-block: 18px; }
+.story-edit-pending p { margin-block: 7px; }
+.story-edit-form { display: grid; gap: 20px; }
+.story-edit-form .field { margin: 0; }
+.story-edit-form textarea { resize: vertical; min-height: 160px; }
+.story-edit-form small { color: var(--muted); line-height: 1.7; }
+.story-card-utilities { min-width: 0; flex-shrink: 1; }
+.story-date-link { overflow-wrap: normal; }
+@media (max-width: 600px) {
+  .story-card-heading { flex-wrap: wrap; }
+  .story-card-utilities { width: 100%; justify-content: space-between; margin-left: 0; }
+  .story-card-author { flex-basis: 100%; }
+  .story-edit-form .story-feed-actions > .button { width: 100%; }
+}
+
+.group-removal-option { margin-block: 20px; align-items: flex-start; }
+.group-removal-option p { margin: 8px 0 14px; }
+.group-decision-notice .eyebrow { overflow-wrap: anywhere; }

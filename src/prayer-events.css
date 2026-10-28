@@ -1,0 +1,75 @@
+.prayer-events, .prayer-connections { min-width:0; }
+.prayer-events-heading { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1.5rem; margin:1.5rem 0 2rem; }
+.prayer-events-heading > div { flex:1 1 26rem; min-width:0; }
+.prayer-events-heading h1 { margin:.35rem 0 .75rem; font-size:clamp(1.9rem,4vw,2.65rem); line-height:1.15; letter-spacing:-.035em; }
+.prayer-events-heading .page-intro { max-width:42rem; margin:0; }
+.prayer-event-section { margin-top:2rem; }
+.prayer-event-section-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem 1rem; margin-bottom:1rem; }
+.prayer-event-section-heading h2, .prayer-event-section > h2 { margin:0 0 .35rem; font-size:1.5rem; }
+.prayer-event-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr)); gap:1.25rem; }
+.prayer-event-card { display:flex; flex-direction:column; gap:1.2rem; padding:1.5rem; min-width:0; border:1px solid #cedae7; background:linear-gradient(140deg,#f5f9fe,#fcf8ff); box-shadow:0 4px 0 #d8e3ef70; }
+.prayer-event-heading { display:flex; align-items:flex-start; gap:1rem; min-width:0; }
+.prayer-event-date { flex:none; width:3.8rem; padding:.5rem .25rem; text-align:center; border:1px solid #b8c9db; border-radius:.85rem; background:#e0edfa; box-shadow:inset 0 2px 0 #fff,0 3px 0 #d0ddea70; color:#365974; }
+.prayer-event-date span { display:block; font-size:.85rem; text-transform:uppercase; letter-spacing:.07em; }
+.prayer-event-date strong { display:block; font-size:1.7rem; line-height:1.2; }
+.prayer-event-title { min-width:0; }
+.prayer-event-title h3 { margin:.2rem 0 .5rem; font-size:1.5rem; line-height:1.25; overflow-wrap:anywhere; }
+.prayer-event-title p { margin:.2rem 0; overflow-wrap:anywhere; }
+.prayer-event-description { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.65; }
+.prayer-event-details { display:grid; gap:.8rem; }
+.prayer-event-details p { display:flex; align-items:flex-start; gap:.7rem; margin:0; min-width:0; }
+.prayer-event-details p > svg { flex:none; margin-top:.2rem; color:#5a738d; }
+.prayer-event-details p > span, .prayer-event-details p > a { min-width:0; overflow-wrap:anywhere; }
+.prayer-event-address { white-space:pre-wrap; }
+.prayer-event-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem 1rem; min-width:0; }
+.prayer-event-actions .button, .prayer-events-heading > .button, .prayer-connection-row > .button { white-space:normal; text-align:center; }
+.prayer-event-actions .text-link { min-height:2.75rem; text-align:left; overflow-wrap:anywhere; }
+.prayer-event-calendar { gap:.65rem; }
+.prayer-event-calendar .button { flex:1 1 12rem; font-size:.98rem; padding:.7rem; }
+.prayer-event-calendar-help { margin:-.5rem 0 0; }
+.prayer-event-footer { margin-top:auto; padding-top:.7rem; border-top:1px solid #d5dfe9; }
+.prayer-event-scope { display:flex; align-items:center; gap:.5rem; font-size:.95rem; color:#52667c; margin:0; }
+.prayer-event-scope svg { flex:none; }
+.prayer-event-status { padding:1rem; margin:0; border:1px solid #ddcdc1; border-radius:.8rem; background:#fff5ed; color:#695348; }
+.prayer-event-card.cancelled { background:#f8f6f3; border-color:#dbd4cc; box-shadow:none; }
+.prayer-event-card.cancelled .prayer-event-date { background:#eae6e1; border-color:#c9beb4; color:#665a50; }
+.prayer-event-caution { color:#874538; }
+.prayer-event-empty { display:grid; justify-items:center; gap:.65rem; text-align:center; padding:1.5rem; border:1px dashed #bccddf; border-radius:1rem; background:#f0f7fc; color:#52677f; }
+.prayer-event-empty h2, .prayer-event-empty p { margin:0; max-width:36rem; }
+.prayer-event-form { display:grid; gap:1.15rem; min-width:0; }
+.prayer-event-form > p { margin:0; }
+.prayer-event-form label, .prayer-connection-search > label { display:grid; gap:.45rem; min-width:0; font-weight:600; }
+.prayer-event-form input:not([type=checkbox]), .prayer-event-form select, .prayer-event-form textarea, .prayer-connection-search select { width:100%; max-width:100%; min-width:0; box-sizing:border-box; font:inherit; color:inherit; background:#fff; border:1px solid #b6c4d4; border-radius:.75rem; padding:.8rem; }
+.prayer-event-form textarea { resize:vertical; min-height:6rem; }
+.prayer-event-form select:disabled { opacity:1; background:#eef2f6; color:#5a687c; }
+.prayer-event-times { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; min-width:0; }
+.prayer-event-times input { font-size:1rem!important; }
+.prayer-event-form .quiet-copy { font-weight:400; }
+.prayer-event-form .prayer-event-check { display:flex; align-items:flex-start; gap:.8rem; padding:1rem; border:1px solid #c9d8e0; border-radius:.9rem; background:#f1f7f6; font-weight:500; }
+.prayer-event-check input { flex:none; width:1.2rem; height:1.2rem; margin:.15rem 0 0; accent-color:#526c8b; }
+.prayer-event-check span { min-width:0; }
+.prayer-event-check small { display:block; font-size:.95rem; margin-top:.45rem; color:#5f6e7e; font-weight:400; }
+.prayer-event-audience { display:flex; align-items:flex-start; gap:.75rem; padding:1rem; border:1px solid #c8d7e6; border-radius:.9rem; background:#edf5fc; color:#395b74; }
+.prayer-event-audience svg { flex:none; margin-top:.15rem; }
+.prayer-event-error { padding:.85rem; border:1px solid #dca7b1; border-radius:.7rem; background:#fff3f2; color:#913c4b; overflow-wrap:anywhere; }
+.prayer-event-review { display:grid; gap:.65rem; padding:1rem; border:1px solid #d5c692; border-radius:.9rem; background:#fff8e7; color:#63552f; overflow-wrap:anywhere; }
+.prayer-event-review h3 { font-size:1.15rem; margin:0; }
+.prayer-event-review p { margin:0; }
+.prayer-connections { margin:2rem 0; }
+.prayer-connections > p { max-width:47rem; }
+.prayer-connection-search { display:grid; gap:1rem; margin:1.4rem 0 1rem; }
+.prayer-connection-input { display:flex; align-items:center; gap:.7rem; padding:.6rem 1rem; border:1px solid #b7c7d9; border-radius:.9rem; background:white; }
+.prayer-connection-input input { flex:1; min-width:0; border:0; background:transparent; padding:.4rem 0; font:inherit; color:inherit; }
+.prayer-connection-list, .prayer-connection-requests { display:grid; gap:.8rem; margin-top:1.5rem; }
+.prayer-connection-requests > h3 { margin:0 0 .15rem; font-size:1.25rem; }
+.prayer-connection-row { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.15rem; margin-bottom:.65rem; border:1px solid #d0dce8; border-radius:1rem; background:linear-gradient(135deg,#f6faff,#f8f3fc); box-shadow:0 3px 0 #dde5ed55; min-width:0; }
+.prayer-connection-row h3, .prayer-connection-row h4 { margin:0 0 .3rem; font-size:1.15rem; overflow-wrap:anywhere; }
+.prayer-connection-row p { margin:.2rem 0; overflow-wrap:anywhere; }
+.prayer-connection-row > div { min-width:0; }
+.prayer-connection-row > .text-link { min-height:2.75rem; text-align:left; overflow-wrap:anywhere; }
+.prayer-connection-identity { display:flex; align-items:center; gap:.85rem; }
+.prayer-connection-identity > div { min-width:0; }
+.prayer-connection-icon { flex:none; display:grid; place-items:center; width:2.9rem; height:2.9rem; border:1px solid #bdc8dc; border-radius:.85rem; color:#576b8b; background:#e9effa; }
+.prayer-connection-status { padding:.4rem .65rem; border-radius:.6rem; color:#42604f; background:#e6f1e7; font-size:.95rem; }
+@media(max-width:600px) { .prayer-event-times { grid-template-columns:minmax(0,1fr); }.prayer-event-card { padding:1.1rem; }.prayer-event-title h3 { font-size:1.3rem; }.prayer-events-heading > .button { width:100%; }.prayer-event-date { width:3.2rem; }.prayer-event-heading { gap:.8rem; } }
+@media(max-width:390px) { .prayer-event-actions .button { width:100%; }.prayer-connection-row { padding:.9rem; }.prayer-event-form .prayer-event-check { padding:.8rem; }.prayer-event-card { padding:.95rem; } }

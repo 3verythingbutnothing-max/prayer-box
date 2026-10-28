@@ -1,0 +1,2 @@
+# Preserve Wrangler's generated runtime declarations exactly for regeneration checks.
+backend/worker-configuration.d.ts linguist-generated=true -whitespace

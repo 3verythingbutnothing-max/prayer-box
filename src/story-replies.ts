@@ -16,7 +16,7 @@ export function scopedStoryReplies(
   const counts = new Map<string, number>();
   for (const reply of replies) counts.set(reply.id, (counts.get(reply.id) ?? 0) + 1);
   const candidates = replies.filter((reply) =>
-    counts.get(reply.id) === 1 &&
+    counts.get(reply.id) === 1 && !reply.groupRemoval &&
     reply.testimonyId === postId &&
     (!reply.actorId || !blocked.has(reply.actorId)) &&
     (!reply.automatic || canSeeAutomatic),

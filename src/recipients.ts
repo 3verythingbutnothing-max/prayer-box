@@ -23,7 +23,8 @@ export const recipientNames: Record<BoxId, string> = {
   prayerbox: "Prayer Box", maria: "Maria", daniel: "Daniel", jordan: "Jordan",
   grace: "Grace Church", mine: "Elena",
 };
-export function recipientActor(box: BoxId): string {
+export function recipientActor(box: BoxId, organizationOwnerId = "owner"): string {
+  if (box === "grace") return organizationOwnerId;
   return prayerRecipients.find(person => person.id === box)?.actorId ?? box;
 }
 
@@ -32,11 +33,11 @@ export function findPrayerRecipients(
   query: string,
   viewer: Viewer,
   friends: readonly string[],
-  options: { selected?: readonly BoxId[]; mariaVisible?: boolean; blocked?: readonly string[] } = {},
+  options: { selected?: readonly BoxId[]; mariaVisible?: boolean; blocked?: readonly string[]; organizationOwnerId?: string } = {},
 ): PrayerRecipient[] {
   const needle = query.trim().replace(/^@/, "").normalize("NFKC").toLowerCase();
-  return prayerRecipients.filter(person => {
-    if (isOwnPrayerBox(viewer, person.id) || options.selected?.includes(person.id)) return false;
+  return prayerRecipients.map(person => person.id === 'grace' && options.organizationOwnerId ? { ...person, actorId: options.organizationOwnerId } : person).filter(person => {
+    if (isOwnPrayerBox(viewer, person.id, options.organizationOwnerId) || options.selected?.includes(person.id)) return false;
     if (options.blocked?.includes(person.actorId)) return false;
     if (person.id === "mine" && (viewer === "guest" || !friends.includes("elena"))) return false;
     if (person.id === "maria" && options.mariaVisible === false) return false;

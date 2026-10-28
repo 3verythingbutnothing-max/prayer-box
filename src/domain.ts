@@ -1,3 +1,4 @@
+import type { GroupRemoval } from "./group-moderation.ts";
 /**
  * Fictional fixtures and presentation rules for the local frontend prototype.
  * Every fixture is bundled in the browser. This is NOT authorization, anonymity,
@@ -7,11 +8,11 @@ export type Viewer =
   "elena" | "maria" | "member" | "owner" | "guest" | "operator" | "team";
 export type BoxId = "maria" | "grace" | "mine" | "daniel" | "jordan" | "prayerbox";
 /** Prototype ownership only; future submission authorization belongs on a server. */
-export function isOwnPrayerBox(actor: string, box: BoxId): boolean {
+export function isOwnPrayerBox(actor: string, box: BoxId, organizationOwnerId = "owner"): boolean {
   return (
     (box === "mine" && actor === "elena") ||
     (box === "maria" && actor === "maria") ||
-    (box === "grace" && actor === "owner") ||
+    (box === "grace" && actor === organizationOwnerId) ||
     (box === "daniel" && actor === "daniel") ||
     (box === "jordan" && actor === "jordan") ||
     (box === "prayerbox" && actor === "team")
@@ -38,7 +39,20 @@ export function getEffectiveAudience(
 }
 export type Moderation = "approved" | "pending" | "changes" | "appeal";
 
+export interface PendingTextEdit {
+  text: string;
+  title?: string;
+  submittedAt: string;
+  expectedRevision: number;
+  reason: string;
+}
+
 export interface Reply {
+  groupRemoval?: GroupRemoval;
+  editedAt?: string;
+  deletedAt?: string;
+  revision?: number;
+  pendingEdit?: PendingTextEdit;
   parentReplyId?: string;
   /** Private per-viewer agreement state; no public counts or rankings. */
   agreedBy?: string[];
@@ -55,6 +69,10 @@ export interface Reply {
 }
 
 export interface PrayerPost {
+  groupRemoval?: GroupRemoval;
+  editedAt?: string;
+  revision?: number;
+  pendingEdit?: PendingTextEdit;
   id: string;
   text: string;
   kind: "testimony" | "update";
@@ -62,6 +80,10 @@ export interface PrayerPost {
 }
 
 export interface PrayerRequest {
+  groupRemoval?: GroupRemoval;
+  editedAt?: string;
+  revision?: number;
+  pendingEdit?: PendingTextEdit;
   id: string;
   sourceId: string;
   authorId: string;
@@ -76,10 +98,14 @@ export interface PrayerRequest {
   postedAt?: string;
   media?: { kind: "photo" | "audio" | "video"; status: "approved" | "pending" };
   testimony?: {
+    groupRemoval?: GroupRemoval;
     id: string;
     text: string;
     kind: "testimony" | "update";
     createdAt?: string;
+    editedAt?: string;
+    revision?: number;
+    pendingEdit?: PendingTextEdit;
   };
   posts?: PrayerPost[];
   replies: Reply[];
@@ -107,6 +133,7 @@ export const seedRequests: PrayerRequest[] = [
     replies: [
       {
         id: "reply-quiet-1",
+        postedAt: "2026-10-24T10:15:00Z",
         actorId: "maria",
         name: "Maria",
         text: "May the Father hold your family close as you wait. I am praying for peace and wisdom in Jesus’ name.",
@@ -136,6 +163,7 @@ export const seedRequests: PrayerRequest[] = [
     replies: [
       {
         id: "reply-grief-1",
+        postedAt: "2026-10-24T12:30:00Z",
         actorId: "daniel",
         name: "Daniel",
         text: "There is room for your sadness here. May God comfort you and your family, one ordinary day at a time.",
@@ -205,6 +233,7 @@ export const seedRequests: PrayerRequest[] = [
       },
       {
         id: "reply-maria-new-chapter",
+        postedAt: "2026-10-23T16:20:00Z",
         actorId: "maria",
         name: "Maria",
         text: "You can take time with this. I am praying for wisdom and for peace as you consider the next step.",
@@ -255,6 +284,7 @@ export const seedRequests: PrayerRequest[] = [
     replies: [
       {
         id: "reply-ruth-rest",
+        postedAt: "2026-10-21T17:00:00Z",
         actorId: "maria",
         name: "Maria · Grace Church prayer community",
         text: "May the Holy Spirit help you in the moments when words feel hard. We can keep bringing today’s needs to the Father through Jesus.",
@@ -280,6 +310,7 @@ export const seedRequests: PrayerRequest[] = [
     replies: [
       {
         id: "reply-ben-ordinary",
+        postedAt: "2026-10-22T09:15:00Z",
         actorId: "owner",
         name: "Grace Church",
         official: true,
@@ -345,6 +376,8 @@ const defaultBoxCeilings: Record<BoxId, Audience> = {
 
 /** Trusted root-owned fictional state, never browser-derived production authority. */
 export interface DemoAccessContext {
+  /** When supplied, this exact current membership list replaces every legacy default. */
+  graceApprovedMemberIds?: readonly string[];
   elenaApprovedMember?: boolean;
   memberActive?: boolean;
   acceptedElenaFriends?: readonly string[];
@@ -383,10 +416,12 @@ function isIntendedRecipient(
     (request.recipient === "maria" && viewer === "maria") ||
     (request.recipient === "prayerbox" && viewer === "team") ||
     (request.recipient === "grace" &&
-      ((viewer === "member" && context.memberActive !== false) ||
+      (context.graceApprovedMemberIds !== undefined
+        ? viewer !== "guest" && context.graceApprovedMemberIds.includes(viewer)
+        : ((viewer === "member" && context.memberActive !== false) ||
         viewer === "owner" ||
         viewer === "maria" ||
-        (viewer === "elena" && context.elenaApprovedMember === true)))
+        (viewer === "elena" && context.elenaApprovedMember === true))))
   );
 }
 
@@ -396,6 +431,7 @@ export function canViewRequest(
   viewer: Viewer,
   context: DemoAccessContext = {},
 ): boolean {
+  if (request.groupRemoval) return false;
   if (isAuthor(request, viewer)) return true;
   if (request.moderation !== "approved") return false;
   if (isIntendedRecipient(request, viewer, context)) return true;

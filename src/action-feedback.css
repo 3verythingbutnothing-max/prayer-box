@@ -24,6 +24,7 @@
   }
 }
 .action-feedback-icon {
+  position: relative;
   display: grid;
   place-content: center;
   flex: 0 0 43px;
@@ -34,6 +35,18 @@
   border: 1px solid #b6d2b8;
   color: #35734b;
 }
+
+.success-sparkle {
+  position: absolute;
+  width: 136px;
+  height: 96px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.success-sparkle canvas { display: block; }
+@media (prefers-reduced-motion: reduce) { .success-sparkle { display: none; } }
 .action-feedback-copy {
   min-width: 0;
   flex: 1;
