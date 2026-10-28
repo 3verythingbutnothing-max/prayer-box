@@ -8,7 +8,7 @@ import { NOW, ORIGIN, resetDatabase, seedDelivery, seedUsers, session, type USER
 
 type User = typeof USERS[number];
 type Session = Awaited<ReturnType<typeof session>>;
-type Command = { type: string; targetId?: string; successorId?: string; name?: string; website?: string; icon?: string; allowed?: boolean };
+type Command = { type: string; targetId?: string; successorId?: string; name?: string; website?: string; icon?: string; allowed?: boolean; role?: string; proposalId?: string };
 
 beforeEach(async () => { await resetDatabase(); await seedUsers(); });
 
@@ -343,5 +343,131 @@ describe('group lifecycle: real Workers/D1 routes', () => {
     expect((await request(`/api/deliveries/${delivery.id}`, member)).status).toBe(404);
     expect((await action(id, member, { type: 'request_join' })).status).toBe(200);
     expect((await request(`/api/deliveries/${delivery.id}`, member)).status).toBe(404);
+  });
+});
+
+
+describe('moderator roles and unanimous group deletion', () => {
+  it('persists moderator role/tenure and allows admission and ordinary-member removal without assigning roles', async () => {
+    const owner=await signedIn();const mod=await signedIn('member');const applicant=await signedIn('outsider',false);const id=await create(owner);
+    await addMember(id,'member');await addMember(id,'newmember');
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'moderator'})).status).toBe(200);
+    const saved=await env.DB.prepare("SELECT is_admin,is_moderator,moderator_since FROM memberships WHERE box_id=? AND user_id='member'").bind(id).first();
+    expect(saved).toMatchObject({is_admin:0,is_moderator:1,moderator_since:expect.any(Number)});
+    const roster=await (await request(`/api/groups/${id}`,mod)).json() as {membership:{role:string};members:Array<{id:string}>};
+    expect(roster.membership.role).toBe('moderator');expect(roster.members.some(member=>member.id==='newmember')).toBe(true);
+    for(const command of [{type:'set_role',targetId:'newmember',role:'admin'},{type:'set_role',targetId:'newmember',role:'moderator'},
+      {type:'promote',targetId:'newmember'},{type:'edit',name:'No',website:'',icon:'heart'},{type:'invite',targetId:'outsider'},
+      {type:'block',targetId:'newmember'},{type:'set_official_reply',targetId:'newmember',allowed:true},{type:'request_deletion'}]) {
+      expect((await action(id,mod,command)).status).toBe(403);
+    }
+    expect((await action(id,applicant,{type:'request_join'})).status).toBe(200);
+    expect((await action(id,mod,{type:'deny',targetId:'outsider'})).status).toBe(200);
+    expect((await action(id,applicant,{type:'request_join'})).status).toBe(200);
+    expect((await action(id,mod,{type:'approve',targetId:'outsider'})).status).toBe(200);
+    expect((await action(id,mod,{type:'remove',targetId:'outsider'})).status).toBe(200);
+    expect((await action(id,mod,{type:'remove',targetId:'owner'})).status).toBe(409);
+    expect((await action(id,owner,{type:'set_role',targetId:'newmember',role:'moderator'})).status).toBe(200);
+    expect((await action(id,mod,{type:'remove',targetId:'newmember'})).status).toBe(409);
+    expect(await env.DB.prepare("SELECT is_moderator,moderator_since FROM memberships WHERE box_id=? AND user_id='member'").bind(id).first()).toMatchObject({is_moderator:1,moderator_since:(saved as {moderator_since:number}).moderator_since});
+  });
+  it('keeps role/removal notices private and readable after being kicked or blocked',async()=>{
+    const owner=await signedIn();const member=await signedIn('member');const id=await create(owner);await addMember(id,'member');
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'moderator'})).status).toBe(200);
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'member'})).status).toBe(200);
+    expect((await action(id,owner,{type:'remove',targetId:'member'})).status).toBe(200);
+    expect((await action(id,owner,{type:'block',targetId:'member'})).status).toBe(200);
+    const notices=await (await request('/api/group-notices',member)).json() as {notices:Array<{id:string;kind:string}>};
+    expect(notices.notices.map(notice=>notice.kind)).toEqual(expect.arrayContaining(['role_moderator','role_member','removed','blocked']));
+    const own=await (await request('/api/group-notices',owner)).text();expect(own).not.toContain('role_moderator');
+    const path=`/api/group-notices/${encodeURIComponent(notices.notices[0].id)}/read`;
+    expect((await request(path,member,{})).status).toBe(200);
+    expect((await request(path,owner,{})).status).toBe(404);
+  });
+  it('automatically hands off to the longest-serving active moderator ahead of older ordinary members',async()=>{
+    const owner=await signedIn();const id=await create(owner);
+    await addMember(id,'recipient',NOW-40000);await addMember(id,'member',NOW-20000);await addMember(id,'newmember',NOW-10000);await addMember(id,'removed',NOW-30000);
+    await env.DB.prepare("UPDATE memberships SET is_moderator=1,moderator_since=CASE user_id WHEN 'member' THEN ? WHEN 'newmember' THEN ? ELSE ? END WHERE box_id=? AND user_id IN ('member','newmember','removed')").bind(NOW-1000,NOW-5000,NOW-15000,id).run();
+    await env.DB.prepare("UPDATE users SET status='suspended' WHERE id='removed'").run();
+    expect((await action(id,owner,{type:'leave'})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT owner_id FROM boxes WHERE id=?').bind(id).first()).toEqual({owner_id:'newmember'});
+    expect(await env.DB.prepare("SELECT is_admin,is_moderator,moderator_since FROM memberships WHERE box_id=? AND user_id='newmember'").bind(id).first()).toEqual({is_admin:1,is_moderator:0,moderator_since:null});
+    expect(await env.DB.prepare("SELECT kind FROM group_notices WHERE recipient_id='newmember'").first()).toEqual({kind:'role_admin'});
+  });
+  it('clears moderator tenure on demotion/removal and starts a fresh tenure after reappointment',async()=>{
+    const owner=await signedIn();const member=await signedIn('member');const id=await create(owner);await addMember(id,'member');
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'moderator'})).status).toBe(200);
+    await env.DB.prepare("UPDATE memberships SET moderator_since=? WHERE box_id=? AND user_id='member'").bind(NOW-10000,id).run();
+    expect((await action(id,owner,{type:'remove',targetId:'member'})).status).toBe(200);
+    expect(await env.DB.prepare("SELECT is_moderator,moderator_since FROM memberships WHERE box_id=? AND user_id='member'").bind(id).first()).toEqual({is_moderator:0,moderator_since:null});
+    expect((await action(id,member,{type:'request_join'})).status).toBe(200);
+    expect((await action(id,owner,{type:'approve',targetId:'member'})).status).toBe(200);
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'moderator'})).status).toBe(200);
+    expect((await env.DB.prepare("SELECT moderator_since FROM memberships WHERE box_id=? AND user_id='member'").bind(id).first<number>('moderator_since'))!).toBeGreaterThan(NOW-10000);
+  });
+  it('atomically rejects a moderator admission when their role is revoked before commit',async()=>{
+    const owner=await signedIn();const mod=await signedIn('member');const outsider=await signedIn('outsider',false);const id=await create(owner);await addMember(id,'member');
+    expect((await action(id,owner,{type:'set_role',targetId:'member',role:'moderator'})).status).toBe(200);
+    expect((await action(id,outsider,{type:'request_join'})).status).toBe(200);
+    const before=await env.DB.prepare('SELECT COUNT(*) count FROM group_notices').first<number>('count');
+    const response=await raceAtCommit(`/api/groups/${id}/actions`,mod,{expectedVersion:await version(id),command:{type:'approve',targetId:'outsider'}},()=>env.DB.prepare("UPDATE memberships SET is_moderator=0 WHERE box_id=? AND user_id='member'").bind(id).run());
+    expect(response?.status).toBe(409);expect((await membership(id,'outsider'))?.status).toBe('pending');
+    expect(await env.DB.prepare('SELECT COUNT(*) count FROM group_notices').first<number>('count')).toBe(before);
+  });
+  it('allows a sole admin to delete the group and revokes memberships, prayer reads and pending edits',async()=>{
+    const owner=await signedIn();const member=await signedIn('member');const author=await signedIn('author');const id=await create(owner);await addMember(id,'member');
+    const delivery=await seedDelivery({organization:true,history:'retained'});await env.DB.prepare('UPDATE deliveries SET box_id=? WHERE id=?').bind(id,delivery.id).run();
+    expect((await request(`/api/deliveries/${delivery.id}`,member)).status).toBe(200);
+    expect((await request(`/api/deliveries/${delivery.id}/posts/${delivery.postId}/edits`,author,{title:'Correction',body:'Synthetic edit',expectedRevision:1})).status).toBe(202);
+    expect((await action(id,owner,{type:'request_deletion'})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'deleted'});
+    expect((await membership(id,'owner'))?.status).toBe('revoked');expect((await membership(id,'member'))?.status).toBe('revoked');
+    expect((await request(`/api/deliveries/${delivery.id}`,member)).status).toBe(404);
+    expect((await request(`/api/deliveries/${delivery.id}`,author)).status).toBe(404);
+    expect(await env.DB.prepare('SELECT state FROM post_edits').first()).toEqual({state:'cancelled'});
+    expect((await (await request('/api/group-notices',member)).json() as {notices:Array<{kind:string}>}).notices.map(notice=>notice.kind)).toContain('group_deleted');
+    expect(await env.DB.prepare("SELECT status FROM users WHERE id='member'").first()).toEqual({status:'active'});
+  });
+  it('requires every current admin, hides the proposal from non-admins, and does not close on the first vote',async()=>{
+    const owner=await signedIn();const coadmin=await signedIn('member');const viewer=await signedIn('newmember');const id=await create(owner);await addMember(id,'member',NOW-9000,true);await addMember(id,'newmember');
+    const first=await action(id,owner,{type:'request_deletion'});expect(first.status).toBe(200);const value=await first.json() as {deletionProposal:{id:string;approvedBy:string[]}};
+    expect(value.deletionProposal.approvedBy).toEqual(['owner']);
+    expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'active'});
+    expect(await (await request(`/api/groups/${id}`,viewer)).text()).not.toContain('deletionProposal');
+    expect((await action(id,viewer,{type:'approve_deletion',proposalId:value.deletionProposal.id})).status).toBe(403);
+    expect((await action(id,owner,{type:'approve_deletion',proposalId:value.deletionProposal.id})).status).toBe(409);
+    expect((await action(id,coadmin,{type:'approve_deletion',proposalId:value.deletionProposal.id})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'deleted'});
+  });
+  it('invalidates old deletion approvals whenever the admin roster changes',async()=>{
+    const owner=await signedIn();const coadmin=await signedIn('member');const id=await create(owner);await addMember(id,'member',NOW-9000,true);await addMember(id,'newmember');
+    const first=await (await action(id,owner,{type:'request_deletion'})).json() as {deletionProposal:{id:string}};
+    expect((await action(id,owner,{type:'set_role',targetId:'newmember',role:'admin'})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT deletion_proposal FROM group_settings WHERE box_id=?').bind(id).first()).toEqual({deletion_proposal:null});
+    expect((await action(id,coadmin,{type:'approve_deletion',proposalId:first.deletionProposal.id})).status).toBe(409);
+    expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'active'});
+    const second=await (await action(id,owner,{type:'request_deletion'})).json() as {deletionProposal:{id:string}};
+    expect(second.deletionProposal.id).not.toBe(first.deletionProposal.id);
+    expect((await action(id,coadmin,{type:'cancel_deletion',proposalId:second.deletionProposal.id})).status).toBe(200);
+    expect((await action(id,owner,{type:'approve_deletion',proposalId:second.deletionProposal.id})).status).toBe(409);
+  });
+  it('keeps inactive admins in the unanimous quorum and denies retired admin votes',async()=>{
+    const owner=await signedIn();const coadmin=await signedIn('member');const id=await create(owner);await addMember(id,'member',NOW-9000,true);
+    await env.DB.prepare("UPDATE users SET status='suspended' WHERE id='member'").run();
+    const first=await action(id,owner,{type:'request_deletion'});expect(first.status).toBe(200);const value=await first.json() as {deletionProposal:{id:string;adminIds:string[]}};
+    expect(value.deletionProposal.adminIds).toEqual(['member','owner']);
+    expect((await action(id,coadmin,{type:'approve_deletion',proposalId:value.deletionProposal.id})).status).toBe(401);
+    expect((await action(id,owner,{type:'leave'})).status).toBe(409);
+    expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'active'});
+    await env.DB.prepare("UPDATE users SET status='active' WHERE id='member'").run();
+    expect((await action(id,coadmin,{type:'leave'})).status).toBe(200);
+    expect((await action(id,coadmin,{type:'approve_deletion',proposalId:value.deletionProposal.id})).status).toBe(403);
+  });
+  it('aborts the final deletion vote if an admin is revoked or another admin appears during commit',async()=>{
+    const owner=await signedIn();const coadmin=await signedIn('member');const id=await create(owner);await addMember(id,'member',NOW-9000,true);await addMember(id,'newmember');
+    const value=await (await action(id,owner,{type:'request_deletion'})).json() as {deletionProposal:{id:string}};
+    const response=await raceAtCommit(`/api/groups/${id}/actions`,coadmin,{expectedVersion:await version(id),command:{type:'approve_deletion',proposalId:value.deletionProposal.id}},()=>env.DB.prepare("UPDATE memberships SET is_admin=1 WHERE box_id=? AND user_id='newmember'").bind(id).run());
+    expect(response?.status).toBe(409);expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'active'});
+    expect(await env.DB.prepare("SELECT id FROM group_notices WHERE kind='group_deleted'").first()).toBeNull();
   });
 });

@@ -17,8 +17,9 @@ import ProfilePictureSettings from "./components/ProfilePictureSettings";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
 import { PrayerGroups } from "./components/PrayerGroups";
-import { initialPrayerGroups, isGroupAdmin } from "./prayer-groups";
-import type { GroupState } from "./prayer-groups";
+import { initialPrayerGroups, isGroupAdmin, canModerateGroup, visibleGroupNotices } from "./prayer-groups";
+import type { GroupState, GroupNotice } from "./prayer-groups";
+import { groupRemovalReasons, removeGroupContent } from "./group-moderation";
 import CareResources from "./components/CareResources";
 import GetHelpPage from "./components/GetHelpPage";
 import DeleteRequests from "./components/DeleteRequests";
@@ -291,7 +292,12 @@ export default function App() {
   const memberActive = graceMembers.some(member => member.id === "member");
   const groupAdmin = isGroupAdmin(graceGroup, viewer);
   const isOwnBox = (actor: string, target: BoxId) => isOwnPrayerBox(actor, target, graceGroup.ownerId);
-  function updatePrayerGroups(next: GroupState) {
+  const [groupNotices, setGroupNotices] = useState<GroupNotice[]>([]);
+  function addGroupNotices(notices: GroupNotice[]) {
+    setGroupNotices(previous => [...previous, ...notices.filter(notice => !previous.some(old => old.id === notice.id))]);
+  }
+  function updatePrayerGroups(next: GroupState, notices: GroupNotice[] = []) {
+    addGroupNotices(notices);
     setPrayerGroups(next);
     const nextGrace = next.find(group => group.id === "grace");
     const groupBlocked = nextGrace?.members.filter(member => member.status === "blocked").map(member => member.id) ?? [];
@@ -369,6 +375,8 @@ export default function App() {
   const groupMember = graceMembers.some(member => member.id === viewer);
   const officialAllowed = groupMember && !!graceGroup.members.find(member => member.id === viewer)?.officialReply;
   const privacy = privacyByViewer[viewer] ?? "private";
+  const myGroupNotices = visibleGroupNotices(groupNotices, viewer);
+  const unreadGroupNotice = myGroupNotices.some(notice => !notice.readAt);
   const privateSupportNotes = visibleSupportNotes(supportNotes, viewer).filter(
     (note) => !dismissedSupportNotes.includes(note.id),
   );
@@ -1118,7 +1126,7 @@ export default function App() {
                           <span
                             className={`status-label ${copy.moderation === "approved" ? "" : "held"}`}
                           >
-                            {copy.moderation === "approved"
+                            {copy.groupRemoval ? 'Removed from this group' : copy.recipient === 'grace' && graceGroup.archivedAt ? 'Group closed' : copy.moderation === "approved"
                               ? copy.media?.status === "pending"
                                 ? "Text delivered · media held"
                                 : "Delivered"
@@ -1492,6 +1500,13 @@ export default function App() {
 
   function renderDetail() {
     const row = requests.find((r) => r.id === resource);
+    if (row?.authorId === viewer && (row.groupRemoval || row.recipient === 'grace' && graceGroup.archivedAt)) return <section className="panel empty-state">
+      <Icon name="shield" size={34} /><h1>{row.groupRemoval ? 'This group copy was removed.' : 'This prayer group has closed.'}</h1>
+      <p>{row.groupRemoval ? `A group ${row.groupRemoval.actorRole} removed this delivery. Reason: ${groupRemovalReasons[row.groupRemoval.reason]}.` : 'Its prayer inbox is no longer available.'}</p>
+      {row.groupRemoval && <p><time dateTime={row.groupRemoval.removedAt}>{formatStoryDate(row.groupRemoval.removedAt)}</time></p>}
+      <p>Your other prayer boxes and deliveries are unchanged. Your authored words remain in My Requests.</p>
+      <button className="button secondary" onClick={() => navigate('requests')}>Back to My Requests</button>
+    </section>;
     if (!row || !canRead(row))
       return (
         <EmptyState kind="denied" onAction={() => navigate("box/maria")} />
@@ -1505,6 +1520,19 @@ export default function App() {
         groupMember={groupMember}
         officialAllowed={officialAllowed}
         organizationName={graceGroup.name}
+        groupModerationRole={row.recipient === 'grace' && canModerateGroup(graceGroup, viewer) ? groupAdmin ? 'admin' : 'moderator' : undefined}
+        onGroupRemove={input => {
+          try {
+            const current = requests.find(item => item.id === row.id);
+            if (!current || !canRead(current)) throw new Error('This conversation is no longer available.');
+            const result = removeGroupContent(current, graceGroup, viewer, input);
+            setRequests(previous => previous.map(item => item.id === row.id ? result.request : item));
+            if (result.notice) addGroupNotices([result.notice]);
+            acknowledge('success', 'Content removed from this group.', 'A private notice explains the reason to its author. Other deliveries stay separate.');
+            if (!input.replyId && (!input.postId || input.postId === 'original')) navigate('box/grace');
+            return true;
+          } catch (error) { acknowledge('error', error instanceof Error ? error.message : 'The content could not be removed.'); return false; }
+        }}
         outsideAudience={outsideAudience(row)}
         postingRestricted={restricted.includes(viewer)}
         isFriend={viewer === "elena" && friends.includes(row.authorId)}
@@ -1868,7 +1896,7 @@ export default function App() {
               }}
             >
               <span className="notification-bell"><Icon name="bell" size={27} />
-              {(!notificationRead || unreadSupport) && <span className="notification-dot" />}</span>
+              {(!notificationRead || unreadSupport || unreadGroupNotice) && <span className="notification-dot" />}</span>
             </button>
             <div className="account-menu-wrap">
               <button
@@ -2142,7 +2170,7 @@ export default function App() {
                       className="button secondary compact"
                       onClick={() => {
                         const plan = storyPublicationPlan(
-                          requests,
+                          requests.filter(row => row.recipient !== 'grace' || !graceGroup.archivedAt),
                           story.authorId,
                           story.destinations,
                           restricted.includes(story.authorId),
@@ -2422,6 +2450,7 @@ export default function App() {
                 setStoryReadByViewer({});
                 setRestricted([]);
                 setPrayerGroups(initialPrayerGroups());
+                setGroupNotices([]);
                 setFriends(["maria", "daniel"]);
                 setOutgoingFriendRequests([]);
                 setFriendInvitationStatus("pending");
@@ -2450,10 +2479,18 @@ export default function App() {
         </Modal>
       )}
       {dialog === "notifications" && (
-        <Modal title="Your prayer updates" onClose={() => setDialog(null)} wide>
-          <p className="quiet-copy">These in-app updates are visible only when your account can read the original delivery. No external notification has been sent.</p>
+        <Modal title="Your updates" onClose={() => setDialog(null)} wide>
+          <p className="quiet-copy">Prayer updates follow the original delivery’s access. Group decisions are private to your account and stay available after membership ends. No external notification has been sent.</p>
           <PrivateSupportNotifications notes={privateSupportNotes} onOpen={() => setDialog("support")} onDismiss={id => setDismissedSupportNotes(previous => [...previous,id])} />
           <div className="story-notifications">
+            {myGroupNotices.map(notice => <article className="story-notification group-decision-notice" key={notice.id}>
+              <p className="eyebrow">{notice.groupName} · <time dateTime={new Date(notice.createdAt).toISOString()}>{formatStoryDate(new Date(notice.createdAt).toISOString())}</time></p>
+              <h3>{notice.title}</h3><p>{notice.message}</p>
+              <div className="inline-actions">
+                {prayerGroups.some(group => group.id === notice.groupId && !group.archivedAt && group.members.some(member => member.id === viewer && ['approved', 'pending', 'invited'].includes(member.status))) && <button className="text-link" onClick={() => { setDialog(null); navigate(`group/${prayerGroups.find(group => group.id === notice.groupId)!.username}`); }}>View prayer group<Icon name="arrow" size={17} /></button>}
+                {!notice.readAt && <button className="text-link" onClick={() => setGroupNotices(previous => previous.map(item => item.id === notice.id && item.recipientId === viewer ? { ...item, readAt: Date.now() } : item))}>Mark as read</button>}
+              </div>
+            </article>)}
             {storyNotices.map(({row,post,key}) => <article className="story-notification" key={key}>
               <p className="eyebrow">{post.kind === "testimony" ? "Testimony shared" : "Update shared"} · <time dateTime={post.createdAt}>{formatStoryDate(post.createdAt)}</time></p>
               <h3>{row.topic}</h3>
@@ -2461,9 +2498,9 @@ export default function App() {
               <p>{post.text}</p>
               <button className="text-link" onClick={() => { setReadStoryNoticeIds(previous => [...new Set([...previous,key])]); setDialog(null); navigate(`request/${row.id}/post/${encodeURIComponent(post.id)}`); }}>Read & respond to this {post.kind} <Icon name="arrow" size={19} /></button>
             </article>)}
-            {!storyNotices.length && <p className="notice sage">You’re all caught up. Updates to prayer stories you can read will appear here.</p>}
+            {!storyNotices.length && !myGroupNotices.length && <p className="notice sage">You’re all caught up. Updates to prayer stories you can read will appear here.</p>}
           </div>
-          <button className="button secondary" onClick={() => { setReadStoryNoticeIds(storyNotices.map(notice => notice.key)); setDialog(null); }}>Mark updates as read</button>
+          <button className="button secondary" onClick={() => { setReadStoryNoticeIds(storyNotices.map(notice => notice.key)); setGroupNotices(previous => previous.map(item => item.recipientId === viewer ? { ...item, readAt: item.readAt ?? Date.now() } : item)); setDialog(null); }}>Mark updates as read</button>
         </Modal>
       )}
       {dialog === "support" && (
@@ -2588,6 +2625,7 @@ export default function App() {
                 (r) =>
                   r.sourceId === updateStory &&
                   r.authorId === viewer &&
+                  !r.groupRemoval && !(r.recipient === "grace" && graceGroup.archivedAt) &&
                   r.moderation === "approved",
               )
               .map((row) => (
@@ -2636,7 +2674,7 @@ export default function App() {
               onClick={() => {
                 feedback.prepare();
                 const plan = storyPublicationPlan(
-                  requests,
+                  requests.filter(row => row.recipient !== 'grace' || !graceGroup.archivedAt),
                   viewer,
                   updateDestinations,
                   restricted.includes(viewer),

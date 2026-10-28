@@ -14,6 +14,7 @@
 .group-icons .group-picture:active { transform:translateY(1px) scale(.97); }
 .group-icons .selected { outline:3px solid #6b5587; outline-offset:3px; }
 .group-status { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .7rem; border-radius:.7rem; background:#e3edee; color:#365869; font-size:.95rem; }
+.group-status.moderator { background:#ece8f8; color:#5a4777; }
 .group-actions { display:flex; align-items:center; gap:.8rem 1rem; flex-wrap:wrap; min-width:0; }
 .group-actions .button { white-space:normal; }
 .group-search { display:flex; align-items:center; gap:.7rem; background:#fff; border:1px solid #b5c4d3; border-radius:1rem; padding:.65rem 1rem; }
@@ -32,10 +33,30 @@
 .group-invite label { flex:1 1 12rem; }
 .group-member-list { display:grid; gap:.8rem; }
 .group-member { display:flex; flex-direction:column; align-items:flex-start; gap:1rem; padding:1.1rem; border:1px solid #d3dce4; border-radius:1rem; background:#f5f9fc; min-width:0; }
+.group-member-heading { display:grid; gap:.3rem; min-width:0; }
+.group-role-guide { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin:0; }
+.group-role-guide > div { padding:1rem; border:1px solid #cbd9e6; border-radius:1rem; background:linear-gradient(140deg,#edf5fb,#f4f0fa); min-width:0; }
+.group-role-guide dt { display:flex; align-items:center; gap:.45rem; font-weight:700; margin-bottom:.35rem; color:#37566c; }
+.group-role-guide dt svg { flex:none; }
+.group-role-guide dd { margin:0; font-size:1rem; line-height:1.55; overflow-wrap:anywhere; }
+.group-role-control { display:grid; gap:.5rem; width:100%; min-width:0; }
+.group-role-control label { max-width:21rem; }
+.group-role-control select:disabled { opacity:1; color:#596477; background:#eef1f5; cursor:not-allowed; }
+.group-member-actions:empty { display:none; }
+.group-member-actions .text-link { min-height:2.75rem; text-align:left; overflow-wrap:anywhere; }
+.group-caution-action { color:#874538; }
+.group-deletion { display:grid; justify-items:start; gap:1rem; padding:1.15rem; margin-top:.75rem; border:1px solid #dec9bf; border-radius:1rem; background:linear-gradient(135deg,#fff5ee,#fffaf5); min-width:0; }
+.group-deletion h3 { margin:0; font-size:1.25rem; }
+.group-deletion p { overflow-wrap:anywhere; }
+.group-deletion-votes { list-style:none; margin:0; padding:0; width:100%; }
+.group-deletion-votes li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.25rem 1rem; padding:.7rem 0; border-bottom:1px solid #e7d8ce; overflow-wrap:anywhere; }
+.group-deletion-votes li > span { min-width:0; }
+.group-deletion-votes li > span:last-child { color:#665744; }
 .group-transfer { display:flex; align-items:center; gap:.65rem; padding:1rem; border-radius:1rem; background:#fff3ce; color:#62502e; }
 .group-transfer svg { flex:none; }
 .group-inbox { margin-top:1.25rem; text-align:center; padding:2rem; }
 .group-inbox p { max-width:40rem; margin:1rem auto; }
 .group-empty { padding:1.3rem; border:1px dashed #b7c6d8; border-radius:1rem; background:#edf5fc; }
 @media(max-width:420px) { .group-card { padding:1.05rem; }.group-section-heading > .button { width:100%; }.group-actions { gap:.8rem; }.group-actions .button { width:100%; }.group-member { padding:.8rem; }.group-invite > .button { width:100%; } }
+@media(max-width:560px) { .group-role-guide { grid-template-columns:minmax(0,1fr); }.group-deletion { padding:.9rem; }.group-role-control label { max-width:none; } }
 @media(prefers-reduced-motion:reduce) { .group-icons .group-picture { transition:none; }.group-icons .group-picture:hover,.group-icons .group-picture:active { transform:none; } }

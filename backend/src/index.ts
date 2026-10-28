@@ -8,6 +8,7 @@ import { consumeDeadLetterBatch, consumeJobBatch, dispatchOutbox } from './jobs.
 import { handleRead } from './reads.ts';
 import { uploadFeedbackPicture } from './uploads.ts';
 import { handleGroupRoute } from './groups.ts';
+import { handleGroupModerationRoute } from './group-moderation.ts';
 import { submitPostEdit, loadOwnPostEdits, cancelOwnPostEdit } from './post-edits.ts';
 
 type Dependencies = { siteverifyFetch?: Parameters<typeof verifyTurnstile>[0]['fetcher'] };
@@ -131,6 +132,8 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
         capabilities: { signIn: false, feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
     }
     if (request.method === 'GET') {
+      const groupModerationResponse = await handleGroupModerationRoute(request, env, actor, db);
+      if (groupModerationResponse) return groupModerationResponse;
       const groupResponse = await handleGroupRoute(request, env, actor, db);
       if (groupResponse) return groupResponse;
       const edit = url.pathname.match(/^\/api\/deliveries\/([A-Za-z0-9_-]{1,160})\/posts\/([A-Za-z0-9_-]{1,160})\/edits$/);
@@ -143,6 +146,8 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
     }
     if (request.method === 'POST') {
       const verified = await requireMutation(request, env, actor);
+      const groupModerationResponse = await handleGroupModerationRoute(request, env, verified, db);
+      if (groupModerationResponse) return groupModerationResponse;
       const groupResponse = await handleGroupRoute(request, env, verified, db);
       if (groupResponse) return groupResponse;
       const cancelledEdit = url.pathname.match(/^\/api\/deliveries\/([A-Za-z0-9_-]{1,160})\/posts\/([A-Za-z0-9_-]{1,160})\/edits\/([A-Za-z0-9_-]{1,160})\/cancel$/);

@@ -11,7 +11,7 @@ export function getStoryPosts(request: PrayerRequest): PrayerPost[] {
     });
   }
   for (const post of request.posts ?? []) posts.set(post.id, post);
-  return [...posts.values()].sort((a, b) => {
+  return [...posts.values()].filter(post => !post.groupRemoval).sort((a, b) => {
     const first = Date.parse(a.createdAt);
     const second = Date.parse(b.createdAt);
     return Number.isFinite(first) && Number.isFinite(second)
@@ -27,13 +27,14 @@ export function storyReportEvidence(
   replyId?: string,
   postId?: string,
 ): string | null {
+  if (request.groupRemoval) return null;
   const scope = postId === "original" ? undefined : postId;
   const post = scope ? getStoryPosts(request).find((item) => item.id === scope) : undefined;
   if (scope && !post) return null;
   if (replyId) {
     const matches = request.replies.filter((reply) => reply.id === replyId);
     const reply = matches[0];
-    return matches.length === 1 && !reply.automatic && !reply.deletedAt && reply.actorId === actorId && reply.testimonyId === scope
+    return matches.length === 1 && !reply.automatic && !reply.deletedAt && !reply.groupRemoval && reply.actorId === actorId && reply.testimonyId === scope
       ? reply.text
       : null;
   }
@@ -65,7 +66,7 @@ export function hasPrayedForLatest(
   if (
     viewer === "guest" ||
     request.authorId === viewer ||
-    request.moderation !== "approved"
+    request.groupRemoval || request.moderation !== "approved"
   )
     return false;
   const revision = storyRevision(request);
@@ -74,7 +75,7 @@ export function hasPrayedForLatest(
   return request.replies.some(
     (reply) =>
       reply.actorId === viewer &&
-      !reply.automatic &&
+      !reply.automatic && !reply.groupRemoval && !reply.deletedAt &&
       (originalOnly || reply.testimonyId === latestPost?.id) &&
       (reply.storyRevision === revision ||
         (!reply.storyRevision && originalOnly && !reply.testimonyId)),
@@ -106,7 +107,7 @@ export function publishStoryPost(
   const selected = new Set(deliveryIds);
   return requests.map((request) =>
     request.authorId === viewer &&
-    request.moderation === "approved" &&
+    !request.groupRemoval && request.moderation === "approved" &&
     selected.has(request.id)
       ? {
           ...request,
@@ -131,7 +132,7 @@ export function storyPublicationPlan(
           .filter(
             (request) =>
               request.authorId === author &&
-              request.moderation === "approved" &&
+              !request.groupRemoval && request.moderation === "approved" &&
               selected.includes(request.id),
           )
           .map((request) => request.id);
@@ -147,7 +148,7 @@ export function editOwnStoryText(request: PrayerRequest, viewer: Viewer, target:
   input: { text: string; title?: string; expectedRevision: number }, now: string,
   postingRestricted = false): TextEditResult {
   const deny = (state: TextEditResult["state"], message: string): TextEditResult => ({ request, state, message });
-  if (viewer === "guest" || postingRestricted) return deny("denied", "Posting is unavailable for this account.");
+  if (viewer === "guest" || postingRestricted || request.groupRemoval) return deny("denied", "Posting is unavailable for this account.");
   if (!Number.isFinite(Date.parse(now)) || !input.text.trim() || input.text.trim().length > 4000
     || (!target.postId && !target.replyId && (!input.title?.trim() || input.title.trim().length > 160)))
     return deny("invalid", "Add a title up to 160 characters and text up to 4,000 characters.");
@@ -155,7 +156,7 @@ export function editOwnStoryText(request: PrayerRequest, viewer: Viewer, target:
   if (target.postId && !post) return deny("denied", "That part of the story is no longer available.");
   const replies = target.replyId ? request.replies.filter(row => row.id === target.replyId && row.testimonyId === target.postId) : [];
   const reply = replies[0];
-  if (target.replyId ? replies.length !== 1 || reply?.actorId !== viewer || reply.automatic || reply.deletedAt
+  if (target.replyId ? replies.length !== 1 || reply?.actorId !== viewer || reply.automatic || reply.deletedAt || reply.groupRemoval
     : request.authorId !== viewer) return deny("denied", "Only the author can edit these words.");
   const item = reply ?? post ?? request;
   if ((item.revision ?? 1) !== input.expectedRevision) return deny("conflict", "This post changed while you were editing. Reopen it to use the latest version.");
@@ -184,7 +185,7 @@ export function removeOwnEncouragement(request: PrayerRequest, viewer: Viewer, t
   if (viewer === "guest" || !target.replyId || !Number.isFinite(Date.parse(now))) return request;
   const matches = request.replies.filter(row => row.id === target.replyId && row.testimonyId === target.postId);
   const row = matches[0];
-  if (matches.length !== 1 || row.actorId !== viewer || row.automatic || row.deletedAt) return request;
+  if (matches.length !== 1 || row.actorId !== viewer || row.automatic || row.deletedAt || row.groupRemoval) return request;
   return { ...request, replies: request.replies.map(item => item.id === row.id
     ? { ...item, text: "", deletedAt: now, pendingEdit: undefined, agreedBy: [] } : item) };
 }

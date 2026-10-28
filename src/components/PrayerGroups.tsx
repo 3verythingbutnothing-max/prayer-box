@@ -3,15 +3,33 @@ import type { FormEvent } from 'react';
 import { Icon, Modal } from '../ui';
 import { useActionFeedback } from '../action-feedback';
 import { normalizeOrganizationWebsite } from '../organization';
-import { applyGroupCommand, createPrayerGroup, groupIcons, groupPeople, isGroupAdmin, planGroupDeparture } from '../prayer-groups';
-import type { GroupCommand, GroupIcon, GroupState, PrayerGroup } from '../prayer-groups';
+import { applyGroupCommand, canModerateGroup, createPrayerGroup, groupIcons, groupNoticesForCommand, groupPeople, isGroupAdmin, isGroupModerator, planGroupDeparture } from '../prayer-groups';
+import type { GroupCommand, GroupIcon, GroupNotice, GroupState, PrayerGroup } from '../prayer-groups';
 import '../prayer-groups.css';
 import { makePicturePreview } from '../picture-preview';
 
-type Props = { standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
+type Props = { standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
 const date = (time: number) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(time);
 function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | 'name'> }) {
   return <span className="group-picture">{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
+}
+
+function describeChange(group: PrayerGroup, command: GroupCommand): string {
+  if (command.type === 'set_role') {
+    if (command.role === 'admin') return 'They can manage roles, group settings and invitations, approve or remove members, and moderate this group’s posts. Anonymous identities and personal prayer boxes remain private. They will receive a notice about their new role.';
+    if (command.role === 'moderator') return 'They can approve or deny join requests, remove ordinary members, and remove inappropriate posts in this group. They cannot change roles, remove other moderators or admins, or edit group settings. They will receive a notice about their new role.';
+    return 'They will stay an approved member and can continue to pray with the group. Their admin or moderator controls will be removed, and they will receive a notice. Every group needs at least one active admin.';
+  }
+  if (command.type === 'set_official_reply') return command.allowed
+    ? 'They may deliberately choose the group’s name when replying. This is separate from their role, and every reply still needs screening. Their own account remains recorded internally.'
+    : 'They may still reply personally, but cannot use the group’s name. Their membership and role stay the same.';
+  if (command.type === 'block') return 'Their membership access ends immediately, and they cannot request to join again until an admin unblocks them. They will receive a private notice. Their personal box and deliveries to other boxes are unaffected.';
+  if (command.type === 'remove') return 'Their membership access ends immediately. They will receive a private notice and may request to join again, subject to approval. Their personal box and deliveries to other boxes are unaffected.';
+  if (command.type === 'request_deletion') return group.members.filter(member => member.status === 'approved' && member.role === 'admin').length === 1
+    ? 'You are the only admin. Confirming will close this group and its prayer box, end group access, and notify its members. Personal boxes and separate deliveries elsewhere are unaffected. This does not promise erasure of every stored record.'
+    : 'This starts a private deletion proposal and records your approval. The group stays open until every admin agrees. Once all agree, the group and its prayer box close and members are notified. Personal boxes and separate deliveries elsewhere are unaffected. Any admin can cancel the proposal.';
+  if (command.type === 'approve_deletion') return 'Your approval applies to this deletion proposal. If every admin has now agreed, the group and its prayer box will close immediately and members will be notified. Personal boxes and separate deliveries elsewhere are unaffected. This does not promise erasure of every stored record.';
+  return 'This change applies only to this prayer group.';
 }
 
 
@@ -74,9 +92,10 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
     try {
       const current = state.find(value => value.id === group.id); if (!current) throw new Error('This group is no longer available.');
       const next = applyGroupCommand(current, actor, command, group.version, groupPeople);
-      onChange(state.map(value => value.id === next.id ? next : value));
-      feedback.respond({ tone: 'success', title: message });
+      onChange(state.map(value => value.id === next.id ? next : value), groupNoticesForCommand(current, next, actor.id, command));
+      feedback.respond({ tone: 'success', title: next.archivedAt ? 'This prayer group is now closed.' : message });
       setConfirmation(null);
+      if (next.archivedAt) { setManageId(null); setLeaveId(null); setEditor(null); onNavigate?.('groups'); }
       return next;
     } catch (error) { feedback.respond({ tone: 'error', title: error instanceof Error ? error.message : 'This change could not be saved.' }); }
   };
@@ -90,21 +109,25 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
     if (membership?.status === 'invited') return <div className="group-actions"><button className="button primary" onClick={() => send(group, { type: 'accept_invite' }, 'You have joined this prayer group.')}>Accept invitation</button><button className="button secondary" onClick={() => send(group, { type: 'decline_invite' }, 'Invitation declined.')}>Decline</button></div>;
     if (membership?.status === 'pending') return <div className="group-actions"><span className="group-status">Awaiting approval</span><button className="text-link" onClick={() => send(group, { type: 'withdraw' }, 'Your join request was withdrawn.')}>Withdraw request</button></div>;
     if (membership?.status === 'approved') return <div className="group-actions">
-      {isGroupAdmin(group, viewer) && <><button className="button secondary" onClick={() => { setManageId(group.id); setInvite(''); }}>Members & invitations</button><button className="icon-button" aria-label={`Edit ${group.name}`} onClick={() => setEditor(group)}><Icon name="edit" /></button></>}
+      {canModerateGroup(group, viewer) && <button className="button secondary" onClick={() => { setManageId(group.id); setInvite(''); }}>{isGroupAdmin(group, viewer) ? 'Members & invitations' : 'Members & join requests'}</button>}
+      {isGroupAdmin(group, viewer) && <button className="icon-button" aria-label={`Edit ${group.name}`} onClick={() => setEditor(group)}><Icon name="edit" /></button>}
       <button className="text-link" onClick={() => { setLeaveId(group.id); setSuccessor(''); }}>Leave group</button>
     </div>;
-    return <button className="button secondary" onClick={() => send(group, { type: 'request_join' }, 'Your request to join is awaiting admin approval.')}>Request to join<Icon name="plus" /></button>;
+    return <button className="button secondary" onClick={() => send(group, { type: 'request_join' }, 'Your request to join is awaiting approval.')}>Request to join<Icon name="plus" /></button>;
   };
   const card = (group: PrayerGroup) => <article className="panel group-card" key={group.id}>
     <div className="group-card-heading"><GroupPicture group={group} /><div><h3>{group.name}</h3><p>@{group.username}</p></div></div>
     {isGroupAdmin(group, viewer) && <span className="group-status"><Icon name="shield" size={17} />You are an admin</span>}
+    {isGroupModerator(group, viewer) && <span className="group-status moderator"><Icon name="shield" size={17} />You are a moderator</span>}
+    {isGroupAdmin(group, viewer) && group.deletionProposal && <button className="text-link group-caution-action" onClick={() => setManageId(group.id)}>Review group deletion proposal<Icon name="arrow" size={17} /></button>}
     {group.website && <a className="text-link" href={group.website} target="_blank" rel="noopener noreferrer nofollow">Visit website<Icon name="arrow" size={17} /></a>}
     <p className="quiet-copy">A prayer group with its own box. Personal requests and friendships stay separate.</p>
     {action(group)}
     {!selectedHandle && <button className="text-link" onClick={() => onNavigate?.(`group/${group.username}`)}>View prayer group<Icon name="arrow" size={17} /></button>}
   </article>;
   let departure: ReturnType<typeof planGroupDeparture> | undefined;
-  if (leaving && actor) { try { departure = planGroupDeparture(leaving, actor.id, successor || undefined); } catch { /* stale membership: confirmation remains unavailable */ } }
+  let departureError = '';
+  if (leaving && actor) { try { departure = planGroupDeparture(leaving, actor.id, successor || undefined); } catch (error) { departureError = error instanceof Error ? error.message : 'Your membership changed. Reopen the group before trying again.'; } }
   return <section className="prayer-groups" aria-labelledby="prayer-groups-title">
     <div className="group-section-heading"><div><p className="eyebrow">Your organizations</p><Heading id="prayer-groups-title" tabIndex={-1}>{selected ? selected.name : 'A little community for prayer.'}</Heading></div>{actor && !selectedHandle && <button className="button primary" onClick={() => setEditor('new')}><Icon name="plus" />Create prayer group</button>}</div>
     {!actor && <p className="quiet-copy">Sign in to create a group, manage memberships, or accept an invitation.</p>}
@@ -120,26 +143,64 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
       if (editor === 'new') { const next = createPrayerGroup(state, actor, values); onChange([...state, next]); feedback.respond({ tone: 'success', title: 'Your prayer group is ready.', message: 'You are its first admin. Invite someone to pray with you.' }); setEditor(null); }
       else if (send(editor, { type: 'edit', ...values }, 'Your prayer group has been updated.')) setEditor(null);
     }} />}
-    {managed && actor && isGroupAdmin(managed, actor.id) && <Modal title={`${managed.name} · Members`} wide onClose={() => setManageId(null)}>
-      <div className="group-form"><p>Approval grants access to organization-addressed requests under their disclosed history policy. Admin access also allows membership and group settings changes.</p>
-        <form className="group-invite" onSubmit={event => { event.preventDefault(); const person = groupPeople.find(person => person.username === invite.trim().replace(/^@/, '').toLowerCase()); if (!person) { feedback.respond({ tone: 'error', title: 'Enter the exact username of an available account.' }); return; } if (send(managed, { type: 'invite', targetId: person.id }, 'Invitation added. They can accept or decline.')) setInvite(''); }}>
+    {managed && actor && canModerateGroup(managed, actor.id) && <Modal title={`${managed.name} · Members`} wide onClose={() => setManageId(null)}>
+      <div className="group-form">
+        <p>Approval opens this group’s prayer inbox under each request’s disclosed history policy. Personal boxes and anonymous identities stay private.</p>
+        <dl className="group-role-guide">
+          <div><dt><Icon name="shield" size={18} />Admins</dt><dd>Manage roles, invitations and settings, plus all moderator actions.</dd></div>
+          <div><dt><Icon name="heart" size={18} />Moderators</dt><dd>Review join requests, remove ordinary members, and remove inappropriate posts. They cannot change roles or remove other staff.</dd></div>
+        </dl>
+        <p className="quiet-copy">Keep this space welcoming and rooted in the Father, Son, and Holy Spirit. Address harassment, hate and scams; sincere questions or requests for help are welcome. Unclear doctrinal concerns need thoughtful human review.</p>
+        {isGroupAdmin(managed, actor.id) && <form className="group-invite" onSubmit={event => { event.preventDefault(); const person = groupPeople.find(person => person.username === invite.trim().replace(/^@/, '').toLowerCase()); if (!person) { feedback.respond({ tone: 'error', title: 'Enter the exact username of an available account.' }); return; } if (send(managed, { type: 'invite', targetId: person.id }, 'Invitation added. They can accept or decline.')) setInvite(''); }}>
           <label>Invite by @username<input value={invite} onChange={event => setInvite(event.target.value)} placeholder="@daniel" required autoComplete="off" /></label><button className="button primary">Invite<Icon name="mail" /></button>
-        </form>
-        <div className="group-member-list">{managed.members.filter(member => member.status !== 'left' && member.status !== 'declined').map(member => <article className="group-member" key={member.id}>
-          <div><h3>{member.name}</h3><p>@{member.username} · {member.status === 'approved' ? member.role === 'admin' ? 'Admin' : 'Approved member' : member.status}</p>{member.joinedAt && <p className="quiet-copy">Joined <time dateTime={new Date(member.joinedAt).toISOString()}>{date(member.joinedAt)}</time></p>}</div>
-          <div className="group-actions">{member.status === 'pending' && <><button className="button secondary" onClick={() => send(managed, { type: 'approve', targetId: member.id }, 'Membership approved.')}>Approve</button><button className="text-link" onClick={() => send(managed, { type: 'deny', targetId: member.id }, 'Join request denied.')}>Deny</button></>}
-          {member.status === 'invited' && <button className="text-link" onClick={() => send(managed, { type: 'cancel_invite', targetId: member.id }, 'Invitation cancelled.')}>Cancel invitation</button>}
-          {member.status === 'approved' && <><button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: member.role === 'admin' ? 'demote' : 'promote', targetId: member.id }, title: member.role === 'admin' ? `Remove ${member.name}’s admin access?` : `Give ${member.name} admin access?` })}>{member.role === 'admin' ? 'Remove admin access' : 'Make admin'}</button><button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'set_official_reply', targetId: member.id, allowed: !member.officialReply }, title: member.officialReply ? `Remove ${member.name}’s group reply permission?` : `Allow ${member.name} to reply as ${managed.name}?` })}>{member.officialReply ? 'Remove group reply permission' : 'Allow replies as group'}</button>{member.id !== viewer && member.role !== 'admin' && <button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'remove', targetId: member.id }, title: `Remove ${member.name} from this group?` })}>Remove member</button>}</>}
-          {member.id !== viewer && member.role !== 'admin' && (member.status === 'blocked' ? <button className="text-link" onClick={() => send(managed, { type: 'unblock', targetId: member.id }, 'Group block removed. A new join request still needs approval.')}>Unblock</button> : <button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'block', targetId: member.id }, title: `Block ${member.name} from this group?` })}>Block from group</button>)}</div>
-        </article>)}</div>
+        </form>}
+        <div className="group-member-list">{managed.members.filter(member => member.status !== 'left' && member.status !== 'declined' && (isGroupAdmin(managed, actor.id) || member.status === 'approved' || member.status === 'pending')).map(member => {
+          const admin = isGroupAdmin(managed, actor.id);
+          const onlyAdmin = member.role === 'admin' && member.active && !managed.members.some(other => other.id !== member.id && other.active && other.status === 'approved' && other.role === 'admin');
+          const canRemove = member.status === 'approved' && member.id !== actor.id && member.role !== 'admin' && (admin || member.role === 'member');
+          return <article className="group-member" key={member.id}>
+            <div className="group-member-heading"><h3>{member.name}{member.id === actor.id && <span className="quiet-copy"> (you)</span>}</h3><p>@{member.username} · {member.status === 'approved' ? member.role === 'admin' ? 'Admin' : member.role === 'moderator' ? 'Moderator' : 'Approved member' : member.status === 'pending' ? 'Awaiting approval' : member.status === 'invited' ? 'Invited' : 'Blocked'}{!member.active && ' · Inactive account'}</p>{member.joinedAt && <p className="quiet-copy">Joined <time dateTime={new Date(member.joinedAt).toISOString()}>{date(member.joinedAt)}</time></p>}{member.role === 'moderator' && member.moderatorSince != null && <p className="quiet-copy">Moderator since <time dateTime={new Date(member.moderatorSince).toISOString()}>{date(member.moderatorSince)}</time></p>}</div>
+            {admin && member.status === 'approved' && member.active && <div className="group-role-control">
+              <label>Group role<span className="sr-only"> for {member.name}</span><select value={member.role} disabled={onlyAdmin} aria-describedby={onlyAdmin ? `last-admin-${member.id}` : undefined} onChange={event => {
+                const role = event.target.value as 'admin' | 'moderator' | 'member';
+                if (role === member.role) return;
+                setConfirmation({ group: managed, command: { type: 'set_role', targetId: member.id, role }, title: role === 'member' ? `Return ${member.name} to member access?` : `Make ${member.name} ${role === 'admin' ? 'an admin' : 'a moderator'}?` });
+              }}><option value="member">Member</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select></label>
+              {onlyAdmin && <p className="quiet-copy" id={`last-admin-${member.id}`}>Add another admin before changing the last admin’s role. Leaving can transfer the role automatically.</p>}
+            </div>}
+            <div className="group-actions group-member-actions">
+              {member.status === 'pending' && member.active && <><button className="button secondary" onClick={() => send(managed, { type: 'approve', targetId: member.id }, 'Membership approved.')}>Approve</button><button className="text-link" onClick={() => send(managed, { type: 'deny', targetId: member.id }, 'Join request denied.')}>Deny</button></>}
+              {admin && member.status === 'invited' && <button className="text-link" onClick={() => send(managed, { type: 'cancel_invite', targetId: member.id }, 'Invitation cancelled.')}>Cancel invitation</button>}
+              {admin && member.status === 'approved' && member.active && <button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'set_official_reply', targetId: member.id, allowed: !member.officialReply }, title: member.officialReply ? `Remove ${member.name}’s group reply permission?` : `Allow ${member.name} to reply as ${managed.name}?` })}>{member.officialReply ? 'Remove group reply permission' : 'Allow replies as group'}</button>}
+              {canRemove && <button className="text-link group-caution-action" onClick={() => setConfirmation({ group: managed, command: { type: 'remove', targetId: member.id }, title: `Remove ${member.name} from this group?` })}>Remove member</button>}
+              {admin && member.id !== viewer && member.role !== 'admin' && (member.status === 'blocked' ? <button className="text-link" onClick={() => send(managed, { type: 'unblock', targetId: member.id }, 'Group block removed. A new join request still needs approval.')}>Unblock</button> : <button className="text-link group-caution-action" onClick={() => setConfirmation({ group: managed, command: { type: 'block', targetId: member.id }, title: `Block ${member.name} from this group?` })}>Block from group</button>)}
+            </div>
+          </article>;
+        })}</div>
+        {isGroupAdmin(managed, actor.id) && <section className="group-deletion" aria-labelledby="group-deletion-title">
+          <h3 id="group-deletion-title">Close this prayer group</h3>
+          {managed.deletionProposal ? <>
+            <p>A deletion proposal is awaiting every admin’s agreement. The group stays open until all admins approve.</p>
+            <p className="quiet-copy">Started <time dateTime={new Date(managed.deletionProposal.createdAt).toISOString()}>{date(managed.deletionProposal.createdAt)}</time>. Changing the admin team cancels these approvals.</p>
+            <ul className="group-deletion-votes">{managed.deletionProposal.adminIds.map(id => {
+              const member = managed.members.find(value => value.id === id);
+              return <li key={id}><span>{member?.name ?? 'Admin'}{id === actor.id && ' (you)'}</span><span>{managed.deletionProposal!.approvedBy.includes(id) ? 'Approved' : 'Awaiting approval'}{member && !member.active && ' · Inactive account'}</span></li>;
+            })}</ul>
+            <div className="group-actions">{!managed.deletionProposal.approvedBy.includes(actor.id) && <button className="button secondary" onClick={() => setConfirmation({ group: managed, command: { type: 'approve_deletion', proposalId: managed.deletionProposal!.id }, title: `Approve deleting ${managed.name}?` })}>Review and approve deletion</button>}<button className="text-link" onClick={() => send(managed, { type: 'cancel_deletion', proposalId: managed.deletionProposal!.id }, 'Group deletion cancelled. The group stays open.')}>Cancel deletion</button></div>
+          </> : <>
+            <p>Deleting closes the group and its prayer box. Every admin must agree. Personal boxes and separate deliveries elsewhere are unaffected.</p>
+            <button className="button secondary group-caution-action" onClick={() => setConfirmation({ group: managed, command: { type: 'request_deletion' }, title: `Delete ${managed.name}?` })}>Delete group<Icon name="close" /></button>
+          </>}
+        </section>}
       </div>
     </Modal>}
-    {confirmation && <Modal title={confirmation.title} onClose={() => setConfirmation(null)}><p>{confirmation.command.type === 'promote' ? 'This person can edit the group, approve or remove members, and manage admin access. This does not reveal anonymous identities or private personal prayers.' : confirmation.command.type === 'set_official_reply' ? confirmation.command.allowed ? 'They may deliberately choose the group’s name when replying. This is separate from admin access, and every reply still needs screening. Their own account remains recorded internally.' : 'They may still reply personally, but cannot use the group’s name. Their membership and admin role stay the same.' : confirmation.command.type === 'block' ? 'They will lose membership access and cannot request to join again until an admin unblocks them.' : confirmation.command.type === 'remove' ? 'Their membership access ends immediately. They may request to join again, subject to approval.' : 'They will remain an approved member. Every group needs at least one active admin.'}</p><div className="group-actions"><button className="button secondary" onClick={() => setConfirmation(null)}>Cancel</button><button className="button primary" onClick={() => send(confirmation.group, confirmation.command, 'Group membership updated.')}>Confirm change<Icon name="check" /></button></div></Modal>}
-    {leaving && departure && <Modal title={`Leave ${leaving.name}?`} onClose={() => setLeaveId(null)}><div className="group-form">
+    {confirmation && <Modal title={confirmation.title} onClose={() => setConfirmation(null)}><div className="group-form"><p>{describeChange(confirmation.group, confirmation.command)}</p><div className="group-actions"><button className="button secondary" onClick={() => setConfirmation(null)}>Cancel</button><button className="button primary" onClick={() => send(confirmation.group, confirmation.command, confirmation.command.type === 'request_deletion' || confirmation.command.type === 'approve_deletion' ? 'Your approval is saved. The group stays open until every admin agrees.' : 'Group membership updated.')}>{confirmation.command.type === 'request_deletion' ? confirmation.group.members.filter(member => member.status === 'approved' && member.role === 'admin').length === 1 ? 'Delete group' : 'Start deletion proposal' : confirmation.command.type === 'approve_deletion' ? 'Approve deletion' : 'Confirm change'}<Icon name="check" /></button></div></div></Modal>}
+    {leaving && <Modal title={`Leave ${leaving.name}?`} onClose={() => setLeaveId(null)}><div className="group-form">
       <p>Your access to this group’s private prayers, replies, pictures, and future notifications will end. Your personal box and friends stay separate.</p>
-      {departure.successor && <><label>Next admin<select value={successor} onChange={event => setSuccessor(event.target.value)}><option value="">Automatic</option>{departure.eligible.map(member => <option key={member.id} value={member.id}>{member.name} (@{member.username})</option>)}</select></label><p className="group-transfer"><Icon name="shield" /><span>{departure.successor.name} will become an admin when you leave.{!successor && ' They have the longest active membership.'}</span></p></>}
-      {departure.archive && <p className="group-transfer">There is no other active approved member. This group will be archived when you leave; no outsider will be appointed.</p>}
-      <div className="group-actions"><button className="button secondary" onClick={() => setLeaveId(null)}>Stay in group</button><button className="button primary" onClick={() => { if (send(leaving, { type: 'leave', successorId: successor || undefined }, departure.archive ? 'You have left. The group is now archived.' : 'You have left the prayer group.')) { setLeaveId(null); setManageId(null); requestAnimationFrame(() => document.getElementById('prayer-groups-title')?.focus({ preventScroll: true })); } }}>Confirm and leave<Icon name="exit" /></button></div>
+      {departureError && <p className="group-error" role="alert">{departureError}</p>}
+      {departure?.successor && <><label>Next admin<select value={successor} onChange={event => setSuccessor(event.target.value)}><option value="">Automatic</option>{departure.eligible.map(member => <option key={member.id} value={member.id}>{member.name} (@{member.username})</option>)}</select></label><p className="group-transfer"><Icon name="shield" /><span>{departure.successor.name} will become an admin when you leave.{!successor && (departure.successor.role === 'moderator' ? ' They are the longest-serving active moderator.' : ' No active moderator is available, so the longest-serving active member is next.')}</span></p></>}
+      {departure?.archive && <p className="group-transfer">There is no other active approved member. This group will be archived when you leave; no outsider will be appointed.</p>}
+      <div className="group-actions"><button className="button secondary" onClick={() => setLeaveId(null)}>Stay in group</button><button className="button primary" disabled={!departure} onClick={() => { if (departure && send(leaving, { type: 'leave', successorId: successor || undefined }, departure.archive ? 'You have left. The group is now archived.' : 'You have left the prayer group.')) { setLeaveId(null); setManageId(null); requestAnimationFrame(() => document.getElementById('prayer-groups-title')?.focus({ preventScroll: true })); } }}>Confirm and leave<Icon name="exit" /></button></div>
     </div></Modal>}
   </section>;
 }

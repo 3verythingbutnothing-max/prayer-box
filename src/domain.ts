@@ -1,3 +1,4 @@
+import type { GroupRemoval } from "./group-moderation.ts";
 /**
  * Fictional fixtures and presentation rules for the local frontend prototype.
  * Every fixture is bundled in the browser. This is NOT authorization, anonymity,
@@ -47,6 +48,7 @@ export interface PendingTextEdit {
 }
 
 export interface Reply {
+  groupRemoval?: GroupRemoval;
   editedAt?: string;
   deletedAt?: string;
   revision?: number;
@@ -67,6 +69,7 @@ export interface Reply {
 }
 
 export interface PrayerPost {
+  groupRemoval?: GroupRemoval;
   editedAt?: string;
   revision?: number;
   pendingEdit?: PendingTextEdit;
@@ -77,6 +80,7 @@ export interface PrayerPost {
 }
 
 export interface PrayerRequest {
+  groupRemoval?: GroupRemoval;
   editedAt?: string;
   revision?: number;
   pendingEdit?: PendingTextEdit;
@@ -94,6 +98,7 @@ export interface PrayerRequest {
   postedAt?: string;
   media?: { kind: "photo" | "audio" | "video"; status: "approved" | "pending" };
   testimony?: {
+    groupRemoval?: GroupRemoval;
     id: string;
     text: string;
     kind: "testimony" | "update";
@@ -426,6 +431,7 @@ export function canViewRequest(
   viewer: Viewer,
   context: DemoAccessContext = {},
 ): boolean {
+  if (request.groupRemoval) return false;
   if (isAuthor(request, viewer)) return true;
   if (request.moderation !== "approved") return false;
   if (isIntendedRecipient(request, viewer, context)) return true;

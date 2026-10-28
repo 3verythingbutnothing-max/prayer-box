@@ -99,9 +99,11 @@ export async function loadReplies(database: Database, context: DeliveryContext,
         AND m.status = 'approved' AND m.approved_at <= ?5 AND m.revoked_at IS NULL
         AND m.official_reply = 1) AS official_reply_current
     FROM replies r JOIN users a ON a.id = r.actor_id
-    WHERE r.delivery_id = ?2 AND r.post_id = ?3 AND r.status = 'approved'
+    JOIN posts current_post ON current_post.id = r.post_id AND current_post.delivery_id = r.delivery_id
+    WHERE current_post.status = 'approved' AND current_post.deleted_at IS NULL AND current_post.revision = ?6
+      AND r.delivery_id = ?2 AND r.post_id = ?3 AND r.status = 'approved'
       AND r.deleted_at IS NULL ORDER BY r.created_at, r.id LIMIT 200
-  `).bind(actor?.id ?? '', context.id, post.id, context.box_id, now).all<ReplyRow>();
+  `).bind(actor?.id ?? '', context.id, post.id, context.box_id, now, post.revision).all<ReplyRow>();
   const allowed = result.results.filter(reply => canReadReply(context, post, reply, actor));
   // No orphaned or cross-context reply references: a hidden parent hides its descendants.
   const visible = new Set(allowed.filter(reply => reply.parent_id === null).map(reply => reply.id));

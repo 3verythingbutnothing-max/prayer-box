@@ -9,6 +9,8 @@ import type { TextEditTarget } from "../story";
 import { useActionFeedback } from "../action-feedback";
 import { scopedStoryReplies } from "../story-replies";
 import "../story-detail.css";
+import { groupRemovalReasons } from "../group-moderation";
+import type { GroupRemovalInput, GroupRemovalReason } from "../group-moderation";
 
 type Props = {
   request: PrayerRequest;
@@ -16,6 +18,8 @@ type Props = {
   groupMember: boolean;
   officialAllowed: boolean;
   organizationName?: string;
+  groupModerationRole?: 'admin' | 'moderator';
+  onGroupRemove?: (input: GroupRemovalInput) => boolean;
   postingRestricted: boolean;
   outsideAudience: Audience;
   isFriend: boolean;
@@ -41,6 +45,8 @@ export default function PrayerDetail({
   groupMember,
   officialAllowed,
   organizationName = 'Grace Church',
+  groupModerationRole,
+  onGroupRemove,
   postingRestricted,
   outsideAudience,
   isFriend,
@@ -60,7 +66,7 @@ export default function PrayerDetail({
 }: Props) {
   const feedback = useActionFeedback();
   const [safety, setSafety] = useState<
-    "options" | "report" | "block" | "care" | null
+    "options" | "report" | "block" | "care" | "group-remove" | null
   >(null);
   const [editing, setEditing] = useState<(TextEditTarget & { expectedRevision: number }) | null>(null);
   const [editText, setEditText] = useState("");
@@ -69,6 +75,7 @@ export default function PrayerDetail({
   const [savingEdit, setSavingEdit] = useState<{ target: TextEditTarget; expectedRevision: number; at: string; state: "saved" | "pending"; message: string } | null>(null);
   const completedSave = useRef<string | null>(null);
   const [removingReply, setRemovingReply] = useState<TextEditTarget | null>(null);
+  const [groupRemovalReason, setGroupRemovalReason] = useState<GroupRemovalReason>('harassment');
   const [reportReason, setReportReason] = useState("Scam or request for money");
   const [target, setTarget] = useState(request.authorId);
   const [targetReplyId, setTargetReplyId] = useState<string | undefined>();
@@ -1224,7 +1231,7 @@ export default function PrayerDetail({
           title={
             safety === "options"
               ? author ? "Your story post" : "Care and safety"
-              : safety === "care"
+              : safety === "group-remove" ? "Remove from this prayer group?" : safety === "care"
                 ? "Ask for a compassionate check-in"
                 : safety === "report"
                   ? "Help keep this space caring"
@@ -1237,7 +1244,20 @@ export default function PrayerDetail({
             {" · "}{formatStoryDate(targetPost?.createdAt ?? originalDate)}
             <span>{request.topic}</span>
           </p>
-          {safety === "options" && author ? (
+          {safety === "options" && groupModerationRole && onGroupRemove && target !== viewer && <div className="notice butter group-removal-option">
+            <Icon name="shield" size={20} /><div><strong>Group {groupModerationRole} controls</strong><p>Keep this group a caring place for prayer. Removal applies only to this conversation.</p><button className="button secondary" onClick={() => { setGroupRemovalReason('harassment'); setSafety('group-remove'); }}>Remove from group</button></div>
+          </div>}
+          {safety === 'group-remove' ? <div className="story-edit-form">
+            <p>This {targetReplyId ? 'encouragement' : targetPostId ? 'story post' : 'prayer request and its conversation'} will no longer be available in {organizationName}. Its author will receive a private notice with your reason. Other prayer boxes are unchanged.</p>
+            <label className="field">Reason for removal<select value={groupRemovalReason} onChange={event => setGroupRemovalReason(event.target.value as GroupRemovalReason)}>{Object.entries(groupRemovalReasons).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <p className="quiet-copy">Protect people from harassment, hate, scams and privacy violations. Sincere questions, grief, or requests for help are not violations. Consider context when reviewing teaching against our Trinitarian foundation.</p>
+            <div className="story-feed-actions"><button className="button secondary" onClick={() => setSafety(null)}>Keep it</button><button className="button primary" onClick={() => {
+              const item = targetReplyId ? request.replies.find(row => row.id === targetReplyId && row.testimonyId === targetPostId) : targetPostId ? getStoryPosts(request).find(row => row.id === targetPostId) : request;
+              if (!item) { setSafety(null); return; }
+              feedback.prepare();
+              if (onGroupRemove?.({ postId: targetPostId, replyId: targetReplyId, reason: groupRemovalReason, expectedRevision: item.revision ?? 1 })) { setSafety(null); setShowPrayers(false); }
+            }}>Remove & notify author<Icon name="shield" size={18} /></button></div>
+          </div> : safety === "options" && author && !targetReplyId ? (
             <>
               <p>This is your {targetPostId ? "update or testimony" : "original prayer request"}. You can manage the request and its deliveries.</p>
               <div className="care-action-choices">

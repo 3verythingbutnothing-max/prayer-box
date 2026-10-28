@@ -153,8 +153,12 @@ export async function handleRead(request: Request, db: Database, env: BackendEnv
       .bind(currentPost.id, current.id, currentPost.revision).first<{ id: string }>();
     if (!currentRevision) unavailable();
     const finalContext = await readableDelivery(db, current.id, actor);
+    const currentReplies = await loadReplies(db, finalContext, currentPost, actor);
     await requireCurrentActor(db, actor);
-    return jsonResponse({ replies: replies.map(reply => toReplyDto(finalContext, currentPost, reply, actor))
+    // A moderator removal or changed parent during the asynchronous read must not
+    // leak the prior reply body from the first snapshot.
+    return jsonResponse({ replies: replies.filter(reply => currentReplies.some(currentReply => currentReply.id === reply.id && currentReply.revision === reply.revision))
+      .map(reply => toReplyDto(finalContext, currentPost, reply, actor))
       .filter(reply => reply !== null) });
   }
 
