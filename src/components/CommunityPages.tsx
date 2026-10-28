@@ -42,6 +42,7 @@ interface CommunityPagesProps {
   officialReplyAllowed: boolean;
   onOfficialReplyChange: (allowed: boolean) => void;
   onCreateOrganization?: (website: string) => void;
+  usernames?: Readonly<Record<string, string>>;
   language: UiLanguage;
   onLanguageChange: (language: UiLanguage) => void;
 }
@@ -77,13 +78,13 @@ function Heading({
 }: {
   eyebrow: string;
   title: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <header className="community-heading">
       <p className="eyebrow">{eyebrow}</p>
       <h1 className="page-title">{title}</h1>
-      <p className="page-intro">{children}</p>
+      {children && <p className="page-intro">{children}</p>}
     </header>
   );
 }
@@ -114,11 +115,85 @@ function AccessNotice({
   );
 }
 
+export function FriendInvitation(props: Pick<CommunityPagesProps, 'viewer' | 'friends' | 'blockedActors' | 'friendInvitationStatus' | 'onFriendInvitationChange' | 'onFriendsChange' | 'onNotice'>) {
+  const feedback = useActionFeedback();
+  if (props.viewer !== 'elena' || props.friendInvitationStatus !== 'pending' || props.friends.includes('jordan') || props.blockedActors?.includes('jordan')) return null;
+  return (
+            <section
+              className="panel community-invitation"
+              aria-labelledby="friend-invitation-heading"
+            >
+              <div className="community-section-heading">
+                <span className="community-small">Friend request</span>
+                <span className="chip">Awaiting your choice</span>
+              </div>
+              <div className="community-person-row">
+                <span
+                  className="community-avatar community-peach"
+                  aria-hidden="true"
+                >
+                  J
+                </span>
+                <div>
+                  <h2 id="friend-invitation-heading">
+                    Jordan would like to join your circle.
+                  </h2>
+                  <p>
+                    Accepting makes this a mutual friendship. It does not grant
+                    membership in Grace Church.
+                  </p>
+                </div>
+              </div>
+              <div className="community-actions">
+                <button
+                  className="button"
+                  onClick={() => {
+                    feedback.prepare();
+                    props.onFriendsChange([
+                      ...new Set([...props.friends, "jordan"]),
+                    ]);
+                    props.onFriendInvitationChange("accepted");
+                    props.onNotice(
+                      "Jordan’s fictional friendship invitation was accepted. No invitation was sent.",
+                    );
+                    feedback.respond({
+                      tone: "success",
+                      title: "There’s room for prayer together.",
+                      message:
+                        "Jordan’s fictional invitation is accepted. No real invitation was sent.",
+                    });
+                  }}
+                >
+                  Accept friend request
+                  <Icon name="check" size={16} />
+                </button>
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    feedback.prepare();
+                    props.onFriendInvitationChange("declined");
+                    props.onNotice(
+                      "The fictional friendship invitation was declined.",
+                    );
+                    feedback.respond({
+                      tone: "info",
+                      title: "Your invitation choice is updated.",
+                      message:
+                        "The fictional friendship invitation was declined.",
+                    });
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </section>
+  );
+}
+
 function ChurchPage(props: CommunityPagesProps) {
   const feedback = useActionFeedback();
   const [search, setSearch] = useState("");
   const invitation = props.friendInvitationStatus;
-  const setInvitation = props.onFriendInvitationChange;
   const [removeId, setRemoveId] = useState<string | null>(null);
   // Local walkthrough state only. Sending a request never grants friendship access.
   // Durable delivery, recipient acceptance and cross-account sync need the future API.
@@ -162,8 +237,8 @@ function ChurchPage(props: CommunityPagesProps) {
         />
       </div>
     );
-  const accepted = people.filter((person) => props.friends.includes(person.id) && !props.blockedActors?.includes(person.id) && (!search.trim() || `${person.name} @${person.id}`.toLowerCase().includes(search.trim().toLowerCase())));
-  const discoveries = findPrayerRecipients(search, props.viewer, props.friends, { mariaVisible: props.discoverableMaria, blocked: props.blockedActors }).filter(person => search.trim() || person.kind === "platform");
+  const accepted = people.filter((person) => props.friends.includes(person.id) && !props.blockedActors?.includes(person.id) && (!search.trim() || `${person.name} @${props.usernames?.[person.id] ?? person.id}`.toLowerCase().includes(search.trim().toLowerCase())));
+  const discoveries = findPrayerRecipients(search, props.viewer, props.friends, { mariaVisible: props.discoverableMaria, blocked: props.blockedActors, usernames: props.usernames }).filter(person => search.trim() || person.kind === "platform");
   const removed = people.filter(
     (person) => !props.friends.includes(person.id) && !props.blockedActors?.includes(person.id)
       && !(person.id === "jordan" && invitation === "pending")
@@ -176,8 +251,6 @@ function ChurchPage(props: CommunityPagesProps) {
         eyebrow="My Church · only you"
         title="Life is better with prayer."
       >
-        A small circle of accepted friends. A place for familiar names, gentle
-        encouragement, and prayer beyond the screen.
       </Heading>
       <label className="request-search-field church-search"><Icon name="search" size={23} /><span className="sr-only">Find people by @username</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Find someone by @username" autoComplete="off" /></label>
       <div className="church-search-results" aria-label="Available prayer boxes">
@@ -188,7 +261,7 @@ function ChurchPage(props: CommunityPagesProps) {
             <button className="text-link" onClick={() => props.onNavigate(`box/${person.id}`)}>Open box <Icon name="arrow" size={18} /></button>
             {person.kind === "personal" && person.actorId !== props.viewer && !props.friends.includes(person.actorId) && !props.blockedActors?.includes(person.actorId)
               && (person.actorId === "jordan" && invitation === "pending"
-                ? <span className="community-small">Invitation awaiting your choice below</span>
+                ? <span className="community-small">Friend request awaiting your choice above</span>
                 : friendRequestButton(person.actorId, person.name))}
           </div>
         </article>)}
@@ -215,6 +288,7 @@ function ChurchPage(props: CommunityPagesProps) {
                       <h3>{person.name}</h3>
                       <span className="community-small">Accepted friend</span>
                       <p>{person.note}</p>
+                      <button className="button secondary compact friend-box-link" onClick={() => props.onNavigate(`box/${person.id}`)} aria-label={`View ${person.name}’s prayer box`}>View prayer box <Icon name="arrow" size={17}/></button>
                     </div>
                     <button
                       className="text-link community-quiet-action"
@@ -237,76 +311,6 @@ function ChurchPage(props: CommunityPagesProps) {
               )}
             </div>
           </section>
-          {invitation === "pending" && !props.friends.includes("jordan") && !props.blockedActors?.includes("jordan") && (
-            <section
-              className="panel community-invitation"
-              aria-labelledby="friend-invitation-heading"
-            >
-              <div className="community-section-heading">
-                <span className="community-small">A fictional invitation</span>
-                <span className="chip">Awaiting your choice</span>
-              </div>
-              <div className="community-person-row">
-                <span
-                  className="community-avatar community-peach"
-                  aria-hidden="true"
-                >
-                  J
-                </span>
-                <div>
-                  <h2 id="friend-invitation-heading">
-                    Jordan would like to join your circle.
-                  </h2>
-                  <p>
-                    Accepting makes this a mutual friendship. It does not grant
-                    membership in Grace Church.
-                  </p>
-                </div>
-              </div>
-              <div className="community-actions">
-                <button
-                  className="button"
-                  onClick={() => {
-                    feedback.prepare();
-                    props.onFriendsChange([
-                      ...new Set([...props.friends, "jordan"]),
-                    ]);
-                    setInvitation("accepted");
-                    props.onNotice(
-                      "Jordan’s fictional friendship invitation was accepted. No invitation was sent.",
-                    );
-                    feedback.respond({
-                      tone: "success",
-                      title: "There’s room for prayer together.",
-                      message:
-                        "Jordan’s fictional invitation is accepted. No real invitation was sent.",
-                    });
-                  }}
-                >
-                  Accept invitation
-                  <Icon name="check" size={16} />
-                </button>
-                <button
-                  className="button secondary"
-                  onClick={() => {
-                    feedback.prepare();
-                    setInvitation("declined");
-                    props.onNotice(
-                      "The fictional friendship invitation was declined.",
-                    );
-                    feedback.respond({
-                      tone: "info",
-                      title: "Your invitation choice is updated.",
-                      message:
-                        "The fictional friendship invitation was declined.",
-                    });
-                  }}
-                >
-                  Decline
-                </button>
-              </div>
-            </section>
-          )}
           {invitation === "declined" && !props.blockedActors?.includes("jordan") && (
             <p className="quiet-copy">Jordan’s invitation was declined. A future friendship still needs mutual acceptance.</p>
           )}

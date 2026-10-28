@@ -8,7 +8,7 @@ import { NOW, ORIGIN, resetDatabase, seedDelivery, seedUsers, session, type USER
 
 type User = typeof USERS[number];
 type Session = Awaited<ReturnType<typeof session>>;
-type Command = { type: string; targetId?: string; successorId?: string; name?: string; website?: string; icon?: string; allowed?: boolean; role?: string; proposalId?: string };
+type Command = { type: string; targetId?: string; successorId?: string; name?: string; website?: string; icon?: string; color?: string; allowed?: boolean; role?: string; proposalId?: string };
 
 beforeEach(async () => { await resetDatabase(); await seedUsers(); });
 
@@ -470,4 +470,19 @@ describe('moderator roles and unanimous group deletion', () => {
     expect(response?.status).toBe(409);expect(await env.DB.prepare('SELECT status FROM boxes WHERE id=?').bind(id).first()).toEqual({status:'active'});
     expect(await env.DB.prepare("SELECT id FROM group_notices WHERE kind='group_deleted'").first()).toBeNull();
   });
+  it('persists the expanded icon palette and bounded gradients without changing roles', async () => {
+    const auth=await signedIn();
+    const created=await request('/api/groups',auth,{name:'Prayer night',username:'prayer-night',icon:'cross',color:'sky',website:''});
+    expect(created.status).toBe(201);
+    const id=(await env.DB.prepare("SELECT id FROM boxes WHERE slug='prayer-night'").first<{id:string}>())!.id;
+    expect(await env.DB.prepare('SELECT icon,color FROM group_settings WHERE box_id=?').bind(id).first()).toEqual({icon:'cross',color:'sky'});
+    expect((await action(id,auth,{type:'edit',name:'Prayer night',website:'',icon:'prayer-hands',color:'peach'})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT icon,color FROM group_settings WHERE box_id=?').bind(id).first()).toEqual({icon:'prayer-hands',color:'peach'});
+    expect((await action(id,auth,{type:'edit',name:'Prayer night',website:'',icon:'heart'})).status).toBe(200);
+    expect(await env.DB.prepare('SELECT color FROM group_settings WHERE box_id=?').bind(id).first()).toEqual({color:'peach'});
+    expect((await membership(id,'owner'))?.is_admin).toBe(1);
+    expect((await action(id,auth,{type:'edit',name:'Prayer night',website:'',icon:'heart',color:'url(https://unsafe.example)'})).status).toBe(400);
+    expect(await env.DB.prepare('SELECT color FROM group_settings WHERE box_id=?').bind(id).first()).toEqual({color:'peach'});
+  });
+
 });

@@ -1,4 +1,6 @@
-export const groupIcons = ['heart', 'people', 'box', 'sun', 'note', 'shield'] as const;
+export const groupIcons = ['heart', 'people', 'box', 'sun', 'note', 'shield', 'cross', 'prayer-hands'] as const;
+export const groupColors = ['lavender', 'sky', 'sage', 'peach', 'sunrise'] as const;
+export type GroupColor = typeof groupColors[number];
 export type GroupIcon = typeof groupIcons[number];
 export type GroupPerson = { id: string; name: string; username: string; active: boolean };
 export type GroupMember = GroupPerson & {
@@ -7,7 +9,7 @@ export type GroupMember = GroupPerson & {
 };
 export type PrayerGroup = {
   id: string; ownerId: string; name: string; username: string; website: string; icon: GroupIcon;
-  image?: string; version: number; createdAt: number; updatedAt: number;
+  image?: string; color?: GroupColor; version: number; createdAt: number; updatedAt: number;
   archivedAt: number | null; members: GroupMember[];
   deletionProposal?: { id: string; requestedBy: string; createdAt: number; adminIds: string[]; approvedBy: string[] };
 };
@@ -15,7 +17,7 @@ export type GroupState = PrayerGroup[];
 export type GroupCommand =
   | { type: 'request_deletion' }
   | { type: 'approve_deletion' | 'cancel_deletion'; proposalId: string }
-  | { type: 'edit'; name: string; website: string; icon: GroupIcon; image?: string }
+  | { type: 'edit'; name: string; website: string; icon: GroupIcon; image?: string; color?: GroupColor }
   | { type: 'request_join' | 'withdraw' | 'accept_invite' | 'decline_invite' }
   | { type: 'invite' | 'cancel_invite' | 'approve' | 'deny' | 'remove' | 'block' | 'unblock' | 'promote' | 'demote'; targetId: string }
   | { type: 'set_role'; targetId: string; role: GroupMember['role'] }
@@ -63,10 +65,11 @@ export function planGroupDeparture(group: PrayerGroup, actorId: string, successo
     throw new GroupError('Another admin is inactive. Arrange an active successor before leaving; closing the group still needs every admin’s agreement.');
   return { successor: successor ?? null, archive: !successor, eligible };
 }
-export function createPrayerGroup(state: GroupState, actor: GroupPerson, values: { name: string; username: string; website: string; icon: GroupIcon; image?: string }, now = Date.now(), id = crypto.randomUUID()): PrayerGroup {
+export function createPrayerGroup(state: GroupState, actor: GroupPerson, values: { name: string; username: string; website: string; icon: GroupIcon; image?: string; color?: GroupColor }, now = Date.now(), id = crypto.randomUUID()): PrayerGroup {
   if (!actor.active) throw new GroupError('Sign in with an active account to create a prayer group.');
   const username = normalizeGroupUsername(values.username);
   if (state.some(group => group.username === username)) throw new GroupError('That username is already in use. Please choose another.');
+  if (values.color && !groupColors.includes(values.color)) throw new GroupError('Choose an available background.');
   const name = values.name.trim();
   if (!name || name.length > 80 || !groupIcons.includes(values.icon)) throw new GroupError('Give your group a name of up to 80 characters and choose an icon.');
   return { id, ...values, ownerId: actor.id, name, username, version: 1, createdAt: now, updatedAt: now, archivedAt: null,
@@ -115,9 +118,10 @@ export function applyGroupCommand(original: PrayerGroup, actor: GroupPerson, com
       break;
     }
     case 'edit': {
+      if (command.color && !groupColors.includes(command.color)) throw new GroupError('Choose an available background.');
       const name = command.name.trim();
       if (!name || name.length > 80 || !groupIcons.includes(command.icon)) throw new GroupError('Use a name of up to 80 characters and choose an icon.');
-      Object.assign(group, { name, website: command.website, icon: command.icon, image: command.image }); break;
+      Object.assign(group, { name, website: command.website, icon: command.icon, image: command.image, color: command.color ?? group.color }); break;
     }
     case 'request_join':
       if (self && ['approved', 'pending', 'invited'].includes(self.status)) throw new GroupError('You already have a membership, request, or invitation here.');

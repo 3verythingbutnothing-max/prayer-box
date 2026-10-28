@@ -5,7 +5,7 @@ import { Icon, PrayerBoxMark } from "../ui";
 import "../recipient-picker.css";
 
 export default function RecipientPicker({
-  selected, onChange, viewer, friends, mariaVisible = true, blocked = [], organizationOwnerId,
+  selected, onChange, viewer, friends, mariaVisible = true, blocked = [], organizationOwnerId, usernames,
 }: {
   selected: BoxId[];
   onChange: (ids: BoxId[]) => void;
@@ -14,11 +14,12 @@ export default function RecipientPicker({
   mariaVisible?: boolean;
   blocked?: readonly string[];
   organizationOwnerId?: string;
+  usernames?: Readonly<Record<string, string>>;
 }) {
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const helpId = useId();
-  const matches = findPrayerRecipients(query, viewer, friends, { selected, mariaVisible, blocked, organizationOwnerId });
+  const matches = findPrayerRecipients(query, viewer, friends, { selected, mariaVisible, blocked, organizationOwnerId, usernames });
   return (
     <fieldset className="recipient-picker">
       <legend>Where will this go?</legend>

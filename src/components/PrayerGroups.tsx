@@ -3,15 +3,15 @@ import type { FormEvent } from 'react';
 import { Icon, Modal } from '../ui';
 import { useActionFeedback } from '../action-feedback';
 import { normalizeOrganizationWebsite } from '../organization';
-import { applyGroupCommand, canModerateGroup, createPrayerGroup, groupIcons, groupNoticesForCommand, groupPeople, isGroupAdmin, isGroupModerator, planGroupDeparture } from '../prayer-groups';
-import type { GroupCommand, GroupIcon, GroupNotice, GroupState, PrayerGroup } from '../prayer-groups';
+import { applyGroupCommand, canModerateGroup, createPrayerGroup, groupColors, groupIcons, groupNoticesForCommand, groupPeople, isGroupAdmin, isGroupModerator, planGroupDeparture } from '../prayer-groups';
+import type { GroupCommand, GroupColor, GroupIcon, GroupPerson, GroupNotice, GroupState, PrayerGroup } from '../prayer-groups';
 import '../prayer-groups.css';
 import { makePicturePreview } from '../picture-preview';
 
-type Props = { standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
+type Props = { people?: readonly GroupPerson[]; standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
 const date = (time: number) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(time);
-function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | 'name'> }) {
-  return <span className="group-picture">{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
+function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | 'name' | 'color'> }) {
+  return <span className={`group-picture group-tone-${group.color ?? "lavender"}`}>{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
 }
 
 function describeChange(group: PrayerGroup, command: GroupCommand): string {
@@ -33,19 +33,20 @@ function describeChange(group: PrayerGroup, command: GroupCommand): string {
 }
 
 
-function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: (values: { name: string; username: string; website: string; icon: GroupIcon; image?: string }) => void; onClose: () => void }) {
+function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: (values: { name: string; username: string; website: string; icon: GroupIcon; image?: string; color?: GroupColor }) => void; onClose: () => void }) {
   const [name, setName] = useState(group?.name ?? '');
   const [username, setUsername] = useState(group?.username ?? '');
   const [website, setWebsite] = useState(group?.website ?? '');
   const [icon, setIcon] = useState<GroupIcon>(group?.icon ?? 'heart');
   const [image, setImage] = useState(group?.image);
+  const [color, setColor] = useState<GroupColor>(group?.color ?? 'lavender');
   const [error, setError] = useState(''); const [reading, setReading] = useState(false);
   const imageSequence = useRef(0);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const result = normalizeOrganizationWebsite(website);
     if (!result.valid) { setError(result.error); return; }
-    try { onSave({ name, username, website: result.url, icon, image }); } catch (error) { setError(error instanceof Error ? error.message : 'Please check the details.'); }
+    try { onSave({ name, username, website: result.url, icon, image, color }); } catch (error) { setError(error instanceof Error ? error.message : 'Please check the details.'); }
   };
   return <Modal title={group ? 'Edit prayer group' : 'Create a prayer group'} onClose={onClose}>
     <form className="group-form" onSubmit={submit}>
@@ -55,27 +56,30 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
       <p className="quiet-copy">{group ? 'Your username stays the same so shared links keep working.' : 'Use 3–32 letters, numbers, or hyphens. This is how others find your group.'}</p>
       <label>Website <span className="quiet-copy">(optional)</span><input value={website} onChange={event => setWebsite(event.target.value)} type="text" inputMode="url" maxLength={2048} placeholder="https://yourchurch.org" /></label>
       <fieldset className="group-icon-field"><legend>Choose a little picture</legend><div className="group-icons">
-        {groupIcons.map(value => <button key={value} type="button" className={`group-picture ${!image && icon === value ? 'selected' : ''}`} aria-label={`${value} icon`} aria-pressed={!image && icon === value} onClick={() => { imageSequence.current++; setIcon(value); setImage(undefined); setReading(false); }}><Icon name={value} size={29} /></button>)}
-      </div></fieldset>
-      <label className="group-upload">Or choose your own image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async event => {
+        <label className={`group-picture group-upload-tile ${image ? 'selected' : ''}`}><Icon name="upload" size={26}/><span>Upload</span><input className="sr-only" aria-label="Upload group image" type="file" accept="image/png,image/jpeg,image/webp" onChange={async event => {
         const file = event.target.files?.[0]; if (!file) return;
         const sequence = ++imageSequence.current; setReading(true); setError('');
         try { const preview = await makePicturePreview(file); if (sequence === imageSequence.current) setImage(preview); }
         catch (error) { if (sequence === imageSequence.current) setError(error instanceof Error ? error.message : 'That image could not be opened.'); }
         finally { if (sequence === imageSequence.current) setReading(false); event.target.value = ''; }
       }} /></label>
+        {groupIcons.map(value => <button key={value} type="button" className={`group-picture group-tone-${color} ${!image && icon === value ? 'selected' : ''}`} aria-label={value === "prayer-hands" ? "Praying hands icon" : `${value} icon`} aria-pressed={!image && icon === value} onClick={() => { imageSequence.current++; setIcon(value); setImage(undefined); setReading(false); }}><Icon name={value} size={29} /></button>)}
+      </div></fieldset>
+
+      <fieldset className="group-color-field"><legend>Icon background</legend><div className="group-color-options">{groupColors.map(value => <button type="button" key={value} className={`group-color-swatch group-tone-${value}`} aria-label={`${value} gradient background`} aria-pressed={color === value} onClick={() => setColor(value)}>{color === value && <Icon name="check" size={18}/>}</button>)}</div></fieldset>
+      <div className="group-preview"><GroupPicture group={{name,icon,image,color}} /><span className="quiet-copy">Your group picture</span></div>
       <p className="quiet-copy">PNG, JPEG, or WebP, up to 2 MB. Custom pictures stay in this browser preview; publication will require screening.</p>
-      {image && <div className="group-preview"><GroupPicture group={{ name, icon, image }} /><button type="button" className="text-link" onClick={() => { imageSequence.current++; setImage(undefined); setReading(false); }}>Remove custom picture</button></div>}
+      {image && <div className="group-preview"><GroupPicture group={{ name, icon, image, color }} /><button type="button" className="text-link" onClick={() => { imageSequence.current++; setImage(undefined); setReading(false); }}>Remove custom picture</button></div>}
       {error && <p className="group-error" role="alert">{error}</p>}
       <div className="group-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={reading}>{reading ? 'Preparing picture…' : group ? 'Save changes' : 'Create prayer group'}<Icon name="check" /></button></div>
     </form>
   </Modal>;
 }
 
-export function PrayerGroups({ standalone = false, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
+export function PrayerGroups({ standalone = false, people = groupPeople, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
   const feedback = useActionFeedback();
   const Heading = standalone ? 'h1' : 'h2';
-  const actor = groupPeople.find(person => person.id === viewer);
+  const actor = people.find(person => person.id === viewer);
   const [search, setSearch] = useState('');
   const [editor, setEditor] = useState<PrayerGroup | 'new' | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
@@ -91,7 +95,7 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
     feedback.prepare();
     try {
       const current = state.find(value => value.id === group.id); if (!current) throw new Error('This group is no longer available.');
-      const next = applyGroupCommand(current, actor, command, group.version, groupPeople);
+      const next = applyGroupCommand(current, actor, command, group.version, people);
       onChange(state.map(value => value.id === next.id ? next : value), groupNoticesForCommand(current, next, actor.id, command));
       feedback.respond({ tone: 'success', title: next.archivedAt ? 'This prayer group is now closed.' : message });
       setConfirmation(null);
@@ -123,7 +127,7 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
     {group.website && <a className="text-link" href={group.website} target="_blank" rel="noopener noreferrer nofollow">Visit website<Icon name="arrow" size={17} /></a>}
     <p className="quiet-copy">A prayer group with its own box. Personal requests and friendships stay separate.</p>
     {action(group)}
-    {!selectedHandle && <button className="text-link" onClick={() => onNavigate?.(`group/${group.username}`)}>View prayer group<Icon name="arrow" size={17} /></button>}
+    {!selectedHandle && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)} aria-label={`View prayer box for ${group.name}`}>View prayer box<Icon name="arrow" size={17} /></button>}
   </article>;
   let departure: ReturnType<typeof planGroupDeparture> | undefined;
   let departureError = '';
@@ -151,10 +155,10 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
           <div><dt><Icon name="heart" size={18} />Moderators</dt><dd>Review join requests, remove ordinary members, and remove inappropriate posts. They cannot change roles or remove other staff.</dd></div>
         </dl>
         <p className="quiet-copy">Keep this space welcoming and rooted in the Father, Son, and Holy Spirit. Address harassment, hate and scams; sincere questions or requests for help are welcome. Unclear doctrinal concerns need thoughtful human review.</p>
-        {isGroupAdmin(managed, actor.id) && <form className="group-invite" onSubmit={event => { event.preventDefault(); const person = groupPeople.find(person => person.username === invite.trim().replace(/^@/, '').toLowerCase()); if (!person) { feedback.respond({ tone: 'error', title: 'Enter the exact username of an available account.' }); return; } if (send(managed, { type: 'invite', targetId: person.id }, 'Invitation added. They can accept or decline.')) setInvite(''); }}>
+        {isGroupAdmin(managed, actor.id) && <form className="group-invite" onSubmit={event => { event.preventDefault(); const person = people.find(person => person.username === invite.trim().replace(/^@/, '').toLowerCase()); if (!person) { feedback.respond({ tone: 'error', title: 'Enter the exact username of an available account.' }); return; } if (send(managed, { type: 'invite', targetId: person.id }, 'Invitation added. They can accept or decline.')) setInvite(''); }}>
           <label>Invite by @username<input value={invite} onChange={event => setInvite(event.target.value)} placeholder="@daniel" required autoComplete="off" /></label><button className="button primary">Invite<Icon name="mail" /></button>
         </form>}
-        <div className="group-member-list">{managed.members.filter(member => member.status !== 'left' && member.status !== 'declined' && (isGroupAdmin(managed, actor.id) || member.status === 'approved' || member.status === 'pending')).map(member => {
+        <p className="quiet-copy group-reply-help">“Reply under group name” lets a member choose the organization’s name on a prayer or encouragement instead of their own. It does not grant admin or moderator rights.</p><div className="group-member-list">{managed.members.filter(member => member.status !== 'left' && member.status !== 'declined' && (isGroupAdmin(managed, actor.id) || member.status === 'approved' || member.status === 'pending')).map(member => {
           const admin = isGroupAdmin(managed, actor.id);
           const onlyAdmin = member.role === 'admin' && member.active && !managed.members.some(other => other.id !== member.id && other.active && other.status === 'approved' && other.role === 'admin');
           const canRemove = member.status === 'approved' && member.id !== actor.id && member.role !== 'admin' && (admin || member.role === 'member');
@@ -171,7 +175,7 @@ export function PrayerGroups({ standalone = false, viewer, state, onChange, sele
             <div className="group-actions group-member-actions">
               {member.status === 'pending' && member.active && <><button className="button secondary" onClick={() => send(managed, { type: 'approve', targetId: member.id }, 'Membership approved.')}>Approve</button><button className="text-link" onClick={() => send(managed, { type: 'deny', targetId: member.id }, 'Join request denied.')}>Deny</button></>}
               {admin && member.status === 'invited' && <button className="text-link" onClick={() => send(managed, { type: 'cancel_invite', targetId: member.id }, 'Invitation cancelled.')}>Cancel invitation</button>}
-              {admin && member.status === 'approved' && member.active && <button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'set_official_reply', targetId: member.id, allowed: !member.officialReply }, title: member.officialReply ? `Remove ${member.name}’s group reply permission?` : `Allow ${member.name} to reply as ${managed.name}?` })}>{member.officialReply ? 'Remove group reply permission' : 'Allow replies as group'}</button>}
+              {admin && member.status === 'approved' && member.active && <button className="text-link" onClick={() => setConfirmation({ group: managed, command: { type: 'set_official_reply', targetId: member.id, allowed: !member.officialReply }, title: member.officialReply ? `Remove ${member.name}’s group reply permission?` : `Allow ${member.name} to reply as ${managed.name}?` })}>{member.officialReply ? 'Remove group reply permission' : 'Allow replies under group name'}</button>}
               {canRemove && <button className="text-link group-caution-action" onClick={() => setConfirmation({ group: managed, command: { type: 'remove', targetId: member.id }, title: `Remove ${member.name} from this group?` })}>Remove member</button>}
               {admin && member.id !== viewer && member.role !== 'admin' && (member.status === 'blocked' ? <button className="text-link" onClick={() => send(managed, { type: 'unblock', targetId: member.id }, 'Group block removed. A new join request still needs approval.')}>Unblock</button> : <button className="text-link group-caution-action" onClick={() => setConfirmation({ group: managed, command: { type: 'block', targetId: member.id }, title: `Block ${member.name} from this group?` })}>Block from group</button>)}
             </div>

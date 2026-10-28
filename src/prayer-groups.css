@@ -60,3 +60,19 @@
 @media(max-width:420px) { .group-card { padding:1.05rem; }.group-section-heading > .button { width:100%; }.group-actions { gap:.8rem; }.group-actions .button { width:100%; }.group-member { padding:.8rem; }.group-invite > .button { width:100%; } }
 @media(max-width:560px) { .group-role-guide { grid-template-columns:minmax(0,1fr); }.group-deletion { padding:.9rem; }.group-role-control label { max-width:none; } }
 @media(prefers-reduced-motion:reduce) { .group-icons .group-picture { transition:none; }.group-icons .group-picture:hover,.group-icons .group-picture:active { transform:none; } }
+
+.group-picture.group-tone-lavender, .group-tone-lavender { background:linear-gradient(135deg,#e9dcfa,#deebfc); color:#60467f; }
+.group-picture.group-tone-sky, .group-tone-sky { background:linear-gradient(135deg,#d0eaff,#d9e0fc); color:#355e83; }
+.group-picture.group-tone-sage, .group-tone-sage { background:linear-gradient(135deg,#d9efde,#ddf0ee); color:#3e695b; }
+.group-picture.group-tone-peach, .group-tone-peach { background:linear-gradient(135deg,#ffdfca,#f6d8e8); color:#875044; }
+.group-picture.group-tone-sunrise, .group-tone-sunrise { background:linear-gradient(135deg,#fff0b8,#ffdbcc); color:#795c30; }
+.group-icons .group-upload-tile { display:flex; flex-direction:column; justify-content:center; gap:.15rem; cursor:pointer; background:linear-gradient(135deg,#f0f1f3,#e1e5e9); border-color:#b9c1cb; color:#5c6877; font-size:.7rem; font-weight:600; }
+.group-upload-tile:focus-within { outline:3px solid var(--focus); outline-offset:3px; }
+.group-color-field { border:0; padding:0; margin:0; }
+.group-color-field legend { font-weight:600; }
+.group-color-options { display:flex; gap:.8rem; flex-wrap:wrap; padding:.75rem .2rem .2rem; }
+.group-color-swatch { display:grid; place-items:center; width:2.4rem; height:2.4rem; border-radius:50%; border:1px solid #aaafbf; cursor:pointer; box-shadow:inset 0 2px 0 #ffffffc9; }
+.group-color-swatch[aria-pressed=true] { outline:3px solid #6b5587; outline-offset:3px; }
+.group-form select, .group-role-control select, .group-role-control select:disabled { appearance:none; padding-right:2.8rem; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235c6880' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-position:right 1rem center; background-size:16px; background-repeat:no-repeat; }
+.group-reply-help { max-width:45rem; }
+@media(forced-colors:active) { .group-form select, .group-role-control select { appearance:auto; background-image:none; }.group-color-swatch { border:2px solid ButtonText; } }
