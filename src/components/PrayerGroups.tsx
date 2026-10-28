@@ -46,6 +46,7 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
   const form = useRef<HTMLFormElement>(null);
   const keepEditingButton = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const previousScroll = useRef(0);
   const submitFrame = useRef<number | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const changed = name !== initial.current.name || username !== initial.current.username || website !== initial.current.website || icon !== initial.current.icon || image !== initial.current.image || color !== initial.current.color;
@@ -55,12 +56,16 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
   }, []);
   useEffect(() => {
     if (confirmExit) keepEditingButton.current?.focus();
-    else if (previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
+    else if (previousFocus.current?.isConnected) {
+      if (form.current?.parentElement) form.current.parentElement.scrollTop = previousScroll.current;
+      previousFocus.current.focus({ preventScroll: true });
+    }
   }, [confirmExit]);
   const requestClose = () => {
     if (confirmExit) { setConfirmExit(false); return; }
     if (!changed && !reading) { onClose(); return; }
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousScroll.current = form.current?.parentElement?.scrollTop ?? 0;
     setConfirmExit(true);
   };
   const saveAndExit = () => {
