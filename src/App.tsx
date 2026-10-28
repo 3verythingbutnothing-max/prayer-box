@@ -17,9 +17,16 @@ import ProfilePictureSettings from "./components/ProfilePictureSettings";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
 import { PrayerGroups } from "./components/PrayerGroups";
-import { initialPrayerGroups, isGroupAdmin, canModerateGroup, visibleGroupNotices } from "./prayer-groups";
+import { groupPeople, initialPrayerGroups, isGroupAdmin, canModerateGroup, visibleGroupNotices } from "./prayer-groups";
 import type { GroupState, GroupNotice } from "./prayer-groups";
 import { groupRemovalReasons, removeGroupContent } from "./group-moderation";
+import { NotificationPreferences, defaultNotificationChoices } from "./components/NotificationPreferences";
+import type { NotificationChoices } from "./components/NotificationPreferences";
+import { AccountRecovery } from "./components/AccountRecovery";
+import { PrayerEvents, ConnectionsPanel } from "./components/PrayerEvents";
+import { initialPrayerConnections, requestPrayerConnection, invitationsForViewer, visibleConnectionRequests } from "./prayer-events";
+import type { EventContext, EventHost, PrayerConnection, PrayerEventState } from "./prayer-events";
+
 import CareResources from "./components/CareResources";
 import GetHelpPage from "./components/GetHelpPage";
 import DeleteRequests from "./components/DeleteRequests";
@@ -54,6 +61,13 @@ import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
 import "./story-list.css";
 import { recipientNames, prayerRecipients, recipientActor } from "./recipients";
+
+const eventPeople = [...groupPeople, { id: 'team', name: 'Prayer Box', username: 'prayerbox', active: true }];
+const initialConnections = () => eventPeople.flatMap(person => initialPrayerConnections(person.id));
+function initialEvents(): PrayerEventState {
+  const now = Date.now();
+  return { shares: [], dismissals: [], events: [{ id: 'sample-morning-prayer', host: { kind: 'person', id: 'team' }, title: 'Morning prayer together', description: 'A sample invitation to make a little space for prayer and gratitude. This preview has no live meeting.', format: 'virtual', meetingUrl: 'https://example.org/prayer-preview', startsAt: new Date(now + 2 * 86400000).toISOString(), endsAt: new Date(now + 2 * 86400000 + 1800000).toISOString(), timeZone: 'America/New_York', audience: 'connections', shareable: true, createdAt: now, updatedAt: now, version: 1 }] };
+}
 
 const initialUpdateText = "The story is still unfolding. I am thankful for a little more peace today, and I am still asking for wisdom for the next step.";
 
@@ -283,6 +297,11 @@ export default function App() {
   }, [language]);
   const [requests, setRequests] = useState<PrayerRequest[]>(cloneFixtures);
   const [prayerGroups, setPrayerGroups] = useState<GroupState>(initialPrayerGroups);
+  const [connections, setConnections] = useState<PrayerConnection[]>(initialConnections);
+  const [prayerEvents, setPrayerEvents] = useState<PrayerEventState>(initialEvents);
+  const [connectionSuggestions, setConnectionSuggestions] = useState<EventHost[]>([]);
+  const [notificationChoices, setNotificationChoices] = useState<Partial<Record<Viewer, NotificationChoices>>>({});
+
   const graceGroup = prayerGroups.find(group => group.id === "grace")!;
   const organizationWebsite = graceGroup.website;
   const boxNames = { ...recipientNames, grace: graceGroup.name };
@@ -316,7 +335,9 @@ export default function App() {
   const [associationByViewer, setAssociationByViewer] = useState<
     Partial<Record<Viewer, boolean>>
   >({ maria: true });
-  const [reminders, setReminders] = useState(true);
+  const [inPersonReminders, setInPersonReminders] = useState<Partial<Record<Viewer, boolean>>>({});
+  const reminders = inPersonReminders[viewer] ?? true;
+  const setReminders = (value: boolean) => setInPersonReminders(previous => ({ ...previous, [viewer]: value }));
   const [automatic, setAutomatic] = useState<Partial<Record<BoxId, boolean>>>({
     mine: false,
     maria: false,
@@ -329,6 +350,18 @@ export default function App() {
   const [boxRemoved, setBoxRemoved] = useState<
     Partial<Record<BoxId, string[]>>
   >({});
+  const eventContext: EventContext = { people: eventPeople, groups: prayerGroups, connections,
+    blocks: Object.entries(blocked).flatMap(([blockerId, ids]) => (ids ?? []).map(blockedId => ({blockerId, blockedId}))) };
+  const currentInvitations = invitationsForViewer(prayerEvents, viewer, eventContext);
+  const incomingConnections = visibleConnectionRequests(connections, viewer, eventContext).filter(row => row.direction === 'incoming');
+  function offerConnection(hosts: EventHost[], showStatus = false) {
+    if (viewer === 'guest') return;
+    const choices = hosts.filter((host, index) => hosts.findIndex(other => other.id === host.id && other.kind === host.kind) === index).filter(host => {
+      try { return requestPrayerConnection(connections, viewer, host, eventContext).some(row => row.status === 'pending' && !connections.some(old => old.id === row.id && old.status === 'pending')); } catch { return false; }
+    });
+    setConnectionSuggestions(choices);
+    if (showStatus && !choices.length) acknowledge('info', 'Review this connection in My Church.', 'It may already be connected, awaiting a reply, or unavailable.');
+  }
   const [reports, setReports] = useState<Report[]>([]);
   const [careConcerns, setCareConcerns] = useState<CareConcern[]>([]);
   const [supportNotes, setSupportNotes] = useState<SupportNote[]>([]);
@@ -439,6 +472,7 @@ export default function App() {
     feedback.clear();
     setRequestSearch("");
     if (next !== viewer) {
+      setConnectionSuggestions([]);
       setUpdateStory(null);
       setUpdateText(initialUpdateText);
       setUpdateKind("update");
@@ -484,7 +518,7 @@ export default function App() {
 
   }, [route]);
   useEffect(() => {
-    const titles: Record<string, string> = { requests: 'My Requests', prayers: 'My Prayers', help: 'Get Help', feedback: 'Report a bug', app: 'Mobile app', church: 'My Church', 'donation-history': 'My Donations', donations: 'Donations', settings: 'Settings', signup: 'Create your prayer box', groups: 'Your prayer groups' };
+    const titles: Record<string, string> = { requests: 'My Requests', prayers: 'My Prayers', help: 'Get Help', feedback: 'Report a bug', app: 'Mobile app', church: 'My Church', 'donation-history': 'My Donations', donations: 'Donations', settings: 'Settings', signup: 'Create your prayer box', groups: 'Your prayer groups', events: 'Prayer events', invitations: 'Invitations', connections: 'Connections', recovery: 'Account recovery', signin: 'Sign in', 'notification-preferences': 'Notification choices' };
     const title = isAbout ? 'About' : page === 'box' ? `${boxNames[box]}’s Prayer Box` : page === 'inbox' ? `${graceGroup.name} inbox` : page === 'members' ? graceGroup.name : page === 'group' ? prayerGroups.find(group => group.username === resource && !group.archivedAt)?.name ?? 'Prayer group' : titles[page];
     document.title = title ? `${title} · Prayer Box` : 'Prayer Box';
   }, [page, resource, box, isAbout, graceGroup.name, prayerGroups]);
@@ -671,6 +705,7 @@ export default function App() {
       rows.some(
         (row) =>
           row.authorId !== viewer ||
+          (row.recipient === "grace" && (graceGroup.archivedAt || graceGroup.members.some(member => member.id === viewer && member.status === "blocked"))) ||
           blockedActors.includes(recipientActor(row.recipient, graceGroup.ownerId)) ||
           isOwnBox(row.authorId, row.recipient),
       )
@@ -685,6 +720,7 @@ export default function App() {
         }),
       ),
     ]);
+    offerConnection(rows.filter(row => row.moderation === 'approved').map(row => row.recipient === 'grace' ? {kind:'group' as const,id:'grace'} : {kind:'person' as const,id:recipientActor(row.recipient,graceGroup.ownerId)}));
     const offers = rows.filter((row) => hasSupportLanguage(row.text));
     if (offers.length)
       setSupportNotes((previous) => {
@@ -908,6 +944,8 @@ export default function App() {
             </button>
           </section>
         )}
+        {box === ownBox && viewer !== 'guest' && <nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`} aria-current="page">Prayers & testimonies</a><a className="button secondary" href="#invitations">Invitations <Icon name="arrow" size={18} /></a></nav>}
+        {viewer !== 'guest' && !receivingOwnBox && box !== 'prayerbox' && <div className="box-connect-action"><button className="text-link" onClick={() => offerConnection([box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}], true)}>Connect with {boxNames[box]} <Icon name="people" size={19} /></button><span className="quiet-copy">Connecting is optional and separate from prayer access.</span></div>}
         <div className="box-layout">
           <section
             id="box-requests"
@@ -1544,11 +1582,11 @@ export default function App() {
         }
         blockedActors={blockedActors}
         onRemindersChange={setReminders}
-        onUpdate={(update) =>
-          setRequests((previous) =>
-            previous.map((r) => (r.id === row.id ? update(r) : r)),
-          )
-        }
+        onUpdate={(update) => {
+          const next = update(row);
+          setRequests(previous => previous.map(r => r.id === row.id ? next : r));
+          if (!row.anonymous && next.replies.some(reply => reply.actorId === viewer && !reply.automatic && !row.replies.some(old => old.id === reply.id))) offerConnection([{kind:'person',id:row.authorId}]);
+        }}
         onNavigate={navigate}
         onReport={(reason, actor, replyId, postId) => {
           const evidence = storyReportEvidence(row, actor, replyId, postId);
@@ -1574,6 +1612,11 @@ export default function App() {
   }
 
   function renderPage() {
+    if (page === 'notification-preferences') return <><NotificationPreferences key={`${viewer}/${resetVersion}`} viewer={viewer} value={notificationChoices[viewer] ?? defaultNotificationChoices} onChange={value => setNotificationChoices(previous => ({...previous,[viewer]:value}))} /><button className="button secondary" onClick={() => navigate(`box/${ownBox}`)}>Continue to My Box <Icon name="arrow" /></button></>;
+    if (page === 'recovery') return <AccountRecovery onNavigate={navigate} />;
+    if (page === 'signin') return <section className="panel empty-state"><h1>Sign-in is being prepared.</h1><p>Real accounts are not open in this preview. Password recovery needs a verified contact and a configured delivery service.</p><button className="button secondary" onClick={() => navigate('recovery')}>Forgot password?</button><button className="text-link" onClick={() => navigate('signup')}>View account setup</button></section>;
+    if (page === 'events' || page === 'invitations') return <><nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`}>Prayers & testimonies</a><a className="button secondary" href="#invitations" aria-current={page === 'invitations' ? 'page' : undefined}>Invitations</a></nav><PrayerEvents key={`${viewer}/${resetVersion}/${page}`} viewer={viewer} state={prayerEvents} context={eventContext} onChange={setPrayerEvents} onNavigate={navigate} mode={page === 'events' ? 'events' : 'invitations'} /></>;
+    if (page === 'connections') return <ConnectionsPanel key={`${viewer}/${resetVersion}`} viewer={viewer} connections={connections} context={eventContext} onChange={setConnections} onNavigate={navigate} />;
     if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} state={prayerGroups} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
@@ -1620,7 +1663,7 @@ export default function App() {
     )
       return (
         <>
-          {page === "church" && <PrayerGroups key={`${resetVersion}/${viewer}`} viewer={viewer} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} />}
+          {page === "church" && <><PrayerGroups key={`${resetVersion}/${viewer}`} viewer={viewer} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} /><ConnectionsPanel key={`connections/${resetVersion}/${viewer}`} viewer={viewer} connections={connections} context={eventContext} onChange={setConnections} onNavigate={navigate} /><div className="box-section-links"><button className="button secondary" onClick={() => navigate('events')}>Create or manage prayer events <Icon name="arrow" size={18} /></button><button className="button secondary" onClick={() => navigate('invitations')}>Your invitations</button></div></>}
           <CommunityPages
             language={language}
             onLanguageChange={setLanguage}
@@ -1628,7 +1671,7 @@ export default function App() {
             page={page}
             viewer={viewer}
             requests={requests}
-            onNavigate={navigate}
+            onNavigate={destination => navigate(page === 'signup' && ['box/mine','inbox'].includes(destination) ? 'notification-preferences' : destination)}
             onNotice={notify}
             onViewerChange={changeViewer}
             onUpdateRequests={(update) =>
@@ -1896,7 +1939,7 @@ export default function App() {
               }}
             >
               <span className="notification-bell"><Icon name="bell" size={27} />
-              {(!notificationRead || unreadSupport || unreadGroupNotice) && <span className="notification-dot" />}</span>
+              {(!notificationRead || unreadSupport || unreadGroupNotice || incomingConnections.length > 0) && <span className="notification-dot" />}</span>
             </button>
             <div className="account-menu-wrap">
               <button
@@ -1932,6 +1975,9 @@ export default function App() {
                     <a href="#box/grace" onClick={() => setMenuOpen(false)}>
                       Grace Church
                     </a>
+                    <a href="#invitations" onClick={() => setMenuOpen(false)}>Invitations</a>
+                    <a href="#events" onClick={() => setMenuOpen(false)}>Create a prayer event</a>
+                    <a href="#connections" onClick={() => setMenuOpen(false)}>Connections</a>
                     <a href="#prayers" onClick={() => setMenuOpen(false)}>
                       My Prayers
                     </a>
@@ -1945,6 +1991,8 @@ export default function App() {
                         Manage members
                       </a>
                     )}
+                    <a href="#notification-preferences" onClick={() => setMenuOpen(false)}>Notification choices</a>
+                    <a href="#recovery" onClick={() => setMenuOpen(false)}>Account recovery</a>
                     <a href="#settings" onClick={() => setMenuOpen(false)}>
                       Profile & settings
                     </a>
@@ -2332,6 +2380,7 @@ export default function App() {
           onSignIn={() => changeViewer("elena")}
         />
       )}
+      {!composer && connectionSuggestions.length > 0 && <Modal title="Would you like to connect?" onClose={() => setConnectionSuggestions([])}><p className="form-intro">Keep in touch through prayer invitations. Connecting shares your profile; your prayer keeps its chosen privacy and is not attached to the connection request.</p>{connectionSuggestions.map(host => { const name = host.kind === 'group' ? prayerGroups.find(group => group.id === host.id)?.name : eventPeople.find(person => person.id === host.id)?.name; return <div className="connection-suggestion panel" key={`${host.kind}/${host.id}`}><span className="avatar">{host.kind === 'group' ? <Icon name="people" /> : name?.slice(0,1)}</span><strong>{name ?? 'Prayer community'}</strong><button className="button" onClick={() => {try { setConnections(requestPrayerConnection(connections,viewer,host,eventContext)); setConnectionSuggestions(previous => previous.filter(item => item.id !== host.id || item.kind !== host.kind)); acknowledge('success','Connection request sent.','They can accept or decline it in My Church.');}catch(error){acknowledge('info',error instanceof Error ? error.message : 'This connection is unavailable.');} }}>Connect <Icon name="people" size={20} /></button></div>;})}<button className="button secondary" onClick={() => setConnectionSuggestions([])}>Not now</button></Modal>}
       {deleteStory && viewer !== "guest" && (
         <DeleteRequests
           key={`${deleteStory}-${viewer}`}
@@ -2450,6 +2499,10 @@ export default function App() {
                 setStoryReadByViewer({});
                 setRestricted([]);
                 setPrayerGroups(initialPrayerGroups());
+                setNotificationChoices({});
+                setConnections(initialConnections());
+                setPrayerEvents(initialEvents());
+                setConnectionSuggestions([]);
                 setGroupNotices([]);
                 setFriends(["maria", "daniel"]);
                 setOutgoingFriendRequests([]);
@@ -2459,7 +2512,7 @@ export default function App() {
                 setCountryByViewer({ maria: { country: "us", show: true } });
                 setAssociationByViewer({ maria: true });
                 setHeldStories([]);
-                setReminders(true);
+                setInPersonReminders({});
                 setAutomatic({ mine: false, maria: false, grace: false });
                 setAutomaticMessages({});
                 setLanguage("en");
@@ -2483,6 +2536,8 @@ export default function App() {
           <p className="quiet-copy">Prayer updates follow the original delivery’s access. Group decisions are private to your account and stay available after membership ends. No external notification has been sent.</p>
           <PrivateSupportNotifications notes={privateSupportNotes} onOpen={() => setDialog("support")} onDismiss={id => setDismissedSupportNotes(previous => [...previous,id])} />
           <div className="story-notifications">
+            {incomingConnections.length > 0 && <article className="story-notification"><h3>New requests to connect</h3><p>Review who would like to share prayer invitations with you.</p><button className="button secondary" onClick={() => {setDialog(null);navigate('church');}}>Review in My Church</button></article>}
+            {currentInvitations.length > 0 && <article className="story-notification"><h3>You’re invited</h3><p>Prayer gatherings have their own place in your box.</p><button className="button secondary" onClick={() => {setDialog(null);navigate('invitations');}}>Open invitations</button></article>}
             {myGroupNotices.map(notice => <article className="story-notification group-decision-notice" key={notice.id}>
               <p className="eyebrow">{notice.groupName} · <time dateTime={new Date(notice.createdAt).toISOString()}>{formatStoryDate(new Date(notice.createdAt).toISOString())}</time></p>
               <h3>{notice.title}</h3><p>{notice.message}</p>

@@ -2,7 +2,7 @@ export type BackendSession = {
   authenticated: boolean;
   actor: { id: string; username: string; displayName: string } | null;
   csrfToken: string | null;
-  capabilities: { signIn: boolean; feedback: boolean; turnstileSiteKey: string | null };
+  capabilities: { recovery?: boolean; signIn: boolean; feedback: boolean; turnstileSiteKey: string | null };
 };
 
 export type BackendNotification = {

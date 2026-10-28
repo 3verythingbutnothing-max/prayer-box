@@ -326,12 +326,12 @@
 .account-funding .account-section-top > div {
   min-width: 0;
 }
-.donation-lock-message h2 {
+.donation-overflow-message h2 {
   font-size: clamp(1.7rem, 2.2vw, 2.2rem);
   line-height: 1.2;
   text-wrap: balance;
 }
-.donation-lock-message > p:not(.eyebrow) {
+.donation-overflow-message > p {
   max-width: 38ch;
   margin-inline: auto;
 }
@@ -346,10 +346,11 @@
   margin: 16px auto 20px;
   text-align: left;
 }
-.donation-lock-message .donation-overflow-heading h2 {
+.donation-overflow-message .donation-overflow-heading h2 {
   margin: 0;
   font-size: clamp(1.5rem, 2.2vw, 1.9rem);
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 .donation-overflow-cup {
   display: block;
@@ -358,9 +359,8 @@
   overflow: visible;
 }
 @media (max-width: 360px) {
-  .donation-lock-message .donation-overflow-heading h2 {
-    font-size: 1.2rem;
-  }
+  .donation-overflow-heading { grid-template-columns: 1fr; gap: 10px; }
+  .donation-overflow-cup { width: 62px; }
 }
 .donation-drawn-lock {
   display: block;

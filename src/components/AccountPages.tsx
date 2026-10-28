@@ -6,14 +6,7 @@ import OverflowingCup from "./OverflowingCup";
 import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
 import { parseContributionAmount } from "../donation-amount";
 import type { ContributionAmount } from "../donation-amount";
-import {
-  buildFundingWindow,
-  fundingContributionCap,
-  fundingToday,
-  monthlyFundingDates,
-  validateFundingContribution,
-  withFundingContribution,
-} from "../funding-window";
+import { buildMonthlyFunding, fundingToday, nextMonthlyFundingDate, validateFundingContribution } from "../funding-window";
 import type { FundingInput, FundingWindow } from "../funding-window";
 import "../donation-refinements.css";
 
@@ -255,8 +248,8 @@ function FundingMeter({ window }: { window: FundingWindow }) {
       data-motion={onScreen && pageVisible ? "running" : "paused"}
       aria-label={
         positiveCost
-          ? `Fictional three-month funding: ${money(window.receivedAppliedCents / 100)} received and ${money(window.expectedAppliedCents / 100)} expected toward ${money(window.costCents / 100)} of hosting need. ${money(window.remainingCents / 100)} remaining. Expected funds are not guaranteed.`
-          : "No hosting costs in this three-month window. The full rainbow with a gold edge is decorative; no funding percentage applies."
+          ? `Monthly hosting: ${money(window.receivedNetCents / 100)} received after fees and refunds toward ${money(window.costCents / 100)} average monthly cost. ${money(window.remainingCents / 100)} remaining. Contributions remain open.`
+          : "The current monthly hosting cost is zero. The full rainbow with a gold edge is decorative; no funding percentage applies. Contributions remain open."
       }
     >
       <div className="donation-meter-art">
@@ -448,9 +441,7 @@ function FundingMeter({ window }: { window: FundingWindow }) {
         </div>
       </div>
       <figcaption className="donation-meter-status">
-        {positiveCost
-          ? `${money(window.remainingCents / 100)} USD still needed`
-          : "Our hosting cost has been met this month"}
+        {window.covered ? "Our hosting cost has been met this month" : `${money(window.remainingCents / 100)} USD still needed this month`}
       </figcaption>
     </figure>
   );
@@ -542,7 +533,7 @@ export default function AccountPages({
   const [fundingAsOf] = useState(() => fundingToday());
   const [simulatedReceived, setSimulatedReceived] = useState(0);
   const [simulatedMonthly, setSimulatedMonthly] = useState(0);
-  const fundingDates = monthlyFundingDates(fundingAsOf);
+  const nextFundingDate = nextMonthlyFundingDate(fundingAsOf);
   const scenarioCost = fundingScenario === "zero" ? 0 : 10_000;
   const scenarioGross =
     fundingScenario === "partial"
@@ -558,18 +549,8 @@ export default function AccountPages({
       : fundingScenario === "covered"
         ? 10_000
         : 0;
-  const fundingInput: FundingInput = {
-    asOf: fundingAsOf,
-    costsCents: [scenarioCost, scenarioCost, scenarioCost],
-    receivedGrossCents: scenarioGross + simulatedReceived,
-    feesCents: scenarioFees,
-    refundsCents: 0,
-    expected: fundingDates.slice(1).flatMap((due, index) => [
-      { id: `fixture-renewal-${index}`, due, cents: scenarioRenewal },
-      { id: `personal-renewal-${index}`, due, cents: simulatedMonthly },
-    ]),
-  };
-  const fundingWindow = buildFundingWindow(fundingInput);
+  const fundingInput: FundingInput = { asOf: fundingAsOf, costCents: scenarioCost, receivedGrossCents: scenarioGross + simulatedReceived, feesCents: scenarioFees, refundsCents: 0 };
+  const fundingWindow = buildMonthlyFunding(fundingInput);
   const [frequency, setFrequency] = useState<ContributionFrequency>("one-time");
   const [amountChoice, setAmountChoice] = useState<number | "custom">(10);
   const [customAmount, setCustomAmount] = useState("");
@@ -580,9 +561,6 @@ export default function AccountPages({
     amountChoice === "custom"
       ? parseContributionAmount(customAmount)
       : { cents: amountChoice * 100 };
-  const contributionCap = fundingContributionCap(fundingInput, frequency);
-  const monthlyHasNoRoom =
-    !fundingWindow.locked && frequency === "monthly" && contributionCap === 0;
   const amount =
     selectedAmount.cents === undefined ? null : selectedAmount.cents / 100;
   const [contributionPreview, setContributionPreview] = useState<{
@@ -647,11 +625,7 @@ export default function AccountPages({
       });
       return;
     }
-    const fundingError = validateFundingContribution(
-      fundingInput,
-      selectedAmount.cents,
-      frequency,
-    );
+    const fundingError = validateFundingContribution(selectedAmount.cents);
     if (fundingError) {
       setAmountError(fundingError);
       customAmountField.current?.focus();
@@ -860,69 +834,18 @@ export default function AccountPages({
               <div className="account-section-top">
                 <div>
                   <span className="account-kicker">
-                    Three months, thoughtfully covered
+                    Average monthly hosting need
                   </span>
-                  <h2 id="account-funding-title">
-                    {fundingWindow.months[0].key.slice(0, 4) ===
-                    fundingWindow.months[2].key.slice(0, 4)
-                      ? fundingWindow.months[0].label.split(" ")[0]
-                      : fundingWindow.months[0].label}
-                    –{fundingWindow.months[2].label} <span>· USD</span>
-                  </h2>
+                  <h2 id="account-funding-title">{fundingWindow.label} <span>· USD</span></h2>
                 </div>
                 <span className="account-soft-icon">
                   <AccountIcon name="heart" size={25} />
                 </span>
               </div>
               <FundingMeter window={fundingWindow} />
-              <p className="account-funding-caption">
-                {fundingWindow.locked
-                  ? "A little space, with room to keep praying."
-                  : "A little help goes a long way."}
-              </p>
-              <div
-                className="donation-months"
-                aria-label="Rolling three-month hosting plan"
-              >
-                {fundingWindow.months.map((month) => (
-                  <article
-                    key={month.key}
-                    className={month.remainingCents === 0 ? "is-covered" : ""}
-                  >
-                    <h3>{month.label}</h3>
-                    <p>
-                      <strong>{money(month.costCents / 100)}</strong> hosting
-                      need
-                    </p>
-                    <dl>
-                      <div>
-                        <dt>Received</dt>
-                        <dd>{money(month.receivedCents / 100)}</dd>
-                      </div>
-                      <div>
-                        <dt>Expected</dt>
-                        <dd>{money(month.expectedCents / 100)}</dd>
-                      </div>
-                      <div>
-                        <dt>Still needed</dt>
-                        <dd>{money(month.remainingCents / 100)}</dd>
-                      </div>
-                    </dl>
-                    <span className="donation-month-status">
-                      {month.costCents === 0
-                        ? "No hosting cost"
-                        : month.remainingCents === 0
-                          ? month.expectedCents > 0
-                            ? "Covered with expected funds"
-                            : "Covered by received funds"
-                          : "Room to help"}
-                    </span>
-                  </article>
-                ))}
-              </div>
               <dl className="account-funding-lines">
                 <div>
-                  <dt>Three-month hosting need</dt>
+                  <dt>Average monthly hosting cost</dt>
                   <dd>{money(fundingWindow.costCents / 100)}</dd>
                 </div>
                 <div>
@@ -940,23 +863,16 @@ export default function AccountPages({
                   <dd>{money(fundingWindow.receivedNetCents / 100)}</dd>
                 </div>
                 <div>
-                  <dt>Expected renewals applied</dt>
-                  <dd>{money(fundingWindow.expectedAppliedCents / 100)}</dd>
+                  <dt>Monthly commitments · not yet received</dt>
+                  <dd>{money((scenarioRenewal + simulatedMonthly) / 100)}</dd>
                 </div>
                 <div className="account-total-line">
-                  <dt>Remaining three-month need</dt>
+                  <dt>Remaining monthly need</dt>
                   <dd>{money(fundingWindow.remainingCents / 100)}</dd>
                 </div>
               </dl>
               <p className="account-small">
-                Planning date {fundingAsOf} · USD. The window rolls to the
-                current month and the following two months. Received funds are
-                net of fees and refunds. Expected renewals are separate,
-                uncollected commitments, not guaranteed income; failed or
-                canceled renewals reopen the need. Future renewals cannot cover
-                an earlier month. Renewal estimates in these fictional scenarios
-                assume no additional fees or refunds; real net estimates would
-                need reconciliation.
+                Planning date {fundingAsOf} · USD. The meter compares net funds received with the average monthly hosting cost. Recurring commitments are shown separately and do not count as received funds. Contributions stay open when the monthly need is met.
               </p>
               <label className="field donation-scenario-control">
                 Funding preview
@@ -974,10 +890,10 @@ export default function AccountPages({
                     Fictional · $100 needed each month
                   </option>
                   <option value="partial">
-                    Fictional · received + expected, need remains
+                    Fictional · monthly need remains
                   </option>
                   <option value="covered">
-                    Fictional · covered by received + expected
+                    Fictional · monthly need met
                   </option>
                 </select>
               </label>
@@ -993,79 +909,13 @@ export default function AccountPages({
                 className="account-contribute panel"
                 aria-labelledby="account-contribute-title"
               >
-                {fundingWindow.locked ? (
-                  <div className="donation-lock-message" role="status">
-                    <svg
-                      className="donation-drawn-lock"
-                      viewBox="0 0 180 160"
-                      aria-hidden="true"
-                    >
-                      <ellipse cx="90" cy="143" rx="55" ry="8" fill="#dce2e8" />
-                      <path
-                        d="M57 70V48C57 9 121 10 123 48V70"
-                        fill="none"
-                        stroke="#617188"
-                        strokeWidth="15"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M59 69V47C59 15 116 16 118 48V68"
-                        fill="none"
-                        stroke="#f2f5f7"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M43 63Q90 58 136 65L141 127Q90 145 39 128Z"
-                        fill="#e4c985"
-                        stroke="#9d7d42"
-                        strokeWidth="3"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="m48 71 80-1M47 79l1 40"
-                        fill="none"
-                        stroke="#fff5cb"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M95 90c9 0 12 13 3 17l3 13H85l3-13c-8-5-4-17 7-17Z"
-                        fill="#807052"
-                      />
-                      <path
-                        d="m24 45 3 7 7 3-7 3-3 7-3-7-7-3 7-3ZM151 82l2 5 6 2-6 2-2 6-2-6-5-2 5-2Z"
-                        fill="#c5b0e6"
-                      />
-                    </svg>
-                    <p className="eyebrow">Enough for this little space</p>
-                    <div className="donation-overflow-heading">
-                      <OverflowingCup />
-                      <h2 id="account-contribute-title">Our cup is overflowing!</h2>
-                    </div>
-                    <p>
-                      The next three months’ hosting need has been met, so
-                      donations are disabled for now. Contributions can reopen
-                      when that rolling three-month need is no longer covered.
-                    </p>
-                    {fundingWindow.expectedAppliedCents > 0 && (
-                      <p className="account-small">
-                        Some coverage is expected from recurring commitments.
-                        Those funds have not been received; a failed or canceled
-                        renewal may reopen donations.
-                      </p>
-                    )}
+                {fundingWindow.covered ? (
+                  <div className="donation-overflow-message" role="status">
+                    <div className="donation-overflow-heading"><OverflowingCup /><h2 id="account-contribute-title">Our cup is overflowing!</h2></div>
+                    <p>Our hosting cost has been met this month. Thank you for supporting Prayer Box. Contributions remain welcome.</p>
+                    {fundingWindow.surplusCents > 0 && <p className="account-small">{money(fundingWindow.surplusCents / 100)} received above this month’s hosting cost.</p>}
                   </div>
-                ) : (
-                  <>
-                    <p className="eyebrow">An optional contribution</p>
-                    <h2 id="account-contribute-title">Made with care.</h2>
-                    <p>
-                      Try the contribution flow within the remaining need. No
-                      money will be collected.
-                    </p>
-                  </>
-                )}
+                ) : <><p className="eyebrow">An optional contribution</p><h2 id="account-contribute-title">Made with care.</h2><p>Help keep Prayer Box welcoming and available. Asking for prayer is always free.</p></>}
                 <form
                   className="donation-contribution-form"
                   noValidate
@@ -1073,7 +923,6 @@ export default function AccountPages({
                 >
                   <fieldset
                     className="donation-form-fields"
-                    disabled={fundingWindow.locked}
                   >
                     <legend className="account-sr-only">
                       Contribution preview controls
@@ -1126,7 +975,6 @@ export default function AccountPages({
                               type="radio"
                               name="contribution-amount"
                               checked={amountChoice === value}
-                              disabled={value * 100 > contributionCap}
                               onChange={() => {
                                 setAmountChoice(value);
                                 setAmountError("");
@@ -1181,11 +1029,7 @@ export default function AccountPages({
                             className="account-small"
                             id={`${amountId}-amount-help`}
                           >
-                            {contributionCap > 0
-                              ? `Up to ${money(contributionCap / 100)} USD${frequency === "monthly" ? " per month" : " once"}; minimum $0.01, up to two decimal places.`
-                              : fundingWindow.locked
-                                ? "No contribution can be previewed while this need is covered."
-                                : `There is still ${money(fundingWindow.remainingCents / 100)} USD to cover, but three equal monthly payments will not fit. Choose One-time to help with the remaining need.`}
+                            Enter $0.01–$10,000 USD, with up to two decimal places. Your contribution is not capped by the remaining hosting need.
                           </p>
                         </div>
                       )}
@@ -1199,73 +1043,18 @@ export default function AccountPages({
                         {amountError}
                       </p>
                     )}
-                    <p className="donation-cap-note">
-                      {monthlyHasNoRoom
-                        ? `The remaining ${money(fundingWindow.remainingCents / 100)} USD can be covered with one-time support. There is no room for three equal monthly payments.`
-                        : frequency === "monthly"
-                          ? `Three equal payments: today, ${fundingDates[1]}, and ${fundingDates[2]}. The current cap is ${money(contributionCap / 100)} USD per payment.`
-                          : `Current one-time cap: ${money(contributionCap / 100)} USD.`}
-                    </p>
                     <p className="account-frequency-note">
-                      {monthlyHasNoRoom
-                        ? "Choose One-time above or below to preview a contribution within the remaining need."
-                        : amount === null
-                          ? `Enter your custom USD amount to preview a ${frequency === "monthly" ? "monthly contribution" : "one-time contribution"}.`
-                          : frequency === "monthly"
-                            ? `${money(amount)} USD every month. Review billing dates and cancellation before simulating.`
-                            : `${money(amount)} USD once. No recurring contribution.`}
+                      {amount === null ? 'Enter a custom amount to continue.' : frequency === 'monthly' ? `${money(amount)} USD every month until you cancel. Next example renewal: ${nextFundingDate}.` : `${money(amount)} USD once. No recurring contribution.`}
                     </p>
-                    {monthlyHasNoRoom && (
-                      <button
-                        type="button"
-                        className="button secondary account-wide-button donation-switch-once"
-                        onClick={() => {
-                          setFrequency("one-time");
-                          setAmountChoice("custom");
-                          setCustomAmount(
-                            (
-                              fundingContributionCap(fundingInput, "one-time") /
-                              100
-                            ).toFixed(2),
-                          );
-                          setAmountError("");
-                          requestAnimationFrame(() =>
-                            customAmountField.current?.focus(),
-                          );
-                        }}
-                      >
-                        Choose one-time support{" "}
-                        <AccountIcon name="arrow" size={19} />
-                      </button>
-                    )}
-                    <button
-                      type="submit"
-                      className="button account-wide-button"
-                      disabled={contributionCap === 0}
-                    >
-                      {fundingWindow.locked
-                        ? "Donations are resting for now"
-                        : monthlyHasNoRoom
-                          ? "Monthly preview unavailable"
-                          : "Preview contribution"}{" "}
-                      <AccountIcon
-                        name={fundingWindow.locked ? "lock" : "arrow"}
-                        size={19}
-                      />
-                    </button>
+                    <button type="submit" className="button account-wide-button">Preview contribution <AccountIcon name="arrow" size={19} /></button>
                   </fieldset>
                 </form>
                 <p className="account-small">
-                  Preview only. No real payment, subscription, or tax receipt is
-                  created. Real charges would be rechecked against the remaining
-                  need before every renewal and paused or reduced when covered,
-                  with clear consent before any later increase. Provider,
-                  receiving entity, and final billing rules still require
-                  approval.
+                  Preview only. No payment, subscription or tax receipt is created. Contributions are not paused when the monthly need is met. Payment-provider setup, receiving entity, and use of funds above hosting costs must be settled before accepting money.
                 </p>
               </section>
               <p className="account-donation-footnote">
-                <AccountIcon name="lock" size={18} />
+                <AccountIcon name="heart" size={18} />
                 <span>
                   Public contributions would be labeled “Anonymous.” Necessary
                   payment and private account records may still identify a
@@ -1460,9 +1249,7 @@ export default function AccountPages({
                       Next example billing date
                       <br />
                       <strong>
-                        {fundingWindow.months[1].label.split(" ")[0]}{" "}
-                        {planNextDay},{" "}
-                        {fundingWindow.months[1].label.split(" ")[1]} · USD
+                        {nextMonthlyFundingDate(`${fundingAsOf.slice(0, 8)}${String(planNextDay).padStart(2, '0')}`)} · USD
                       </strong>
                     </p>
                     <button
@@ -2093,7 +1880,7 @@ export default function AccountPages({
                     personal block cannot secretly exclude an approved member
                     from a whole-church audience.
                   </p>
-                  <button className="button secondary" onClick={onManageBlocked}>Manage blocked accounts</button>
+                  <button className="button secondary" onClick={onManageBlocked}>Manage blocked accounts</button><button className="button secondary" onClick={() => onNavigate('recovery')}>Account recovery</button><button className="button secondary" onClick={() => onNavigate('notification-preferences')}>Notification choices</button>
                   <button className="button secondary" onClick={() => onNavigate("church")}>Your prayer groups and friends</button>
                   <button
                     className="text-link account-danger-link"
@@ -2173,21 +1960,14 @@ export default function AccountPages({
             {contributionPreview.frequency === "monthly" ? (
               <div>
                 <dt>Next example billing</dt>
-                <dd>{fundingDates[1]}</dd>
+                <dd>{nextFundingDate}</dd>
               </div>
             ) : null}
           </dl>
           {contributionPreview.frequency === "monthly" ? (
             <p>
               You would authorize {money(contributionPreview.cents / 100)} USD
-              per month. This three-month preview includes today and{" "}
-              {fundingDates[1]} and {fundingDates[2]}:{" "}
-              {money((contributionPreview.cents * 3) / 100)} USD total. On
-              confirmation, the first simulated payment is added to received
-              funds; the next two remain expected. A real renewal would need a
-              fresh rolling-window check and pause or reduction when no need
-              remains. You can cancel from My donations at any time, including
-              if posting is restricted.
+              per month until you cancel. The first simulated payment is included in this month’s received funds; later renewals are not received yet. Reaching the hosting goal does not pause or change your recurring amount. You can cancel from My donations at any time.
             </p>
           ) : (
             <p>
@@ -2211,30 +1991,19 @@ export default function AccountPages({
               className="button"
               onClick={() => {
                 feedback.prepare();
-                const currentError = validateFundingContribution(
-                  fundingInput,
-                  contributionPreview.cents,
-                  contributionPreview.frequency,
-                );
+                const currentError = validateFundingContribution(contributionPreview.cents);
                 if (currentError) {
                   setDialog(null);
                   setAmountError(currentError);
                   feedback.respond({
                     tone: "error",
-                    title: "The remaining need changed.",
+                    title: "Check your contribution amount.",
                     message: currentError,
                   });
                   return;
                 }
                 // Model amounts only, never a real payment or financial record.
-                const simulated = withFundingContribution(
-                  fundingInput,
-                  contributionPreview.cents,
-                  contributionPreview.frequency,
-                );
-                setSimulatedReceived(
-                  simulated.receivedGrossCents - scenarioGross,
-                );
+                setSimulatedReceived(previous => previous + contributionPreview.cents);
                 if (contributionPreview.frequency === "monthly") {
                   setSimulatedMonthly(
                     (previous) => previous + contributionPreview.cents,
@@ -2273,9 +2042,7 @@ export default function AccountPages({
         >
           <p>
             The fictional {money(planAmount)} USD monthly plan will end
-            immediately. Its {fundingWindow.months[1].label.split(" ")[0]}{" "}
-            {planNextDay}, {fundingWindow.months[1].label.split(" ")[1]} example
-            renewal will not occur.
+            immediately. Its next example renewal will not occur.
           </p>
           <p>
             Your private contribution records remain available. No real

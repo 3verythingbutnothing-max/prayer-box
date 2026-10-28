@@ -6,57 +6,9 @@ import { Icon, PrayerBoxMark } from './ui';
 import { BackendError, getBackendNotifications, getBackendSession, sendBackendFeedback, uploadBackendPicture } from './backend-client';
 import type { BackendNotification, BackendSession } from './backend-client';
 import './backend.css';
+import { AccountRecovery } from './components/AccountRecovery';
 
-type TurnstileApi = {
-  render: (container: HTMLElement, options: { sitekey: string; action: string; theme: string; size: string;
-    callback: (token: string) => void; 'expired-callback': () => void; 'error-callback': () => void }) => string;
-  remove: (id: string) => void;
-};
-declare global { interface Window { turnstile?: TurnstileApi } }
-let turnstileScript: Promise<void> | undefined;
-
-function loadTurnstile(): Promise<void> {
-  if (window.turnstile) return Promise.resolve();
-  if (!turnstileScript) {
-    turnstileScript = new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      const timeout = window.setTimeout(() => { script.remove(); reject(new Error('Verification unavailable')); }, 15_000);
-      script.onload = () => {
-        window.clearTimeout(timeout);
-        if (window.turnstile) resolve();
-        else { script.remove(); reject(new Error('Verification unavailable')); }
-      };
-      script.onerror = () => { window.clearTimeout(timeout); script.remove(); reject(new Error('Verification unavailable')); };
-      document.head.appendChild(script);
-    }).catch(error => { turnstileScript = undefined; throw error; });
-  }
-  return turnstileScript;
-}
-
-function BotCheck({ siteKey, attempt, onToken }: { siteKey: string; attempt: number; onToken: (value: string) => void }) {
-  const target = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let stopped = false;
-    let widget: string | undefined;
-    setError('');
-    onToken('');
-    void loadTurnstile().then(() => {
-      if (stopped || !target.current) return;
-      if (!window.turnstile) throw new Error('Verification unavailable');
-      widget = window.turnstile.render(target.current, { sitekey: siteKey, action: 'feedback', theme: 'light', size: 'compact',
-        callback: token => { if (!stopped) { setError(''); onToken(token); } },
-        'expired-callback': () => { if (!stopped) { onToken(''); setError('Verification expired. Please try again below.'); } },
-        'error-callback': () => { if (!stopped) { onToken(''); setError('Verification is unavailable. Your draft stays here while you retry.'); } },
-      });
-    }).catch(() => { if (!stopped) setError('Verification could not connect. Your draft stays here while you retry.'); });
-    return () => { stopped = true; if (widget !== undefined) window.turnstile?.remove(widget); };
-  }, [siteKey, attempt, onToken]);
-  return <div className="backend-bot-check"><div ref={target} aria-label="Bot verification" />
-    {error && <p role="status">{error}</p>}</div>;
-}
+import BotCheck from './components/BackendBotCheck';
 
 type Picture = { key: string; file: File; state: 'waiting' | 'sending' | 'saved' | 'failed'; error?: string };
 
@@ -185,6 +137,8 @@ function FeedbackForm({ session, refreshSession }: { session: BackendSession; re
 }
 
 export default function BackendApp() {
+  const [route, setRoute] = useState(() => window.location.hash.slice(1));
+  useEffect(() => { const changed = () => setRoute(window.location.hash.slice(1)); window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
   const [session, setSession] = useState<BackendSession | null>(null);
   const [draftOwner, setDraftOwner] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState('');
@@ -232,6 +186,14 @@ export default function BackendApp() {
     } finally { if (sequence === notificationRequest.current) setRefreshing(false); }
   }
 
+  function recoveryCompleted() {
+    sessionRequest.current++; notificationRequest.current++;
+    currentActor.current = null;
+    setSession(null); setDraftOwner(null); setNotifications([]);
+    setNotificationMessage(''); setSessionError(''); setRefreshing(false);
+    refreshSession();
+  }
+  if (route === 'recovery') return <div className="backend-app"><header className="backend-header"><a href="#signin" className="brand"><PrayerBoxMark size={42} />Prayer Box</a></header><main className="backend-main"><AccountRecovery onReset={recoveryCompleted} onNavigate={destination => { window.location.hash = destination; }} /></main></div>;
   return <div className="backend-app">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="backend-header"><a href="#main-content" className="brand"><PrayerBoxMark size={42} /><span>Prayer Box</span></a>
@@ -243,7 +205,7 @@ export default function BackendApp() {
       {!session ? !sessionError && <p role="status">Connecting to Prayer Box…</p>
           : !session.authenticated && !draftOwner ? <section className="backend-card backend-connection"><span className="backend-icon"><Icon name="lock" size={28} /></span>
             <h2>Sign-in is not open yet.</h2><p>This local integration is being checked before accounts and prayer submissions open. No password or personal information is needed here.</p>
-            <button className="button secondary" onClick={refreshSession}>Refresh connection</button></section> : <>
+            <button className="button secondary" onClick={refreshSession}>Refresh connection</button><a className="text-link" href="#recovery">Forgot password?</a></section> : <>
             <p className="backend-signed-in">{session.authenticated ? <>Connected as <strong>{session.actor?.displayName}</strong>.</>
               : 'Your session has ended. Your draft remains below, and sending is unavailable until your connection is restored.'}</p>
             <FeedbackForm key={draftOwner} session={session} refreshSession={refreshSession} />

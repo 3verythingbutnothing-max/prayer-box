@@ -23,11 +23,12 @@ The backend build retains the current soft blue/pastel surfaces, logo, typograph
 
 | Area | Implemented in this increment | Still required before real use |
 | --- | --- | --- |
-| Identity | Hashed session lookup, expiry/revocation/account-epoch checks, origin and CSRF checks, logout | Maintained sign-in provider, enrollment, recovery, MFA and proof of recovery semantics |
+| Identity | Hashed sessions, expiry/revocation/epoch checks, Origin/CSRF, logout; local verified-contact code recovery and password-hash verification tests | Real signup/sign-in, verified-contact enrollment, delivery binding, identity authority decision, MFA and contact-free recovery kit |
 | Privacy | D1 delivery/post/reply boundaries; current approval and block checks; anonymous DTO allowlists; protected GET routes | Complete request/reply writes, edit approval, consent records and API/UI migration; group lifecycle commands and held edit proposals are now implemented locally |
 | Bot protection | Server Siteverify; exact hostname/action; timeout/failure denial; bounded JSON; per-account rate counters | Real widget/domain/secret, edge abuse controls, accessible staffed recovery/help process and provider outage drill |
 | Feedback | Authenticated, idempotent database submission; durable triage jobs; owner-only reads | Staff interface, assignment/resolution and operational response policy |
 | Media | PNG/JPEG/WebP screenshot admission, private quarantine, bounded upload, manual hold, authorized derivative gateway | Safe decoding/normalization, metadata stripping, malware/content screening, derivative provenance, staffed appeals; audio/video remain disabled |
+| Connections and events | Pending connection requests/acceptance, private canonical event invitations, scoped reposts, edit/cancel/dismiss and revocation guards in local D1 | API-connected UI, signup-only default team connection, privacy-preserving repost management listing, pagination/capacity and screening review |
 | Jobs and notices | Transactional outbox, IDs-only transport, lease/duplicate/retry protection, failure cases, private in-app notices | Production queues/alerts, operator dashboard, retention/reconciliation jobs, full prayer/care jobs |
 | Operations | Local configuration, migrations, runtime tests and GitHub check workflow | Separate staging/production resources, restore drill, secret lifecycle, monitoring, incident procedures and launch approval |
 
@@ -39,13 +40,41 @@ See [the launch readiness brief](LAUNCH_READINESS_BRIEF.md) for the current cont
 
 ## Identity and recovery contract
 
-The account requirement permits a username and password without requiring an email address or telephone number. Provider selection must prove that exact behavior, rather than inventing an address or quietly making contact information mandatory. No password verification or recovery endpoint is implemented by this increment.
+The account requirement permits a username and password without requiring an email address or telephone number. The local foundation now implements `POST /api/recovery/start` and `/api/recovery/complete`, a maintained-runtime scrypt password hash/verification helper, and synthetic Workers/D1 tests. Real signup, sign-in, verified-contact enrollment, MFA, and account settings integration are still absent. Choose one authoritative credential system before connecting login and reset; do not introduce independent provider and D1 passwords that can diverge.
 
-Before selecting a provider, demonstrate username uniqueness and safe normalization, enumeration-resistant sign-in/recovery, password/session protections, optional verified contact methods, and usable single-use recovery codes for people without contacts. Prove atomic consumption of recovery codes, session-epoch invalidation after recovery, session revocation and administrative MFA. Keep the provider's subject mapping internal. Do not put provider tokens in local storage or URLs.
+Recovery start accepts a username and selected email/phone channel, never a destination supplied by the caller. It uses only a stored, current verified contact, requires server Turnstile validation, and gives the same public response for eligible and ineligible accounts. Eight-digit codes are kept as challenge-specific HMACs with a ten-minute expiry, five-guess limit, and account/IP throttling. Completing an eligible challenge atomically changes the password hash, consumes the challenge, advances the account session epoch, revokes sessions and invalidates other challenges. Tests exercise synthetic email/phone delivery, wrong/expired/reused codes, concurrent completion, contact changes, account/session revocation, and failure paths.
+
+No real email or SMS is sent: `RECOVERY_DELIVERY`, recovery secrets and live verification configuration are not connected. The browser reports recovery unavailable until the required configuration exists. The private service-binding contract carries a challenge ID as an idempotency key; its production implementation must enforce destination handling, delivery retry limits and secret/log redaction. Delivery currently runs through the request lifecycle, not a durable recovery outbox. A crash after sending but before marking the challenge ready can leave an unusable code that expires; the person must request a new code. Prove this ambiguous-send case, provider timeout/outage, expiry during delivery or hashing, duplicate provider requests and retry UX in staging before enabling it. Measure scrypt CPU, memory, concurrent-reset capacity and abuse cost on the actual Worker plan.
+
+The contact-free recovery kit remains unimplemented. Before selecting and connecting an identity authority, demonstrate username uniqueness and safe normalization, enumeration-resistant sign-in/recovery, password/session protections, optional verified contact methods, and usable single-use recovery codes for people without contacts. Prove atomic consumption of recovery codes, session-epoch invalidation after recovery, session revocation and administrative MFA. Keep the provider's subject mapping internal. Do not put provider tokens in local storage or URLs.
 
 Production sessions must use a Secure, HttpOnly, SameSite cookie scoped to the application origin. The local-only session fixture uses an HTTP localhost cookie. Mutation requests require the trusted Origin and a session-bound CSRF token. MFA and a recent authentication event are required for sensitive administrative commands; no browser-supplied role or membership field can grant access.
 
 The checked-in configuration refuses requests to non-loopback hosts while `APP_ENV=local`. There is no development-login endpoint. Creating a public configuration requires deliberate new environment bindings and an identity implementation, not changing a browser toggle.
+
+## Consented connections and prayer events
+
+Every ordinary connection starts as a request and requires the other person or the group’s current admin to accept. Pending requests can be declined or withdrawn. Neither named nor anonymous prayer activity creates a connection automatically, and connection records contain no prayer ID, text, anonymity flag or interaction provenance. Connections control event invitations only; they do not grant friendship, private prayer access, profile visibility or group membership. Either endpoint may end an accepted connection. Only the endpoint that ended it can initiate a new request, which still needs fresh acceptance. Group-side actions require current admin rights and recent MFA, including after an admin changes.
+
+The intended signup default is a connection to the official `@prayerbox` profile. The shared initialization helper models that single exception and permits opting out. It is not connected to a real signup transaction and must never run on a prayer submission, refresh, or ordinary sign-in to restore a removed connection. Provision and verify the official account identity before wiring it.
+
+| Local route | Purpose |
+| --- | --- |
+| `GET /api/connections`; `POST /api/connections/request` | Private connection list and pending request; explicit person/group target, optional managed group sender |
+| `POST /api/connections/:id/actions` | Accept, decline, withdraw or end with expected version; URL-encode the connection ID |
+| `GET/POST /api/prayer-events`; `GET /api/prayer-events/:id` | Authorized event list, creation and canonical detail |
+| `POST /api/prayer-events/:id/edit` or `/cancel` | Host edit/cancellation with expected version |
+| `POST /api/prayer-events/:id/repost` | Canonical reference to the person’s connections or a group they administer |
+| `POST /api/prayer-events/:id/shares/:shareId/revoke` | Withdraw an owned/managed repost and invalidate downstream access |
+| `GET /api/prayer-invitations`; `POST /api/prayer-events/:id/dismiss` | Private derived invitation list and durable personal dismissal |
+
+Events support virtual or in-person details, a title/description, optional HTTPS information link, a meeting URL or address, start/end and a named time zone. Group publication requires current admin MFA. Members-only events stay within currently approved group membership and cannot be reposted. A connections event must explicitly allow reposting before it can be shared. Reposts preserve one canonical event and origin, deduplicate an active destination, and validate their source chain. Edits propagate; cancellation retains the cancellation notice while the API omits the meeting URL/address. Blocks, disconnections, revoked source shares, inactive accounts and closed groups are rechecked on subsequent reads. These records never broaden access to the original prayers.
+
+The foundation stores events, connections, shares and dismissals in D1; invitations are derived privately at read time. It does not fan out email/SMS or push alerts. Current safety bounds are 40 stored shares per event, 60 event candidates per list, 200 listed connections and 2,000 scoped connection/member records; rate limits also apply. Add cursor pagination, retention and measured load/cost limits before expanding the cohort. These bounds are not production capacity measurements. A new group admin can revoke a known repost ID but may not see it in the event list without original-audience access; finish a safe management-metadata endpoint rather than exposing private meeting details. The current prototype screens are not connected to these APIs.
+
+## Donation availability
+
+One-time/custom and monthly donation choices remain available regardless of whether the displayed hosting need is funded. The earlier three-month funding lock and funding-gap cap no longer apply. Illustrative meters are not production hosting estimates. Payment processing, recurring billing, verified receipts/tax treatment, refunds and donor-data handling remain a separately approved integration; no real payment is accepted by the current app.
 
 ## Server-enforced prayer privacy and church membership
 
@@ -83,7 +112,7 @@ Care requests remain separate from abuse violations. Mentioning self-harm must o
 
 Workers commit an outbox row in the same D1 transaction as the originating report. A scheduled dispatcher sends only the job ID. Queue delivery may repeat or arrive out of order; the consumer uses durable leases, guarded writes and unique effects. A duplicate must not create duplicate notices or override a completed job. Expired leases can be retried. Exhausted processing attempts and transport dead letters create durable review cases; ordinary send failures retain an outbox error and scheduled retry. Operators must monitor and resolve these failure states.
 
-Notifications are stored privately and rechecked against the current owning resource before display. Deleted resources and inactive recipients do not generate usable notices. Initial notices contain generic receipt/status wording, not prayer text. Email, SMS, web push, external bug trackers and Zapier are not connected. A later integration must have explicit destination consent, sanitized payloads, idempotency and verified real delivery.
+Notifications are stored privately. Resource receipts recheck the current owning resource before display; deleted resources and inactive recipients cannot expose their content. Private group role, removal and closure notices remain readable by their active recipient after membership ends, so the person can understand the decision. Initial notices contain generic receipt/status wording, not prayer text. Optional notification choices and phone previews are interface state only; they do not enroll a device or deliver a notification. Email, SMS, web push, external bug trackers and Zapier are not connected. Recovery has a tested service-binding contract but no configured delivery service. A later integration must have separate notification consent, verified destinations, sanitized payloads, idempotency and verified real delivery; an account-recovery contact is not automatic permission for prayer or event notifications.
 
 ## Local development and source control
 
@@ -115,13 +144,13 @@ The backend GitHub workflow runs type generation/checks, local runtime tests, po
 | Gate | Required evidence before advancing |
 | --- | --- |
 | 1. Local foundation | Real Workers-runtime tests with local D1/R2, deny-by-default privacy matrix, duplicate/race tests, failure/retry tests, independent review, both frontend builds and visual inspection |
-| 2. Identity and policy proof | Chosen provider and recovery/MFA tests; approved membership history/block policy, age/region rules, retention, consent wording and role responsibilities |
+| 2. Identity and policy proof | Chosen credential authority, real signup/sign-in/contact enrollment, recovery delivery/kit/MFA tests; approved membership history/block policy, age/region rules, retention, consent wording and role responsibilities |
 | 3. Staging text flow | Isolated provisioned resources; real auth/Turnstile; request/update/reply/delete and membership commands; source-to-delivery isolation; post-specific conversations; audited moderation/appeals; real staff queues |
 | 4. Operations readiness | Named owners, measurable queue/error alerts, support route, privacy/terms, access reviews, secret rotation, deletion/tombstone jobs, staging load tests and restore exercise |
 | 5. Limited pilot | Explicit founder release approval, consented testers, verified end-to-end delivery, actual moderation/prayer/care staffing and incident response; text-only if media is unfinished |
 | 6. Public launch | Pilot findings resolved, final accessibility/security review, forecast costs and operational capacity approved; payments remain separately gated |
 
-Stress tests must be bounded to isolated synthetic environments. Cover cross-account/direct-ID access, exact-post and organization boundaries, revoked/expired sessions, stale membership, block/privacy changes, concurrent idempotency requests, upload size/type/cap races, malformed/chunked/slow requests, queue duplication/reordering, partial provider outages and resource exhaustion. Record throughput, latency, rejected traffic, costs and unresolved findings. Local tests do not establish production capacity or constitute a penetration-test certification.
+Stress tests must be bounded to isolated synthetic environments. Cover cross-account/direct-ID access, exact-post and organization boundaries, revoked/expired sessions, stale membership, block/privacy changes, concurrent idempotency requests, upload size/type/cap races, malformed/chunked/slow requests, queue duplication/reordering, connection acceptance/revocation races, private event repost chains, canonical cancellation, recovery delivery crash/expiry/retry and hashing load, partial provider outages and resource exhaustion. Record throughput, latency, rejected traffic, costs and unresolved findings. Local tests do not establish production capacity or constitute a penetration-test certification.
 
 Backups must cover D1 and R2 together. Define recovery-point and recovery-time objectives, backup retention and permitted operators, then restore into a quarantined environment and reconcile objects, source revisions and deletion tombstones before enabling access. D1 Time Travel is useful but does not restore R2 or undo external messages. Test data recovery and application rollback separately. Suspend intake and queue delivery if an incident could violate privacy; do not roll back data to resurrect revoked membership or deleted prayers.
 

@@ -9,9 +9,12 @@ import { handleRead } from './reads.ts';
 import { uploadFeedbackPicture } from './uploads.ts';
 import { handleGroupRoute } from './groups.ts';
 import { handleGroupModerationRoute } from './group-moderation.ts';
+import { handlePrayerEventRoute } from './prayer-events.ts';
+import { handleRecoveryRoute, recoveryAvailable } from './account-recovery.ts';
+import type { RecoveryDependencies } from './account-recovery.ts';
 import { submitPostEdit, loadOwnPostEdits, cancelOwnPostEdit } from './post-edits.ts';
 
-type Dependencies = { siteverifyFetch?: Parameters<typeof verifyTurnstile>[0]['fetcher'] };
+type Dependencies = RecoveryDependencies;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 function sessionToken(request: Request): string | null {
@@ -124,14 +127,18 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
     }
     if (url.pathname === '/api/health' && request.method === 'GET') return jsonResponse({ status: 'local', liveIntake: false });
     const db = primary(env.DB);
+    const recoveryResponse = await handleRecoveryRoute(request, env, db, dependencies);
+    if (recoveryResponse) return recoveryResponse;
     const token = sessionToken(request);
     const actor = await loadActor(db, token);
     if (url.pathname === '/api/session' && request.method === 'GET') {
       return jsonResponse({ authenticated: Boolean(actor), actor: actor ? { id: actor.id, username: actor.username, displayName: actor.displayName } : null,
         csrfToken: actor && token ? await hashSecret(`csrf:${token}`) : null,
-        capabilities: { signIn: false, feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
+        capabilities: { signIn: false, recovery: recoveryAvailable(env), feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
     }
     if (request.method === 'GET') {
+      const eventResponse = await handlePrayerEventRoute(request, env, actor, db);
+      if (eventResponse) return eventResponse;
       const groupModerationResponse = await handleGroupModerationRoute(request, env, actor, db);
       if (groupModerationResponse) return groupModerationResponse;
       const groupResponse = await handleGroupRoute(request, env, actor, db);
@@ -146,6 +153,8 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
     }
     if (request.method === 'POST') {
       const verified = await requireMutation(request, env, actor);
+      const eventResponse = await handlePrayerEventRoute(request, env, verified, db);
+      if (eventResponse) return eventResponse;
       const groupModerationResponse = await handleGroupModerationRoute(request, env, verified, db);
       if (groupModerationResponse) return groupModerationResponse;
       const groupResponse = await handleGroupRoute(request, env, verified, db);
@@ -172,7 +181,7 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
 }
 
 export default {
-  fetch: (request, env) => handleRequest(request, env),
+  fetch: (request, env, ctx) => handleRequest(request, env, { waitUntil: promise => ctx.waitUntil(promise) }),
   async scheduled(_event, env) { await dispatchOutbox(env.DB, env.JOBS); },
   async queue(batch, env) {
     if (batch.queue === 'prayer-box-local-dead') await consumeDeadLetterBatch(batch, env.DB);

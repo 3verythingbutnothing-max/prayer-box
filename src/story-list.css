@@ -124,3 +124,10 @@
     overflow-wrap: anywhere;
   }
 }
+
+.box-section-links { display:flex; flex-wrap:wrap; gap:12px; margin:22px 0; }
+.box-section-links a[aria-current="page"] { background:#e3eef6; border-color:#a9bed0; }
+.box-connect-action { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:18px 0; }
+.connection-suggestion { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:14px; padding:20px; margin:16px 0; }
+.connection-suggestion strong { overflow-wrap:anywhere; }
+.connection-suggestion .button { grid-column:1/-1; width:100%; }

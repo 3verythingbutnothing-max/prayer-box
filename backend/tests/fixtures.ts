@@ -6,7 +6,7 @@ export const ORIGIN = "http://localhost:8787";
 export const USERS = ["author", "recipient", "member", "newmember", "pending", "removed", "outsider", "owner"] as const;
 
 export async function resetDatabase() {
-  const tables = ["group_content_removals", "group_notices", "group_events", "group_settings", "notifications", "review_cases", "jobs", "media", "acknowledgments", "replies", "posts", "deliveries", "authored_sources", "idempotency", "feedback", "rate_buckets", "box_blocks", "blocks", "box_circle", "friendships", "memberships", "sessions", "boxes", "users"];
+  const tables = ["recovery_challenges", "account_credentials", "recovery_contacts", "prayer_event_actions", "prayer_event_dismissals", "prayer_event_shares", "prayer_events", "prayer_connections", "group_content_removals", "group_notices", "group_events", "group_settings", "notifications", "review_cases", "jobs", "media", "acknowledgments", "replies", "posts", "deliveries", "authored_sources", "idempotency", "feedback", "rate_buckets", "box_blocks", "blocks", "box_circle", "friendships", "memberships", "sessions", "boxes", "users"];
   await env.DB.batch(tables.map(table => env.DB.prepare(`DELETE FROM ${table}`)));
   const objects = await env.MEDIA.list();
   if (objects.objects.length) await env.MEDIA.delete(objects.objects.map(object => object.key));
