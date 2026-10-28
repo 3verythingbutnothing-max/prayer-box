@@ -15,11 +15,13 @@ import PrayerDetail from "./components/PrayerDetail";
 import AccountPages from "./components/AccountPages";
 import AboutPage from "./components/AboutPage";
 import CommunityPages from "./components/CommunityPages";
+import { PrayerGroups } from "./components/PrayerGroups";
+import { initialPrayerGroups, isGroupAdmin } from "./prayer-groups";
+import type { GroupState } from "./prayer-groups";
 import CareResources from "./components/CareResources";
 import GetHelpPage from "./components/GetHelpPage";
 import DeleteRequests from "./components/DeleteRequests";
 import { OrganizationWebsiteLink } from "./components/OrganizationWebsite";
-import { normalizeOrganizationWebsite } from "./organization";
 import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
 import { useAppInstall } from "./app-install";
 import { useActionFeedback } from "./action-feedback";
@@ -278,13 +280,25 @@ export default function App() {
     document.documentElement.lang = language;
   }, [language]);
   const [requests, setRequests] = useState<PrayerRequest[]>(cloneFixtures);
-  const [organizationWebsite, setOrganizationWebsite] = useState(
-    "https://example.org/",
-  );
-  const [membership, setMembership] = useState<Membership>("none");
-  const [memberActive, setMemberActive] = useState(true);
-  const [officialAllowed, setOfficialAllowed] = useState(false);
+  const [prayerGroups, setPrayerGroups] = useState<GroupState>(initialPrayerGroups);
+  const graceGroup = prayerGroups.find(group => group.id === "grace")!;
+  const organizationWebsite = graceGroup.website;
+  const boxNames = { ...recipientNames, grace: graceGroup.name };
+  const graceMembers = graceGroup.archivedAt ? [] : graceGroup.members.filter(member => member.status === "approved" && member.active);
+  const graceElena = graceGroup.members.find(member => member.id === "elena");
+  const membership: Membership = !graceGroup.archivedAt && graceElena && ["pending", "invited", "approved"].includes(graceElena.status) ? graceElena.status as Membership : "none";
+  const memberActive = graceMembers.some(member => member.id === "member");
+  const groupAdmin = isGroupAdmin(graceGroup, viewer);
+  const isOwnBox = (actor: string, target: BoxId) => isOwnPrayerBox(actor, target, graceGroup.ownerId);
+  function updatePrayerGroups(next: GroupState) {
+    setPrayerGroups(next);
+    const nextGrace = next.find(group => group.id === "grace");
+    const groupBlocked = nextGrace?.members.filter(member => member.status === "blocked").map(member => member.id) ?? [];
+    if (groupBlocked.length) setBoxRemoved(previous => ({ ...previous, grace: [...new Set([...(previous.grace ?? []), ...groupBlocked])] }));
+  }
   const [friends, setFriends] = useState(["maria", "daniel"]);
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<string[]>([]);
+  const [friendInvitationStatus, setFriendInvitationStatus] = useState<"pending" | "accepted" | "declined">("pending");
   const [privacyByViewer, setPrivacyByViewer] = useState<
     Partial<Record<Viewer, Audience>>
   >({ elena: "private", maria: "public" });
@@ -350,11 +364,8 @@ export default function App() {
   const box: BoxId =
     prayerRecipients.some(person => person.id === resource) ? resource as BoxId : "maria";
   const roleActive = viewer === "member" ? memberActive : true;
-  const groupMember =
-    viewer === "owner" ||
-    viewer === "maria" ||
-    (viewer === "member" && memberActive) ||
-    (viewer === "elena" && membership === "approved");
+  const groupMember = graceMembers.some(member => member.id === viewer);
+  const officialAllowed = groupMember && !!graceGroup.members.find(member => member.id === viewer)?.officialReply;
   const privacy = privacyByViewer[viewer] ?? "private";
   const privateSupportNotes = visibleSupportNotes(supportNotes, viewer).filter(
     (note) => !dismissedSupportNotes.includes(note.id),
@@ -364,6 +375,7 @@ export default function App() {
   );
   const blockedActors = blocked[viewer] ?? [];
   const accessContext = {
+    graceApprovedMemberIds: graceMembers.map(member => member.id),
     elenaApprovedMember: membership === "approved",
     memberActive,
     acceptedElenaFriends: friends,
@@ -376,6 +388,7 @@ export default function App() {
   };
   const canRead = (row: PrayerRequest) =>
     canViewRequest(row, viewer, accessContext) &&
+    (row.recipient !== "grace" || !graceGroup.archivedAt && !graceGroup.members.some(member => member.id === viewer && member.status === "blocked")) &&
     !blockedActors.includes(row.authorId) &&
     !(boxRemoved[row.recipient] ?? []).includes(row.authorId);
   const outsideAudience = (row: PrayerRequest) =>
@@ -387,14 +400,14 @@ export default function App() {
   const storyNotices = requests.filter(row => row.moderation === "approved" && canRead(row)).flatMap(row => getStoryPosts(row).map(post => ({ row, post, key: `${row.id}/${post.id}` }))).sort((a,b) => Date.parse(b.post.createdAt) - Date.parse(a.post.createdAt));
   const notificationRead = storyNotices.every(notice => readStoryNoticeIds.includes(notice.key));
   const ownBox: BoxId =
-    viewer === "team" ? "prayerbox" : viewer === "owner" ? "grace" : viewer === "maria" ? "maria" : "mine";
+    viewer === "team" ? "prayerbox" : viewer === "maria" ? "maria" : viewer === "elena" ? "mine" : viewer === graceGroup.ownerId && groupMember ? "grace" : "mine";
   const canSeeMariaProfile =
     viewer === "maria" ||
     (privacyByViewer.maria ?? "public") === "public" ||
     (privacyByViewer.maria === "friends" &&
       viewer === "elena" &&
       friends.includes("maria"));
-  const offerGrace = !!associationByViewer.maria && canSeeMariaProfile;
+  const offerGrace = !!associationByViewer.maria && canSeeMariaProfile && graceMembers.some(member => member.id === "maria");
 
   function setPrivacy(next: Audience) {
     setPrivacyByViewer((previous) => ({ ...previous, [viewer]: next }));
@@ -458,8 +471,13 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: "instant" });
       mainRef.current?.focus({ preventScroll: true });
     }
-    document.title = `${isAbout ? "About" : page === "box" ? `${boxNames[box]}’s Prayer Box` : page === "inbox" ? "Grace Church inbox" : page === "requests" ? "My Requests" : page === "prayers" ? "My Prayers" : page === "help" ? "Get Help" : page === "feedback" ? "Report a bug" : page === "app" ? "Mobile app" : page === "church" ? "My Church" : page === "donation-history" ? "My Donations" : page === "donations" ? "Donations" : page === "settings" ? "Settings" : "Prayer Box"} · Prayer Box`;
+
   }, [route]);
+  useEffect(() => {
+    const titles: Record<string, string> = { requests: 'My Requests', prayers: 'My Prayers', help: 'Get Help', feedback: 'Report a bug', app: 'Mobile app', church: 'My Church', 'donation-history': 'My Donations', donations: 'Donations', settings: 'Settings', signup: 'Create your prayer box', groups: 'Your prayer groups' };
+    const title = isAbout ? 'About' : page === 'box' ? `${boxNames[box]}’s Prayer Box` : page === 'inbox' ? `${graceGroup.name} inbox` : page === 'members' ? graceGroup.name : page === 'group' ? prayerGroups.find(group => group.username === resource && !group.archivedAt)?.name ?? 'Prayer group' : titles[page];
+    document.title = title ? `${title} · Prayer Box` : 'Prayer Box';
+  }, [page, resource, box, isAbout, graceGroup.name, prayerGroups]);
   useEffect(() => {
     setMenuOpen(false);
     setDeleteStory(null);
@@ -479,7 +497,11 @@ export default function App() {
   }, [heldStories, page, viewer]);
 
   function openComposer(recipient: BoxId, initial?: PrayerRequest) {
-    if (isOwnPrayerBox(viewer, recipient)) {
+    if (recipient === "grace" && (graceGroup.archivedAt || graceGroup.members.some(member => member.id === viewer && member.status === "blocked"))) {
+      acknowledge("info", "This prayer group is unavailable.", "Please choose another prayer box.");
+      return;
+    }
+    if (isOwnBox(viewer, recipient)) {
       acknowledge(
         "info",
         "Your box is for receiving prayer requests.",
@@ -495,29 +517,6 @@ export default function App() {
     }
     setComposer({ recipient, initial });
   }
-  function saveOrganizationWebsite(value: string) {
-    if (viewer !== "owner") {
-      acknowledge(
-        "error",
-        "This link couldn’t be saved.",
-        "Only the organization owner can change its website.",
-      );
-      return;
-    }
-    const result = normalizeOrganizationWebsite(value);
-    if (!result.valid) {
-      acknowledge("error", "Check the website link.", result.error);
-      return;
-    }
-    setOrganizationWebsite(result.url);
-    acknowledge(
-      "success",
-      result.url ? "Organization website saved." : "Website link removed.",
-      result.url
-        ? "Organization website saved in this demo. It is visible on Grace Church’s public prayer box."
-        : "Organization website removed from this demo’s public prayer box.",
-    );
-  }
   function removeActor(actorId: string, reportReason?: string, evidence = "") {
     setBlocked((previous) => ({
       ...previous,
@@ -528,7 +527,7 @@ export default function App() {
     const ownsAffectedBox =
       (recipient === "mine" && viewer === "elena") ||
       (recipient === "maria" && viewer === "maria") ||
-      (recipient === "grace" && viewer === "owner");
+      (recipient === "grace" && groupAdmin);
     if (ownsAffectedBox)
       setBoxRemoved((previous) => ({
         ...previous,
@@ -662,8 +661,8 @@ export default function App() {
       rows.some(
         (row) =>
           row.authorId !== viewer ||
-          blockedActors.includes(recipientActor(row.recipient)) ||
-          isOwnPrayerBox(row.authorId, row.recipient),
+          blockedActors.includes(recipientActor(row.recipient, graceGroup.ownerId)) ||
+          isOwnBox(row.authorId, row.recipient),
       )
     )
       return false;
@@ -741,7 +740,7 @@ export default function App() {
   }
 
   function renderBox() {
-    const receivingOwnBox = isOwnPrayerBox(viewer, box);
+    const receivingOwnBox = isOwnBox(viewer, box);
     const emptyBoxAction = () =>
       receivingOwnBox
         ? navigate(viewer === "maria" ? "box/grace" : "box/maria")
@@ -753,7 +752,6 @@ export default function App() {
     const rows = requests.filter(
       (r) =>
         r.recipient === box &&
-        !isOwnPrayerBox(r.authorId, box) &&
         r.moderation === "approved" &&
         canRead(r),
     );
@@ -779,7 +777,7 @@ export default function App() {
                 className={`avatar profile-avatar ${box === "grace" ? "sage" : ""}`}
               >
                 {box === "grace" ? (
-                  <Icon name="people" size={27} />
+                  graceGroup.image ? <img src={graceGroup.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : <Icon name={graceGroup.icon} size={27} />
                 ) : (
                   boxNames[box].slice(0, 1)
                 )}
@@ -808,7 +806,7 @@ export default function App() {
               </div>
             </div>
             <h1 id="box-title">
-              {box === "prayerbox" ? "Prayer Box is here for you" : `${box === "grace" ? "Grace Church" : boxNames[box]}’s Prayer Box`}<span className="hero-dot">.</span>
+              {box === "prayerbox" ? "Prayer Box is here for you" : `${boxNames[box]}’s Prayer Box`}<span className="hero-dot">.</span>
             </h1>
             <p className="hero-intro">
               {box === "grace"
@@ -820,12 +818,12 @@ export default function App() {
             {box === "grace" && (
               <OrganizationWebsiteLink value={organizationWebsite} />
             )}
-            {box === "grace" && viewer === "owner" && (
+            {box === "grace" && groupAdmin && (
               <button
                 className="text-link organization-website-edit"
-                onClick={() => navigate("settings")}
+                onClick={() => navigate("group/grace-church")}
               >
-                Edit organization website
+                Manage prayer group
               </button>
             )}
             {box === "maria" && offerGrace && (
@@ -834,7 +832,7 @@ export default function App() {
                 onClick={() => navigate("box/grace")}
               >
                 <Icon name="people" size={14} />
-                Member of Grace Church
+                Member of {graceGroup.name}
                 <Icon name="arrow" size={13} />
               </button>
             )}
@@ -885,56 +883,17 @@ export default function App() {
               <Icon name="shield" size={20} />
               <p>
                 {groupMember
-                  ? "You are viewing an approved member fixture. The shared inbox is separate from every personal delivery."
+                  ? "You are an approved member. The shared inbox is separate from every personal delivery."
                   : membership === "pending"
-                    ? "Your fictional membership request is waiting for the church owner. No private access yet."
+                    ? "Your membership request is waiting for an admin. Private access begins after approval."
                     : membership === "invited" && viewer === "elena"
-                      ? "Grace Church has invited your demo account. Membership begins only when you accept."
+                      ? "Grace Church has invited you. Membership begins only when you accept."
                       : "Church approval is required to open organization-only requests. A public visit does not create membership."}
               </p>
             </div>
-            {groupMember ? (
-              <button
-                className="button secondary compact"
-                onClick={() => navigate("inbox")}
-              >
-                Open shared inbox <Icon name="arrow" size={16} />
-              </button>
-            ) : membership === "invited" && viewer === "elena" ? (
-              <button
-                className="button compact"
-                onClick={() => {
-                  setMembership("approved");
-                  acknowledge(
-                    "success",
-                    "Invitation accepted.",
-                    "Invitation accepted for the fictional account. Group access is now active.",
-                  );
-                }}
-              >
-                Accept demo invitation
-              </button>
-            ) : (
-              <button
-                className="button secondary compact"
-                disabled={membership === "pending"}
-                onClick={() => {
-                  if (viewer === "guest") navigate("signup");
-                  else {
-                    setMembership("pending");
-                    acknowledge(
-                      "pending",
-                      "Your church approval request is ready.",
-                      "Fictional membership request sent to the owner. Access is still pending.",
-                    );
-                  }
-                }}
-              >
-                {membership === "pending"
-                  ? "Approval pending"
-                  : "Request church approval"}
-              </button>
-            )}
+            <button className="button secondary compact" onClick={() => navigate(groupMember ? "inbox" : "group/grace-church")}>
+              {groupMember ? "Open shared inbox" : "View membership options"}<Icon name="arrow" size={16} />
+            </button>
           </section>
         )}
         <div className="box-layout">
@@ -1185,7 +1144,7 @@ export default function App() {
                     >
                       Add update or testimony
                     </button>
-                    {!isOwnPrayerBox(viewer, copyTarget) && (
+                    {!isOwnBox(viewer, copyTarget) && (
                       <button
                         className="text-link"
                         onClick={() => openComposer(copyTarget, first)}
@@ -1290,7 +1249,7 @@ export default function App() {
       return (
         <>
           <header className="page-heading">
-            <p className="eyebrow">Grace Church</p>
+            <p className="eyebrow">{graceGroup.name}</p>
             <h1 className="page-title">A shared prayer community.</h1>
           </header>
           <EmptyState kind="denied" onAction={() => navigate("box/grace")} />
@@ -1329,7 +1288,7 @@ export default function App() {
         <header className="page-heading">
           <p className="eyebrow">
             <Icon name="people" size={16} />
-            Grace Church · approved community
+            {graceGroup.name} · approved community
           </p>
           <h1 className="page-title">A little care, shared.</h1>
           <p className="page-intro">
@@ -1343,7 +1302,7 @@ export default function App() {
             <Icon name="shield" size={14} />
             Church-approved access · fictional
           </span>
-          {viewer === "owner" && (
+          {groupAdmin && (
             <button
               className="button secondary compact"
               onClick={() => navigate("members")}
@@ -1355,7 +1314,7 @@ export default function App() {
         <div className="notice sage">
           <Icon name="lock" />
           <p>
-            This is Grace Church’s shared inbox. Maria’s private personal
+            This is {graceGroup.name}’s shared inbox. Maria’s private personal
             deliveries and Elena’s personal box are separate. New members may
             see retained group history under the proposed policy.
           </p>
@@ -1430,7 +1389,7 @@ export default function App() {
                       <option value="archived">Archived</option>
                     </select>
                   </label>
-                  {viewer === "owner" && (
+                  {groupAdmin && (
                     <label className="field">
                       Owner reassignment
                       <select
@@ -1476,9 +1435,9 @@ export default function App() {
           ) : (
             <EmptyState
               kind="empty"
-              receivingOwnBox={viewer === "owner"}
+              receivingOwnBox={viewer === graceGroup.ownerId}
               onAction={() =>
-                viewer === "owner"
+                viewer === graceGroup.ownerId
                   ? navigate("box/maria")
                   : openComposer("grace")
               }
@@ -1540,7 +1499,8 @@ export default function App() {
         request={row}
         viewer={viewer}
         groupMember={groupMember}
-        officialAllowed={viewer === "member" && officialAllowed}
+        officialAllowed={officialAllowed}
+        organizationName={graceGroup.name}
         outsideAudience={outsideAudience(row)}
         postingRestricted={restricted.includes(viewer)}
         isFriend={viewer === "elena" && friends.includes(row.authorId)}
@@ -1582,6 +1542,7 @@ export default function App() {
   }
 
   function renderPage() {
+    if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} state={prayerGroups} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
     if (page === "prayers") return renderMyPrayers();
@@ -1627,6 +1588,7 @@ export default function App() {
     )
       return (
         <>
+          {page === "church" && <PrayerGroups key={`${resetVersion}/${viewer}`} viewer={viewer} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} />}
           <CommunityPages
             language={language}
             onLanguageChange={setLanguage}
@@ -1644,20 +1606,19 @@ export default function App() {
             }
             onCareConcern={raiseCareConcern}
             membershipStatus={membership}
-            onMembershipChange={setMembership}
+            onMembershipChange={() => navigate("group/grace-church")}
             friends={friends}
+            outgoingFriendRequests={outgoingFriendRequests}
+            onOutgoingFriendRequestsChange={setOutgoingFriendRequests}
+            friendInvitationStatus={friendInvitationStatus}
+            onFriendInvitationChange={setFriendInvitationStatus}
             discoverableMaria={canSeeMariaProfile}
             blockedActors={blockedActors}
             onFriendsChange={setFriends}
             memberActive={memberActive}
-            onMemberActiveChange={setMemberActive}
+            onMemberActiveChange={() => navigate("group/grace-church")}
             officialReplyAllowed={officialAllowed}
-            onOfficialReplyChange={setOfficialAllowed}
-            onCreateOrganization={(website) => {
-              if (page !== "signup") return;
-              const result = normalizeOrganizationWebsite(website);
-              if (result.valid) setOrganizationWebsite(result.url);
-            }}
+            onOfficialReplyChange={() => navigate('group/grace-church')}
           />
           {page === "review" && viewer === "operator" && (
             <CareReviewQueue
@@ -1947,7 +1908,7 @@ export default function App() {
                         Shared church inbox
                       </a>
                     )}
-                    {viewer === "owner" && (
+                    {groupAdmin && (
                       <a href="#members" onClick={() => setMenuOpen(false)}>
                         Manage members
                       </a>
@@ -2048,6 +2009,9 @@ export default function App() {
             }
             viewer={viewer}
             approvedMember={groupMember}
+            organizationMemberships={prayerGroups.filter(group => !group.archivedAt && group.members.some(member => member.id === viewer && member.status === 'approved' && member.active)).map(group => ({ name: group.name, username: group.username, admin: isGroupAdmin(group, viewer) }))}
+            organizationName={graceGroup.name}
+            groupAdmin={groupAdmin}
             privacyValue={privacy}
             remindersValue={reminders}
             countryPreference={
@@ -2067,17 +2031,16 @@ export default function App() {
               }))
             }
             onNavigate={navigate}
+            onManageBlocked={() => setDialog("blocked")}
             onNotice={notify}
             onPrivacyChange={setPrivacy}
             onRemindersChange={setReminders}
-            organizationWebsite={organizationWebsite}
-            onOrganizationWebsiteChange={saveOrganizationWebsite}
             onAutomaticChange={(enabled, scope, message) => {
-              if (
-                viewer !== "elena" &&
-                viewer !== "maria" &&
-                viewer !== "owner"
-              ) {
+              if (scope === "grace" && !groupAdmin) {
+                acknowledge("error", "Admin access is required.", "Your group access changed. Open the group to review your membership.");
+                return;
+              }
+              if (scope !== "grace" && viewer !== "elena" && viewer !== "maria") {
                 if (enabled)
                   notify(
                     "This viewer’s personal box is not part of the sample deliveries. No other person’s box has been changed.",
@@ -2085,7 +2048,7 @@ export default function App() {
                 return;
               }
               const target: BoxId =
-                scope === "grace" && viewer === "owner"
+                scope === "grace" && groupAdmin
                   ? "grace"
                   : viewer === "maria"
                     ? "maria"
@@ -2313,6 +2276,7 @@ export default function App() {
       </nav>
       {composer && (
         <PrayerComposer
+          organizationOwnerId={graceGroup.ownerId}
           key={`${composer.recipient}-${composer.initial?.id ?? "new"}`}
           {...composer}
           viewer={viewer}
@@ -2438,7 +2402,6 @@ export default function App() {
               className="text-link"
               onClick={() => {
                 setRequests(cloneFixtures());
-                setOrganizationWebsite("https://example.org/");
                 setBlocked({});
                 setBoxRemoved({});
                 setReports([]);
@@ -2448,10 +2411,10 @@ export default function App() {
                 setReadSupportNotes([]);
                 setStoryReadByViewer({});
                 setRestricted([]);
-                setMembership("none");
-                setMemberActive(true);
-                setOfficialAllowed(false);
+                setPrayerGroups(initialPrayerGroups());
                 setFriends(["maria", "daniel"]);
+                setOutgoingFriendRequests([]);
+                setFriendInvitationStatus("pending");
                 setPrivacyByViewer({ elena: "private", maria: "public" });
                 setCountryByViewer({ maria: { country: "us", show: true } });
                 setAssociationByViewer({ maria: true });

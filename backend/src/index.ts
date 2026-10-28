@@ -7,6 +7,8 @@ import { verifyTurnstile } from './turnstile.ts';
 import { consumeDeadLetterBatch, consumeJobBatch, dispatchOutbox } from './jobs.ts';
 import { handleRead } from './reads.ts';
 import { uploadFeedbackPicture } from './uploads.ts';
+import { handleGroupRoute } from './groups.ts';
+import { submitPostEdit, loadOwnPostEdits, cancelOwnPostEdit } from './post-edits.ts';
 
 type Dependencies = { siteverifyFetch?: Parameters<typeof verifyTurnstile>[0]['fetcher'] };
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
@@ -129,11 +131,28 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
         capabilities: { signIn: false, feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
     }
     if (request.method === 'GET') {
+      const groupResponse = await handleGroupRoute(request, env, actor, db);
+      if (groupResponse) return groupResponse;
+      const edit = url.pathname.match(/^\/api\/deliveries\/([A-Za-z0-9_-]{1,160})\/posts\/([A-Za-z0-9_-]{1,160})\/edits$/);
+      if (edit) {
+        if (!actor) throw new HttpError(401, 'sign_in_required', 'Please sign in to view your edits.');
+        return jsonResponse(await loadOwnPostEdits(db, actor, edit[1], edit[2]));
+      }
       const response = await handleRead(request, db, env, actor);
       if (response) return response;
     }
     if (request.method === 'POST') {
       const verified = await requireMutation(request, env, actor);
+      const groupResponse = await handleGroupRoute(request, env, verified, db);
+      if (groupResponse) return groupResponse;
+      const cancelledEdit = url.pathname.match(/^\/api\/deliveries\/([A-Za-z0-9_-]{1,160})\/posts\/([A-Za-z0-9_-]{1,160})\/edits\/([A-Za-z0-9_-]{1,160})\/cancel$/);
+      if (cancelledEdit) return jsonResponse(await cancelOwnPostEdit(db, verified, cancelledEdit[1], cancelledEdit[2], cancelledEdit[3]));
+      const edit = url.pathname.match(/^\/api\/deliveries\/([A-Za-z0-9_-]{1,160})\/posts\/([A-Za-z0-9_-]{1,160})\/edits$/);
+      if (edit) {
+        const input = await readJsonObject(request, { maxBytes: 20_000 });
+        const result = await submitPostEdit(db, verified, edit[1], edit[2], input);
+        return jsonResponse(result, result.status === 'unchanged' ? 200 : 202);
+      }
       if (url.pathname === '/api/feedback') return await feedback(request, db, env, verified, dependencies);
       const upload = url.pathname.match(/^\/api\/feedback\/([A-Za-z0-9_-]{1,160})\/pictures$/);
       if (upload) return await uploadFeedbackPicture(request, db, env, verified, upload[1]);

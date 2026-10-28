@@ -4,7 +4,8 @@ import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import type { Audience, PrayerRequest, Reply, Viewer } from "../domain";
 import { Icon, Modal } from "../ui";
 import { PlatformAcknowledgment } from "./CareFlow";
-import { formatStoryDate, getStoryPosts, storyRevision } from "../story";
+import { cancelOwnPendingEdit, editOwnStoryText, formatStoryDate, getStoryPosts, removeOwnEncouragement, storyRevision } from "../story";
+import type { TextEditTarget } from "../story";
 import { useActionFeedback } from "../action-feedback";
 import { scopedStoryReplies } from "../story-replies";
 import "../story-detail.css";
@@ -14,6 +15,7 @@ type Props = {
   viewer: Viewer;
   groupMember: boolean;
   officialAllowed: boolean;
+  organizationName?: string;
   postingRestricted: boolean;
   outsideAudience: Audience;
   isFriend: boolean;
@@ -38,6 +40,7 @@ export default function PrayerDetail({
   viewer,
   groupMember,
   officialAllowed,
+  organizationName = 'Grace Church',
   postingRestricted,
   outsideAudience,
   isFriend,
@@ -59,6 +62,13 @@ export default function PrayerDetail({
   const [safety, setSafety] = useState<
     "options" | "report" | "block" | "care" | null
   >(null);
+  const [editing, setEditing] = useState<(TextEditTarget & { expectedRevision: number }) | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState<{ target: TextEditTarget; expectedRevision: number; at: string; state: "saved" | "pending"; message: string } | null>(null);
+  const completedSave = useRef<string | null>(null);
+  const [removingReply, setRemovingReply] = useState<TextEditTarget | null>(null);
   const [reportReason, setReportReason] = useState("Scam or request for money");
   const [target, setTarget] = useState(request.authorId);
   const [targetReplyId, setTargetReplyId] = useState<string | undefined>();
@@ -133,6 +143,9 @@ export default function PrayerDetail({
     setTargetReplyId(undefined);
     setTargetPostId(undefined);
     setReplyReview("");
+    setEditing(null);
+    setSavingEdit(null);
+    setRemovingReply(null);
     setRecording("idle");
     setPreviewPlaying(false);
   }, [request.id, request.authorId, focusedPostId, request.moderation]);
@@ -155,7 +168,7 @@ export default function PrayerDetail({
   }, [parentReplyId, replyKind]);
   const memberName =
     viewer === "owner"
-      ? "Church owner"
+      ? "Grace Church account"
       : viewer === "member"
         ? "Samuel"
         : viewer === "maria"
@@ -167,10 +180,10 @@ export default function PrayerDetail({
               : "Elena";
   const personalByline =
     groupMember && organization
-      ? `${memberName} · Grace Church prayer community`
+      ? `${memberName} · ${organizationName} prayer community`
       : memberName;
   const canReplyOfficially =
-    organization && groupMember && (viewer === "owner" || officialAllowed);
+    organization && groupMember && officialAllowed;
 
   const postAnchor = (id: string) => `story-post-${encodeURIComponent(id)}`;
   const storyHref = `#request/${request.id}`;
@@ -234,6 +247,82 @@ export default function PrayerDetail({
     setTargetReplyId(undefined);
     setTargetPostId(postId);
     setSafety("options");
+  }
+
+  function beginEdit(target: TextEditTarget = {}) {
+    const item = target.replyId ? request.replies.find(row => row.id === target.replyId && row.testimonyId === target.postId)
+      : target.postId ? getStoryPosts(request).find(row => row.id === target.postId) : request;
+    if (!item) return;
+    setEditing({ ...target, expectedRevision: item.revision ?? 1 });
+    setEditText(item.pendingEdit?.text ?? item.text);
+    setEditTitle(item.pendingEdit?.title ?? request.topic);
+    setEditError("");
+    setSafety(null);
+    setShowPrayers(false);
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+    feedback.prepare();
+    const input = { text: editText, title: editTitle, expectedRevision: editing.expectedRevision };
+    const at = new Date().toISOString();
+    const result = editOwnStoryText(request, viewer, editing, input, at, postingRestricted);
+    if (["invalid", "denied", "conflict"].includes(result.state)) {
+      setEditError(result.message);
+      feedback.respond({ tone: "pending", title: "Your draft is still here.", message: result.message });
+      return;
+    }
+    if (result.request === request) {
+      setEditing(null);
+      feedback.respond({ tone: "success", title: "Your words are already up to date.", message: result.message });
+      return;
+    }
+    completedSave.current = null;
+    setSavingEdit({ target: editing, expectedRevision: input.expectedRevision, at,
+      state: result.state as "saved" | "pending", message: result.message });
+    // Re-evaluate inside the parent's functional update. Completion feedback waits
+    // for the actual committed result, so a racing revision never closes the draft.
+    onUpdate(current => editOwnStoryText(current, viewer, editing, input, at, postingRestricted).request);
+  }
+
+  useEffect(() => {
+    if (!savingEdit || completedSave.current === savingEdit.at) return;
+    const target = savingEdit.target;
+    const current = target.replyId ? request.replies.find(row => row.id === target.replyId && row.testimonyId === target.postId)
+      : target.postId ? getStoryPosts(request).find(row => row.id === target.postId) : request;
+    const owns = target.replyId ? (current as Reply | undefined)?.actorId === viewer : request.authorId === viewer;
+    if (!current || ("deletedAt" in current && current.deletedAt) || !owns || postingRestricted || (current.revision ?? 1) !== savingEdit.expectedRevision
+      && current.editedAt !== savingEdit.at) {
+      completedSave.current = savingEdit.at;
+      setSavingEdit(null);
+      setEditError("This post changed while saving. Your draft is still here; reopen the latest post before applying it.");
+      return;
+    }
+    if (current.editedAt !== savingEdit.at && current.pendingEdit?.submittedAt !== savingEdit.at) return;
+    completedSave.current = savingEdit.at;
+    setSavingEdit(null);
+    setEditing(null);
+    onNotice(savingEdit.state === "saved" ? "Your edit has been saved." : "Your edit is awaiting review.");
+    feedback.respond({ tone: savingEdit.state === "saved" ? "success" : "pending",
+      title: savingEdit.state === "saved" ? "Your words have been updated." : "Your edit needs a little review.", message: savingEdit.message });
+  }, [request, savingEdit, viewer, postingRestricted, feedback, onNotice]);
+
+  function renderEditStatus(item: { editedAt?: string; pendingEdit?: { submittedAt: string; reason: string } }, own: boolean, target: TextEditTarget = {}) {
+    return <>
+      {item.editedAt && <p className="story-edited-date">Edited <time dateTime={item.editedAt}>{formatStoryDate(item.editedAt)}</time></p>}
+      {own && item.pendingEdit && <div className="notice butter story-edit-pending" role="status">
+        <Icon name="shield" size={19} /><div><strong>Edit awaiting review</strong>
+        <p>{item.pendingEdit.reason} Your earlier version is shown above.</p>
+        <small>Submitted <time dateTime={item.pendingEdit.submittedAt}>{formatStoryDate(item.pendingEdit.submittedAt)}</time></small>
+        <div className="inline-actions"><button className="text-link" disabled={postingRestricted} onClick={() => beginEdit(target)}>Review or revise your edit</button>
+        <button className="text-link" onClick={() => {
+          feedback.prepare();
+          const submittedAt = item.pendingEdit!.submittedAt;
+          onUpdate(current => cancelOwnPendingEdit(current, viewer, target, submittedAt));
+          feedback.respond({ tone: "success", title: "Your proposed edit was withdrawn.", message: "The earlier words and their original dates remain unchanged." });
+        }}>Withdraw this edit</button></div></div>
+      </div>}
+    </>;
   }
 
   function renderCardHeading(date: string, postId?: string) {
@@ -320,7 +409,7 @@ export default function PrayerDetail({
               )}
             </span>
           )}
-          {!row.automatic && row.actorId && row.actorId !== viewer && (
+          {!row.automatic && !row.deletedAt && row.actorId && row.actorId !== viewer && (
             <button
               className="icon-button"
               aria-label={`Report or block reply from ${row.name}`}
@@ -335,14 +424,19 @@ export default function PrayerDetail({
             </button>
           )}
         </div>
-        <p>{row.text}</p>
+        <p>{row.deletedAt ? "This encouragement was removed by its author." : row.text}</p>
+        {renderEditStatus(row, row.actorId === viewer, { postId: row.testimonyId, replyId: row.id })}
         {row.automatic ? (
           <small>
             An automatic welcome. This does not mean someone has read, prayed,
             or taken this request.
           </small>
-        ) : viewer !== "guest" ? (
+        ) : viewer !== "guest" && !row.deletedAt ? (
           <div className="story-reply-actions">
+            {row.actorId === viewer && <>
+              <button className="text-link" disabled={postingRestricted} onClick={() => beginEdit({ postId: row.testimonyId, replyId: row.id })}>Edit encouragement</button>
+              <button className="text-link story-delete" onClick={() => { setShowPrayers(false); setRemovingReply({ postId: row.testimonyId, replyId: row.id }); }}>Delete encouragement</button>
+            </>}
             <button
               className="text-link"
               aria-pressed={row.agreedBy?.includes(viewer) ?? false}
@@ -437,7 +531,7 @@ export default function PrayerDetail({
           storyRevision: storyRevision(row),
           name:
             replyAs === "official" && canReplyOfficially
-              ? "Grace Church"
+              ? organizationName
               : personalByline,
           official: replyAs === "official" && canReplyOfficially,
           text: reply,
@@ -546,6 +640,7 @@ export default function PrayerDetail({
                 : ""}
             </div>
             <p className="prayer-text">{request.text}</p>
+            {renderEditStatus(request, author)}
             {held && (
               <div className="notice butter">
                 <Icon name="shield" />
@@ -648,12 +743,13 @@ export default function PrayerDetail({
                 <Icon name="people" size={18} /> Read prayers &amp; encouragement
               </button>
             )}
-            {author && onDelete && (
+            {author && (
               <div className="story-author-actions">
-                <button className="text-link story-delete" onClick={onDelete}>
+                <button className="button secondary compact" disabled={postingRestricted} onClick={() => beginEdit()}>Edit request</button>
+                {onDelete && <button className="text-link story-delete" onClick={onDelete}>
                   <Icon name="close" size={15} />
                   Delete request
-                </button>
+                </button>}
                 <span>
                   Choose the delivery scope before anything is removed.
                 </span>
@@ -680,7 +776,9 @@ export default function PrayerDetail({
                   </span>
                   <h2 id={`${postAnchor(post.id)}-title`}>{request.topic}</h2>
                   <p className="prayer-text">{post.text}</p>
+                  {renderEditStatus(post, author, { postId: post.id })}
                   <div className="story-post-footer">
+                    {author && <button className="button secondary compact" disabled={postingRestricted} onClick={() => beginEdit({ postId: post.id })}>Edit {post.kind}</button>}
                     <a
                       className="text-link"
                       href={storyHref}
@@ -787,7 +885,7 @@ export default function PrayerDetail({
                         <option value="personal">{personalByline}</option>
                         {canReplyOfficially && (
                           <option value="official">
-                            Grace Church · authorized organization identity
+                            {organizationName} · authorized organization identity
                           </option>
                         )}
                       </select>
@@ -1011,7 +1109,7 @@ export default function PrayerDetail({
             </h2>
             <p>
               {organization
-                ? "All active approved Grace Church members can read this organization delivery. Assignment does not narrow that audience."
+                ? `All active approved ${organizationName} members can read this organization delivery. Assignment does not narrow that audience.`
                 : request.recipient === "prayerbox"
                   ? "This delivery goes to the Prayer Box team. It stays separate from any copies you send to individuals or your church."
                   : `This request belongs to ${request.recipient === "mine" ? "Elena" : request.recipient === "daniel" ? "Daniel" : request.recipient === "jordan" ? "Jordan" : "Maria"}’s personal box. A church association does not give anyone access to it.`}
@@ -1100,6 +1198,26 @@ export default function PrayerDetail({
           </div>
         </Modal>
       )}
+      {editing && <Modal title={editing.replyId ? "Edit your encouragement" : editing.postId ? "Edit this story post" : "Edit your prayer request"} onClose={() => setEditing(null)}>
+        <form className="story-edit-form" onSubmit={event => { event.preventDefault(); if (!savingEdit) saveEdit(); }}>
+          <p className="story-safety-context"><Icon name="lock" size={17} /> Changes apply only to this prayer box. The audience, anonymity, and original posting date stay the same.</p>
+          {!editing.postId && !editing.replyId && <label className="field">Title<input value={editTitle} maxLength={160} required onChange={event => setEditTitle(event.target.value)} /></label>}
+          <label className="field">Your words<textarea value={editText} rows={7} maxLength={4000} required onChange={event => setEditText(event.target.value)} /></label>
+          <small>{editText.length.toLocaleString()} / 4,000 characters · Changes are screened again before being shown.</small>
+          {editError && <p className="notice butter" role="alert">{editError}</p>}
+          <div className="story-feed-actions"><button type="button" className="text-link" onClick={() => setEditing(null)}>Cancel</button><button className="button" type="submit" disabled={Boolean(savingEdit)}><Icon name="check" size={18} /> {savingEdit ? "Saving…" : "Save changes"}</button></div>
+        </form>
+      </Modal>}
+      {removingReply && <Modal title="Delete your encouragement?" onClose={() => setRemovingReply(null)}>
+        <p>Your words will be removed from this part of the story. Replies other people left will stay, beside a note that your encouragement was removed.</p>
+        <div className="story-feed-actions"><button className="text-link" onClick={() => setRemovingReply(null)}>Keep it</button><button className="button secondary" onClick={() => {
+          feedback.prepare();
+          onUpdate(current => removeOwnEncouragement(current, viewer, removingReply, new Date().toISOString()));
+          setRemovingReply(null);
+          setShowPrayers(true);
+          feedback.respond({ tone: "success", title: "Your encouragement was removed.", message: "Other people’s words remain in this conversation." });
+        }}>Delete encouragement</button></div>
+      </Modal>}
       {safety && (
         <Modal
           key={safety}
@@ -1123,6 +1241,7 @@ export default function PrayerDetail({
             <>
               <p>This is your {targetPostId ? "update or testimony" : "original prayer request"}. You can manage the request and its deliveries.</p>
               <div className="care-action-choices">
+                <button className="button secondary" disabled={postingRestricted} onClick={() => beginEdit({ postId: targetPostId })}>Edit this {targetPostId ? "story post" : "request"}</button>
                 <button className="button secondary" onClick={() => { setSafety(null); onReuse(); }}>
                   Add to another prayer box
                 </button>

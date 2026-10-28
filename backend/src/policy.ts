@@ -63,6 +63,7 @@ export type PostRow = {
   revision: number;
   status: string;
   created_at: number;
+  edited_at?: number | null;
   deleted_at: number | null;
 };
 
@@ -78,6 +79,7 @@ export type ReplyRow = {
   status: string;
   created_at: number;
   deleted_at: number | null;
+  edited_at?: number | null;
   actor_username: string;
   actor_display_name: string;
   actor_status: string;

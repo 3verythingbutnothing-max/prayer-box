@@ -24,12 +24,18 @@ The backend build retains the current soft blue/pastel surfaces, logo, typograph
 | Area | Implemented in this increment | Still required before real use |
 | --- | --- | --- |
 | Identity | Hashed session lookup, expiry/revocation/account-epoch checks, origin and CSRF checks, logout | Maintained sign-in provider, enrollment, recovery, MFA and proof of recovery semantics |
-| Privacy | D1 delivery/post/reply boundaries; current approval and block checks; anonymous DTO allowlists; protected GET routes | Authorized creation/update/delete and membership commands, consent/version records, audit trail, complete API/UI migration |
+| Privacy | D1 delivery/post/reply boundaries; current approval and block checks; anonymous DTO allowlists; protected GET routes | Complete request/reply writes, edit approval, consent records and API/UI migration; group lifecycle commands and held edit proposals are now implemented locally |
 | Bot protection | Server Siteverify; exact hostname/action; timeout/failure denial; bounded JSON; per-account rate counters | Real widget/domain/secret, edge abuse controls, accessible staffed recovery/help process and provider outage drill |
 | Feedback | Authenticated, idempotent database submission; durable triage jobs; owner-only reads | Staff interface, assignment/resolution and operational response policy |
 | Media | PNG/JPEG/WebP screenshot admission, private quarantine, bounded upload, manual hold, authorized derivative gateway | Safe decoding/normalization, metadata stripping, malware/content screening, derivative provenance, staffed appeals; audio/video remain disabled |
 | Jobs and notices | Transactional outbox, IDs-only transport, lease/duplicate/retry protection, failure cases, private in-app notices | Production queues/alerts, operator dashboard, retention/reconciliation jobs, full prayer/care jobs |
 | Operations | Local configuration, migrations, runtime tests and GitHub check workflow | Separate staging/production resources, restore drill, secret lifecycle, monitoring, incident procedures and launch approval |
+
+## Request edits and group lifecycle increment
+
+See [the launch readiness brief](LAUNCH_READINESS_BRIEF.md) for the current controls, provider recommendations and remaining gates. New append-only migrations add immutable author edit proposals and versioned group lifecycle/audit records. The prototype now supports per-post editing and timestamps, group creation/details, invitations, approvals, delegated admins and explicit or oldest-active-member succession. These prototype controls remain separate from the API build.
+
+`POST /api/deliveries/:deliveryId/posts/:postId/edits` stores an author-only pending proposal after current-session, exact-delivery and revision checks; approved text remains unchanged. `GET` on the same path returns only that author's proposals. Group APIs use guarded revision writes and recent MFA for administrative mutations. New groups are unverified and do not open private prayer intake. No scanner or reviewer can publish an edit yet. Reply edit/delete remain prototype controls. This is deliberately not a production completion claim.
 
 ## Identity and recovery contract
 

@@ -25,6 +25,7 @@ type Props = {
   friends?: readonly string[];
   mariaVisible?: boolean;
   blockedActors?: readonly string[];
+  organizationOwnerId?: string;
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
   onClose: () => void;
@@ -71,6 +72,7 @@ export default function PrayerComposer({
   friends = [],
   mariaVisible = true,
   blockedActors = [],
+  organizationOwnerId = "owner",
   boxCeilings,
   initial,
   onClose,
@@ -79,6 +81,7 @@ export default function PrayerComposer({
   onSignIn,
 }: Props) {
   const feedback = useActionFeedback();
+  const isOwnDestination = (actor: string, box: BoxId) => isOwnPrayerBox(actor, box, organizationOwnerId);
   const [selected, setSelected] = useState<BoxId[]>([initialRecipient]);
   const recipient = selected[0] ?? initialRecipient;
   const [step, setStep] = useState<
@@ -111,7 +114,7 @@ export default function PrayerComposer({
     const signedInNow =
       previousViewer.current === "guest" && viewer !== "guest";
     previousViewer.current = viewer;
-    if (signedInNow && isOwnPrayerBox(viewer, recipient))
+    if (signedInNow && isOwnDestination(viewer, recipient))
       ownDestinationHeading.current?.focus();
   }, [viewer, recipient]);
   useEffect(() => {
@@ -123,7 +126,7 @@ export default function PrayerComposer({
     if (step === "write") draftField.current?.focus();
     else stepHeading.current?.focus();
   }, [step]);
-  const destinations = selected.filter(target => !isOwnPrayerBox(viewer, target) && !blockedActors.includes(target === "mine" ? "elena" : target === "prayerbox" ? "team" : target === "grace" ? "owner" : target));
+  const destinations = selected.filter(target => !isOwnDestination(viewer, target) && !blockedActors.includes(recipientActor(target, organizationOwnerId)));
   const church = destinations.includes("grace");
   const signedIn = viewer !== "guest";
 
@@ -135,7 +138,7 @@ export default function PrayerComposer({
     if (
       !signedIn ||
       !targets.length ||
-      targets.some((target) => isOwnPrayerBox(viewer, target) || blockedActors.includes(recipientActor(target)))
+      targets.some((target) => isOwnDestination(viewer, target) || blockedActors.includes(recipientActor(target, organizationOwnerId)))
     ) {
       feedback.prepare();
       feedback.respond({
@@ -366,7 +369,7 @@ export default function PrayerComposer({
         </p>
       )}
       {(step === "write" || step === "preview") &&
-        isOwnPrayerBox(viewer, recipient) && (
+        isOwnDestination(viewer, recipient) && (
           <div className="notice butter">
             <Icon name="box" />
             <div>
@@ -383,7 +386,7 @@ export default function PrayerComposer({
               </p>
               <div className="modal-actions">
                 {(["prayerbox", "maria", "grace", "daniel", "jordan"] as const)
-                  .filter((target) => !isOwnPrayerBox(viewer, target) && !blockedActors.includes(recipientActor(target)))
+                  .filter((target) => !isOwnDestination(viewer, target) && !blockedActors.includes(recipientActor(target, organizationOwnerId)))
                   .map((target) => (
                     <button
                       className="button secondary compact"
@@ -518,8 +521,8 @@ export default function PrayerComposer({
               </p>
             </div>
           )}
-          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} />
-          {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnPrayerBox(viewer, "grace") && (
+          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} />
+          {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnDestination(viewer, "grace") && (
             <p className="quiet-copy">Maria publicly displays her Grace Church association. Search @gracechurch if you would like to add a separate church delivery. Nothing is added automatically.</p>
           )}
           {destinations.map(target => (

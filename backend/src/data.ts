@@ -83,7 +83,7 @@ export async function loadPosts(database: Database, context: DeliveryContext,
   actor: Actor | null): Promise<PostRow[]> {
   if (!canReadDelivery(context, actor)) return [];
   const result = await database.prepare(`SELECT id, delivery_id, kind, title, body, revision,
-    status, created_at, deleted_at FROM posts WHERE delivery_id = ? AND status = 'approved'
+    status, created_at, edited_at, deleted_at FROM posts WHERE delivery_id = ? AND status = 'approved'
     AND deleted_at IS NULL ORDER BY created_at, id LIMIT 100`).bind(context.id).all<PostRow>();
   return result.results.filter(post => canReadPost(context, post, actor));
 }

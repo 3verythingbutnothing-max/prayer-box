@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Viewer } from "../domain";
-import { OrganizationWebsiteEditor } from "./OrganizationWebsite";
 import { PreferenceSwitch } from "../ui";
 import OverflowingCup from "./OverflowingCup";
 import { FeedbackPreferences, useActionFeedback } from "../action-feedback";
@@ -33,6 +32,7 @@ const defaultAutomaticPreference: AutomaticPreference = {
 type AccountPagesProps = {
   page: AccountPage;
   onNavigate: (route: string) => void;
+  onManageBlocked: () => void;
   onNotice: (message: string) => void;
   onPrivacyChange?: (privacy: Privacy) => void;
   onRemindersChange?: (enabled: boolean) => void;
@@ -43,6 +43,9 @@ type AccountPagesProps = {
   ) => void;
   viewer?: Viewer;
   approvedMember?: boolean;
+  organizationMemberships?: { name: string; username: string; admin: boolean }[];
+  organizationName?: string;
+  groupAdmin?: boolean;
   privacyValue?: Privacy;
   remindersValue?: boolean;
   countryPreference?: { country: string; show: boolean };
@@ -52,8 +55,6 @@ type AccountPagesProps = {
   }) => void;
   associationVisibleValue?: boolean;
   onAssociationVisibleChange?: (show: boolean) => void;
-  organizationWebsite?: string;
-  onOrganizationWebsiteChange?: (website: string) => void;
 };
 
 const money = (amount: number) =>
@@ -517,20 +518,22 @@ function csvCell(value: string | number) {
 export default function AccountPages({
   page,
   onNavigate,
+  onManageBlocked,
   onNotice,
   onPrivacyChange,
   onRemindersChange,
   onAutomaticChange,
   viewer = "elena",
   approvedMember = false,
+  organizationMemberships = [],
+  organizationName = "Grace Church",
+  groupAdmin = false,
   privacyValue,
   remindersValue,
   countryPreference,
   onCountryPreferenceChange,
   associationVisibleValue,
   onAssociationVisibleChange,
-  organizationWebsite = "",
-  onOrganizationWebsiteChange,
 }: AccountPagesProps) {
   const feedback = useActionFeedback();
   const [fundingScenario, setFundingScenario] = useState("zero");
@@ -629,8 +632,6 @@ export default function AccountPages({
   const setAutomaticEnabled = (enabled: boolean) =>
     updateAutomaticPreference({ enabled });
   const [showRecovery, setShowRecovery] = useState(false);
-  const [showBlocked, setShowBlocked] = useState(false);
-  const [blocked, setBlocked] = useState(true);
   function reviewContribution(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     feedback.prepare();
@@ -671,10 +672,10 @@ export default function AccountPages({
   const emailAvailable = contact === "email" || contact === "both";
   const phoneAvailable = contact === "phone" || contact === "both";
   const ownedAutomaticBox: "personal" | "grace" =
-    viewer === "owner" ? "grace" : "personal";
+    groupAdmin ? "grace" : "personal";
   const template =
     automaticFixture === "thanks"
-      ? `Thank you for trusting ${ownedAutomaticBox === "personal" ? "me" : "Grace Church"} with your prayer request. Your request has reached ${ownedAutomaticBox === "personal" ? "my" : "our"} prayer box. May you find comfort and strength in Jesus. You’re welcome to return here to share an update.`
+      ? `Thank you for trusting ${ownedAutomaticBox === "personal" ? "me" : organizationName} with your prayer request. Your request has reached ${ownedAutomaticBox === "personal" ? "my" : "our"} prayer box. May you find comfort and strength in Jesus. You’re welcome to return here to share an update.`
       : "Thank you for sharing your prayer request. I make time to pray for those who leave a request in my box. You are welcome to return with an update, even while you are still waiting.";
   const filteredRecords = records.filter(
     (record) =>
@@ -1584,17 +1585,18 @@ export default function AccountPages({
               Make your box feel right for you. All changes here are temporary
               prototype preferences.
             </p>
+            <button className="button secondary" onClick={() => onNavigate('church')}>Your prayer groups and friends</button>
           </header>
           <div className="account-settings-layout">
             <div className="account-settings-main">
               <FeedbackPreferences />
-              {viewer === "owner" && onOrganizationWebsiteChange && (
-                <OrganizationWebsiteEditor
-                  key={organizationWebsite}
-                  value={organizationWebsite}
-                  onSave={onOrganizationWebsiteChange}
-                />
-              )}
+              {organizationMemberships.map(group => (
+                <section className="account-settings-section panel" key={group.username}>
+                  <h2>{group.name}</h2>
+                  <p>{group.admin ? 'Manage your group name, picture, website, and members together.' : 'View your group and manage your membership.'}</p>
+                  <button className="button secondary" onClick={() => onNavigate(`group/${group.username}`)}>{group.admin ? 'Manage prayer group' : 'View prayer group'}</button>
+                </section>
+              ))}
               <section className="account-settings-section panel">
                 <div className="account-section-top">
                   <h2>Your profile & privacy</h2>
@@ -1688,13 +1690,13 @@ export default function AccountPages({
                   {approvedMember ? (
                     <>
                       <div className="account-association">
-                        <span className="account-association-mark">G</span>
+                        <span className="account-association-mark">{organizationName.slice(0, 1)}</span>
                         <div>
-                          <strong>Grace Church</strong>
+                          <strong>{organizationName}</strong>
                           <span>
-                            Approved by Grace Church ·{" "}
-                            {viewer === "owner"
-                              ? "owner"
+                            Approved by {organizationName} ·{" "}
+                            {groupAdmin
+                              ? "admin"
                               : "member / prayer warrior"}{" "}
                             in this demo
                           </span>
@@ -1720,7 +1722,7 @@ export default function AccountPages({
                   ) : (
                     <>
                       <p>
-                        No active approved associations in this viewer fixture.
+                        You are not currently an approved member of {organizationName}.
                         A request to join, invitation or typed affiliation does
                         not create approved membership.
                       </p>
@@ -1735,8 +1737,8 @@ export default function AccountPages({
                   )}
                   <p className="account-small">
                     Church approval is not a platform guarantee of identity or
-                    safety. My Church remains your separate, private list of
-                    accepted friends.
+                    safety. My Church keeps your organizations and your private
+                    list of accepted friends separate.
                   </p>
                 </div>
               </details>
@@ -1940,8 +1942,8 @@ export default function AccountPages({
                   <label className="field">
                     Box you own
                     <select value={ownedAutomaticBox} disabled>
-                      {viewer === "owner" ? (
-                        <option value="grace">Grace Church · owner demo</option>
+                      {groupAdmin ? (
+                        <option value="grace">{organizationName} · admin</option>
                       ) : (
                         <option value="personal">My personal box</option>
                       )}
@@ -2039,7 +2041,7 @@ export default function AccountPages({
                         const deliveryModeled =
                           viewer === "elena" ||
                           viewer === "maria" ||
-                          viewer === "owner";
+                          groupAdmin;
                         feedback.respond({
                           tone: deliveryModeled ? "success" : "info",
                           title: deliveryModeled
@@ -2084,57 +2086,12 @@ export default function AccountPages({
                   </p>
                   <p>
                     In a church inbox, an ordinary member filters their own
-                    view. Only an authorized owner acts for the organization. A
+                    view. Only an authorized admin acts for the organization. A
                     personal block cannot secretly exclude an approved member
                     from a whole-church audience.
                   </p>
-                  <button
-                    className="button secondary"
-                    onClick={() => setShowBlocked((value) => !value)}
-                  >
-                    {showBlocked
-                      ? "Hide fictional block example"
-                      : "View fictional block example"}
-                  </button>
-                  {showBlocked ? (
-                    <div className="account-blocked-row">
-                      <div>
-                        <strong>
-                          {blocked
-                            ? "Example account blocked"
-                            : "Example block cleared"}
-                        </strong>
-                        <span>Fictional actor · personal box scope</span>
-                      </div>
-                      <button
-                        className="text-link"
-                        onClick={() => {
-                          feedback.prepare();
-                          setBlocked((value) => !value);
-                          onNotice(
-                            blocked
-                              ? "Example block cleared. Previously removed requests are not automatically restored."
-                              : "The fictional account is blocked in this example.",
-                          );
-                          feedback.respond({
-                            tone: "info",
-                            title: blocked
-                              ? "Your example block is cleared."
-                              : "Your example block is in place.",
-                            message:
-                              "This setting changes only the fictional walkthrough.",
-                          });
-                        }}
-                      >
-                        {blocked ? "Unblock example" : "Block example"}
-                      </button>
-                    </div>
-                  ) : null}
-                  <p className="account-small">
-                    This panel illustrates policy. Working server authorization,
-                    spam restrictions and private actor matching are not
-                    implemented.
-                  </p>
+                  <button className="button secondary" onClick={onManageBlocked}>Manage blocked accounts</button>
+                  <button className="button secondary" onClick={() => onNavigate("church")}>Your prayer groups and friends</button>
                   <button
                     className="text-link account-danger-link"
                     onClick={() => setDialog("delete")}

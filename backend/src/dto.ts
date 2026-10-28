@@ -19,7 +19,7 @@ export function toDeliveryDto(context: DeliveryContext, actor: Actor | null) {
 export function toPostDto(context: DeliveryContext, post: PostRow, actor: Actor | null) {
   if (!canReadPost(context, post, actor)) return null;
   return { id: post.id, deliveryId: post.delivery_id, kind: post.kind, title: post.title,
-    body: post.body, createdAt: post.created_at };
+    body: post.body, createdAt: post.created_at, editedAt: post.edited_at ?? null, revision: post.revision };
 }
 
 export function toReplyDto(context: DeliveryContext, post: PostRow, reply: ReplyRow, actor: Actor | null) {
@@ -30,5 +30,5 @@ export function toReplyDto(context: DeliveryContext, post: PostRow, reply: Reply
     : reply.identity_mode === 'organization' ? { label: context.box_name }
       : { label: reply.actor_display_name, username: reply.actor_username };
   return { id: reply.id, postId: reply.post_id, parentId: reply.parent_id,
-    body: reply.body, createdAt: reply.created_at, byline };
+    body: reply.body, createdAt: reply.created_at, editedAt: reply.edited_at ?? null, revision: reply.revision, byline };
 }

@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && vite build --base=/prayer-box/",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts src/qr.test.ts src/feedback-cues.test.ts src/widgets.test.ts src/donation-amount.test.ts src/story-replies.test.ts src/funding-window.test.ts src/recipients.test.ts",
+    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts src/qr.test.ts src/feedback-cues.test.ts src/widgets.test.ts src/donation-amount.test.ts src/story-replies.test.ts src/funding-window.test.ts src/recipients.test.ts src/request-edits.test.ts src/prayer-groups.test.ts",
     "test:stress": "node --experimental-strip-types scripts/stress-domain.ts && node --experimental-strip-types scripts/audit-invariants.ts",
     "backend:types": "wrangler types --config backend/wrangler.jsonc backend/worker-configuration.d.ts",
     "backend:check": "tsc --project backend/tsconfig.json --noEmit",
@@ -24,7 +24,8 @@
   "dependencies": {
     "qrcode": "1.5.4",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.9",
@@ -32,6 +33,7 @@
     "@types/qrcode": "1.5.6",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/three": "0.186.0",
     "jsqr": "1.4.0",
     "typescript": "7.0.2",
     "vite": "8.3.5",
