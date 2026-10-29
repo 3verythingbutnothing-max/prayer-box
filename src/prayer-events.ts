@@ -18,7 +18,7 @@ export type PrayerEvent = {
   version: number; cancelledAt?: number;
 };
 export type EventInput = Pick<PrayerEvent, 'title' | 'description' | 'format' | 'website' | 'meetingUrl' | 'address' | 'startsAt' | 'endsAt' | 'timeZone' | 'audience' | 'shareable'>;
-export type PrayerEventShare = { id: string; eventId: string; host: EventHost; sharedBy: string; createdAt: number; viaShareId?: string; revokedAt?: number };
+export type PrayerEventShare = { id: string; eventId: string; host: EventHost; sharedBy: string; createdAt: number; recipientId?: string; viaShareId?: string; revokedAt?: number };
 export type PrayerEventState = { events: PrayerEvent[]; shares: PrayerEventShare[]; dismissals: { eventId: string; viewerId: string; dismissedAt: number }[] };
 export type PrayerInvitation = { event: PrayerEvent; viaHost: EventHost; shareId?: string };
 export class PrayerEventError extends Error {}
@@ -153,17 +153,22 @@ function directAccess(event: PrayerEvent, viewerId: string, context: EventContex
   return hasConnection(event.host, viewerId, context);
 }
 function validShare(state: PrayerEventState, event: PrayerEvent, share: PrayerEventShare, context: EventContext, seen = new Set<string>()): boolean {
-  if (!event.shareable || event.audience === 'members' || share.eventId !== event.id || share.revokedAt != null || !validHost(share.host, context) || !canActAs(share.host, share.sharedBy, context) || sameHost(share.host, event.host) || seen.has(share.id)) return false;
+  if (event.audience === 'members' || share.eventId !== event.id || share.revokedAt != null || !validHost(share.host, context) || !canActAs(share.host, share.sharedBy, context) || seen.has(share.id)) return false;
+  if (share.recipientId && (!hasConnection(share.host, share.recipientId, context) || !hostAvailableTo(event.host, share.recipientId, context))) return false;
+  if (sameHost(share.host, event.host)) return Boolean(share.recipientId && canManageEvent(event, share.sharedBy, context));
+  if (!event.shareable) return false;
   const visited = new Set(seen); visited.add(share.id);
   if (!share.viaShareId) return directAccess(event, share.sharedBy, context);
   const parent = state.shares.find(row => row.id === share.viaShareId && row.eventId === event.id);
   if (!parent || sameHost(parent.host, share.host) || !hostAvailableTo(event.host, share.sharedBy, context)) return false;
-  return validShare(state, event, parent, context, visited) && hasConnection(parent.host, share.sharedBy, context);
+  return validShare(state, event, parent, context, visited) && (!parent.recipientId || parent.recipientId === share.sharedBy) && hasConnection(parent.host, share.sharedBy, context);
 }
 function eventAccess(state: PrayerEventState, event: PrayerEvent, viewerId: string, context: EventContext): PrayerInvitation | null {
   if (!hostAvailableTo(event.host, viewerId, context)) return null;
+  const personal = state.shares.find(row => row.eventId === event.id && row.recipientId === viewerId && validShare(state, event, row, context));
+  if (personal) return { event, viaHost: personal.host, shareId: personal.id };
   if (directAccess(event, viewerId, context)) return { event, viaHost: event.host };
-  const share = state.shares.find(row => row.eventId === event.id && validShare(state, event, row, context) && hasConnection(row.host, viewerId, context));
+  const share = state.shares.find(row => row.eventId === event.id && (!row.recipientId || row.recipientId === viewerId) && validShare(state, event, row, context) && hasConnection(row.host, viewerId, context));
   return share ? { event, viaHost: share.host, shareId: share.id } : null;
 }
 export function canViewEvent(state: PrayerEventState, eventId: string, viewerId: string, context: EventContext): boolean {
@@ -200,13 +205,30 @@ export function cancelPrayerEvent(state: PrayerEventState, eventId: string, acto
 export function sharePrayerEvent(state: PrayerEventState, eventId: string, actorId: string, host: EventHost, context: EventContext, now = Date.now(), id = crypto.randomUUID()): PrayerEventState {
   clock(now); const event = state.events.find(row => row.id === eventId); const access = event && eventAccess(state, event, actorId, context);
   if (!event || !access || event.cancelledAt != null || Date.parse(event.endsAt) <= now || !event.shareable || event.audience === 'members' || !canActAs(host, actorId, context) || sameHost(host, event.host)) throw new PrayerEventError('This event is not available to repost to that audience.');
-  if (state.shares.some(share => share.eventId === eventId && sameHost(share.host, host) && share.revokedAt == null)) return state;
+  if (state.shares.some(share => share.eventId === eventId && sameHost(share.host, host) && !share.recipientId && share.revokedAt == null)) return state;
   // No repeating a host anywhere in the source chain, even when records were imported.
   let parent = access.shareId ? state.shares.find(row => row.id === access.shareId) : undefined;
   const visited = new Set<string>();
   while (parent) { if (visited.has(parent.id) || sameHost(parent.host, host)) throw new PrayerEventError('This event is already part of that invitation chain.'); visited.add(parent.id); parent = parent.viaShareId ? state.shares.find(row => row.id === parent!.viaShareId) : undefined; }
   if (!id || state.shares.some(row => row.id === id)) throw new PrayerEventError('This repost already exists.');
   return { ...state, shares: [...state.shares, { id, eventId, host: { ...host }, sharedBy: actorId, createdAt: now, ...(access.shareId ? { viaShareId: access.shareId } : {}) }] };
+}
+/** A direct invitation reaches one accepted connection, retaining the original event and share chain. */
+export function invitePrayerEventToPerson(state: PrayerEventState, eventId: string, actorId: string, host: EventHost, recipientId: string, context: EventContext, now = Date.now(), id = crypto.randomUUID()): PrayerEventState {
+  clock(now);
+  const event = state.events.find(row => row.id === eventId);
+  const access = event && eventAccess(state, event, actorId, context);
+  if (!event || !access || event.cancelledAt != null || Date.parse(event.endsAt) <= now || event.audience === 'members' || !canActAs(host, actorId, context) || !hasConnection(host, recipientId, context) || !hostAvailableTo(event.host, recipientId, context) || recipientId === actorId || (!canManageEvent(event, actorId, context) && !event.shareable)) throw new PrayerEventError('Choose an accepted connection who can receive this invitation.');
+  let parent = access.shareId ? state.shares.find(row => row.id === access.shareId) : undefined;
+  const visited = new Set<string>();
+  while (parent) {
+    if (visited.has(parent.id) || sameHost(parent.host, host)) throw new PrayerEventError('This event is already part of that invitation chain.');
+    visited.add(parent.id);
+    parent = parent.viaShareId ? state.shares.find(row => row.id === parent!.viaShareId) : undefined;
+  }
+  if (state.shares.some(row => row.eventId === eventId && sameHost(row.host, host) && row.recipientId === recipientId && row.revokedAt == null)) return state;
+  if (!id || state.shares.some(row => row.id === id)) throw new PrayerEventError('This invitation already exists.');
+  return { ...state, shares: [...state.shares, { id, eventId, host: { ...host }, sharedBy: actorId, recipientId, createdAt: now, ...(access.shareId ? { viaShareId: access.shareId } : {}) }] };
 }
 export function dismissPrayerInvitation(state: PrayerEventState, eventId: string, viewerId: string, context: EventContext, now = Date.now()): PrayerEventState {
   clock(now); if (!canViewEvent(state, eventId, viewerId, context)) throw new PrayerEventError('This invitation is no longer available.');

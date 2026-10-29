@@ -5,7 +5,7 @@ import { useActionFeedback } from '../action-feedback';
 import { screenText } from '../domain';
 import {
   canManageEvent, canViewEvent, cancelPrayerEvent, createPrayerEvent, dismissPrayerInvitation,
-  eligibleEventHosts, invitationsForViewer,
+  eligibleEventHosts, invitationsForViewer, invitePrayerEventToPerson,
   sharePrayerEvent, revokePrayerEventShare, updatePrayerEvent, requestPrayerConnection, respondToPrayerConnection,
   disconnectPrayerConnection, visibleManagedConnections, visibleConnectionRequests,
 } from '../prayer-events';
@@ -23,6 +23,13 @@ export interface PrayerEventsProps {
 }
 export interface ConnectionsPanelProps {
   additionalRequests?: ReactNode;
+  directorySearch?: string;
+  onDirectorySearch?: (value: string) => void;
+  directoryFilter?: 'all' | 'groups' | 'people';
+  onDirectoryFilter?: (value: 'all' | 'groups' | 'people') => void;
+  view?: 'all' | 'directory' | 'groups' | 'people';
+  hiddenPersonIds?: readonly string[];
+  hiddenSearchIds?: readonly string[];
   viewer: string;
   connections: PrayerConnection[];
   context: EventContext;
@@ -109,11 +116,15 @@ export function PrayerEvents({ viewer, state, context, onChange, onNavigate, mod
   const [editor, setEditor] = useState<PrayerEvent | 'new' | null>(null);
   const [share, setShare] = useState<PrayerEvent | null>(null);
   const [shareHost, setShareHost] = useState('');
+  const [shareAudience, setShareAudience] = useState('connections');
+  const [shareRecipient, setShareRecipient] = useState('');
   const [cancel, setCancel] = useState<PrayerEvent | null>(null);
   const [error, setError] = useState('');
   const hosts = eligibleEventHosts(viewer, context);
   const invitations = invitationsForViewer(state, viewer, context);
   const sharedInvitations = state.shares.filter(item => item.revokedAt == null && hosts.some(host => hostKey(host) === hostKey(item.host)) && canViewEvent(state, item.eventId, viewer, context));
+  const selectedShareHost = hosts.find(host => hostKey(host) === shareHost);
+  const directRecipients = selectedShareHost ? visibleManagedConnections(context.connections, viewer, context).filter(item => hostKey(item.as) === hostKey(selectedShareHost) && item.other.kind === 'person' && item.other.id !== viewer).map(item => item.other) : [];
   const owned = state.events.filter(event => canManageEvent(event, viewer, context)).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const apply = (operation: () => PrayerEventState, message: string) => {
     feedback.prepare(); setError('');
@@ -133,9 +144,8 @@ export function PrayerEvents({ viewer, state, context, onChange, onNavigate, mod
   const eventCard = (event: PrayerEvent, via?: EventHost) => {
     const own = canManageEvent(event, viewer, context), cancelled = event.cancelledAt != null;
     const starts = new Date(event.startsAt), ends = new Date(event.endsAt), past = ends.getTime() < Date.now();
-    const shared = via && hostKey(via) !== hostKey(event.host);
     return <article className={`panel prayer-event-card${cancelled ? ' cancelled' : ''}`} key={event.id}>
-      <div className="prayer-event-heading"><div className="prayer-event-date" aria-hidden="true"><span>{starts.toLocaleDateString('en', { month: 'short' })}</span><strong>{starts.getDate()}</strong></div><div className="prayer-event-title"><p className="eyebrow">{cancelled ? 'Event cancelled' : past ? 'Past event' : event.format === 'virtual' ? 'Online prayer' : 'Prayer in person'}</p><h3>{event.title}</h3><p className="quiet-copy">Organized by {hostLabel(event.host, context)}</p>{shared && <p className="quiet-copy">Shared with you by {hostLabel(via, context)}</p>}</div></div>
+      <div className="prayer-event-heading"><div className="prayer-event-date" aria-hidden="true"><span>{starts.toLocaleDateString('en', { month: 'short' })}</span><strong>{starts.getDate()}</strong></div><div className="prayer-event-title"><p className="eyebrow">{cancelled ? 'Event cancelled' : past ? 'Past event' : event.format === 'virtual' ? 'Online prayer' : 'Prayer in person'}</p><h3>{event.title}</h3><p className="quiet-copy">Organized by {hostLabel(event.host, context)}</p>{via && <p className="event-invited-by">Invited by {hostLabel(via, context)}</p>}</div></div>
       <p className="prayer-event-description">{event.description}</p>
       <div className="prayer-event-details"><p><Icon name="sun" /><span><time dateTime={event.startsAt}>{starts.toLocaleDateString('en', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</time><br /><time dateTime={event.startsAt}>{starts.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}</time> – <time dateTime={event.endsAt}>{starts.toDateString() === ends.toDateString() ? '' : `${ends.toLocaleDateString('en', { month: 'short', day: 'numeric' })}, `}{ends.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</time></span></p>
         {!cancelled && (event.format === 'virtual' ? <p><Icon name="video" /><a className="text-link" href={event.meetingUrl} target="_blank" rel="noopener noreferrer nofollow">Open meeting or livestream<Icon name="arrow" size={17} /></a></p> : <p><Icon name="people" /><span className="prayer-event-address">{event.address}</span></p>)}
@@ -146,8 +156,8 @@ export function PrayerEvents({ viewer, state, context, onChange, onNavigate, mod
       {cancelled ? <p className="prayer-event-status">The organizer cancelled this event. If you saved it to a calendar, remove that copy there too.</p> : !past && <div className="prayer-event-actions prayer-event-calendar"><a className="button secondary" href={googleCalendarUrl(event)} target="_blank" rel="noopener noreferrer">Google Calendar<Icon name="arrow" size={17} /></a><button className="button secondary" onClick={() => downloadCalendar(event)}>Apple / other calendar<Icon name="download" size={17} /></button></div>}
       {!cancelled && !past && <p className="quiet-copy prayer-event-calendar-help">Adding to a calendar copies these details outside Prayer Box. Saved calendar copies do not update automatically.</p>}
       <div className="prayer-event-actions prayer-event-footer">
-        {own ? !cancelled && <><button className="text-link" onClick={() => { setError(''); setEditor(event); }}>Edit event<Icon name="edit" size={17} /></button><button className="text-link prayer-event-caution" onClick={() => { setError(''); setCancel(event); }}>Cancel event</button></> : <>
-          {!cancelled && !past && event.shareable && event.audience !== 'members' && hosts.length > 0 && <button className="text-link" onClick={() => { setError(''); setShare(event); setShareHost(hostKey(hosts[0])); }}>Share invitation<Icon name="arrow" size={17} /></button>}
+        {own ? !cancelled && <><button className="text-link" onClick={() => { setError(''); setEditor(event); }}>Edit event<Icon name="edit" size={17} /></button>{event.audience !== 'members' && !past && <button className="text-link" onClick={() => { setError(''); setShare(event); setShareHost(hostKey(event.host)); setShareAudience('person'); setShareRecipient(''); }}>Invite a person</button>}<button className="text-link prayer-event-caution" onClick={() => { setError(''); setCancel(event); }}>Cancel event</button></> : <>
+          {!cancelled && !past && event.shareable && event.audience !== 'members' && hosts.length > 0 && <button className="text-link" onClick={() => { setError(''); setShare(event); setShareHost(hostKey(hosts[0])); setShareAudience(hostKey(hosts[0])); setShareRecipient(''); }}>Share invitation<Icon name="arrow" size={17} /></button>}
           <button className="text-link" onClick={() => apply(() => dismissPrayerInvitation(state, event.id, viewer, context), 'Invitation dismissed.')}>Dismiss invitation<Icon name="close" size={17} /></button>
         </>}
       </div>
@@ -160,7 +170,7 @@ export function PrayerEvents({ viewer, state, context, onChange, onNavigate, mod
     {hosts.length > 0 && <><section className="prayer-event-section" aria-labelledby="incoming-events-title"><div className="prayer-event-section-heading"><h2 id="incoming-events-title">Invitations for you</h2>{onNavigate && <button className="text-link" onClick={() => onNavigate('church')}>Manage connections<Icon name="people" size={18} /></button>}</div>{invitations.length ? <div className="prayer-event-grid">{invitations.map(invitation => eventCard(invitation.event, invitation.viaHost))}</div> : <div className="prayer-event-empty"><Icon name="mail" size={32} /><p>No invitations waiting right now. Accepted connections and approved groups can invite you to pray.</p></div>}</section>
       {sharedInvitations.length > 0 && <section className="prayer-event-section" aria-labelledby="shared-events-title"><h2 id="shared-events-title">Invitations you shared</h2>{sharedInvitations.map(item => {
         const event = state.events.find(value => value.id === item.eventId); if (!event) return null;
-        return <article className="prayer-connection-row" key={item.id}><div><h3>{event.title}</h3><p className="quiet-copy">Shared with {hostLabel(item.host, context)}’s connections · originally from {hostLabel(event.host, context)}</p></div><button className="text-link prayer-event-caution" onClick={() => apply(() => revokePrayerEventShare(state, item.id, viewer, context), 'Your shared invitation was removed.')}>Remove shared invitation</button></article>;
+        return <article className="prayer-connection-row" key={item.id}><div><h3>{event.title}</h3><p className="quiet-copy">{item.recipientId ? `Invited ${hostLabel({kind:'person',id:item.recipientId}, context)}` : `Shared with ${hostLabel(item.host, context)}’s connections`} · originally from {hostLabel(event.host, context)}</p></div><button className="text-link prayer-event-caution" onClick={() => apply(() => revokePrayerEventShare(state, item.id, viewer, context), 'Your shared invitation was removed.')}>Remove shared invitation</button></article>;
       })}</section>}
       <section className="prayer-event-section" aria-labelledby="your-events-title"><h2 id="your-events-title">Events you organize</h2>{owned.length ? <div className="prayer-event-grid">{owned.map(event => eventCard(event))}</div> : <p className="quiet-copy">When you create an event, you can edit its details or cancel it here.</p>}</section>
     </>}
@@ -169,15 +179,32 @@ export function PrayerEvents({ viewer, state, context, onChange, onNavigate, mod
       const next = editor === 'new' ? createPrayerEvent(state, viewer, host, input, context) : updatePrayerEvent(state, editor.id, viewer, input, editor.version, context);
       onChange(next); setEditor(null); feedback.respond({ tone: 'success', title: editor === 'new' ? 'Your prayer invitation has been shared.' : 'Your event details have been updated.' });
     }} />}
-    {share && <Modal title="Share this prayer invitation" onClose={() => setShare(null)}><div className="prayer-event-form"><p><strong>{share.title}</strong> stays linked to its organizer, {hostLabel(share.host, context)}. Their edits and cancellation remain attached wherever it is shared.</p><label>Share with<select value={shareHost} onChange={change => setShareHost(change.target.value)}>{hosts.map(host => <option key={hostKey(host)} value={hostKey(host)}>{host.kind === 'person' ? 'My connections' : `${hostLabel(host, context)}’s connections`}</option>)}</select></label><p className="quiet-copy">People who can already see this event receive one invitation, even if it reaches them through more than one connection.</p>{error && <p className="prayer-event-error" role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setShare(null)}>Cancel</button><button className="button primary" onClick={() => { const host = hosts.find(value => hostKey(value) === shareHost); if (host && apply(() => sharePrayerEvent(state, share.id, viewer, host, context), 'Invitation shared with your selected connections.')) setShare(null); }}>Share invitation<Icon name="check" /></button></div></div></Modal>}
+    {share && <Modal title="Share this prayer invitation" onClose={() => setShare(null)}><div className="prayer-event-form">
+      <label>Share with<select value={shareAudience} onChange={change => { setShareAudience(change.target.value); setShareRecipient(''); setError(''); }}>
+        <option value="person">A specific person</option>
+        {hosts.filter(host => hostKey(host) !== hostKey(share.host)).map(host => <option key={hostKey(host)} value={hostKey(host)}>{host.kind === 'person' ? 'My connections' : `${hostLabel(host, context)}’s connections`}</option>)}
+        {shareAudience === 'connections' && <option value="connections" disabled>Choose an audience</option>}
+      </select></label>
+      {shareAudience === 'person' && <>
+        {hosts.length > 1 && <label>Send as<select value={shareHost} onChange={event => {setShareHost(event.target.value);setShareRecipient('');}}>{hosts.map(host => <option key={hostKey(host)} value={hostKey(host)}>{hostLabel(host,context)}</option>)}</select></label>}
+        <label>Person<select value={shareRecipient} onChange={event => setShareRecipient(event.target.value)}><option value="">Choose an accepted connection</option>{directRecipients.map(person => <option key={person.id} value={person.id}>{hostLabel(person,context)} · @{hostUsername(person,context)}</option>)}</select></label>
+        {!directRecipients.length && <p className="quiet-copy">No accepted connections are available for this profile yet.</p>}
+      </>}
+      {error && <p className="prayer-event-error" role="alert">{error}</p>}
+      <div className="prayer-event-actions"><button className="button secondary" onClick={() => setShare(null)}>Cancel</button><button className="button primary" disabled={shareAudience === 'person' ? !shareRecipient : shareAudience === 'connections'} onClick={() => {
+        if (shareAudience === 'person' && selectedShareHost) {
+          if (apply(() => invitePrayerEventToPerson(state,share.id,viewer,selectedShareHost,shareRecipient,context),'Invitation sent to your selected person.')) setShare(null);
+        } else { const host = hosts.find(value => hostKey(value) === shareAudience); if (host && apply(() => sharePrayerEvent(state, share.id, viewer, host, context), 'Invitation shared with your selected connections.')) setShare(null); }
+      }}>Share invitation</button></div>
+    </div></Modal>}
     {cancel && <Modal title={`Cancel ${cancel.title}?`} onClose={() => setCancel(null)}><div className="prayer-event-form"><p>People who can still access the event will see that it was cancelled, including on shared invitations. Copies already saved in a calendar must be removed there separately.</p>{error && <p className="prayer-event-error" role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setCancel(null)}>Keep event</button><button className="button primary" onClick={() => { if (apply(() => cancelPrayerEvent(state, cancel.id, viewer, cancel.version, context), 'Your prayer event has been cancelled.')) setCancel(null); }}>Cancel event<Icon name="check" /></button></div></div></Modal>}
     {mode === 'events' && <span className="sr-only">Your invitations and organized events are shown together.</span>}
   </section>;
 }
 
-export function ConnectionsPanel({ viewer, connections, context, onChange, onNavigate, additionalRequests }: ConnectionsPanelProps) {
+export function ConnectionsPanel({ viewer, connections, context, onChange, onNavigate, additionalRequests, directorySearch, onDirectorySearch, directoryFilter = 'all', onDirectoryFilter, view = 'all', hiddenPersonIds = [], hiddenSearchIds = [] }: ConnectionsPanelProps) {
   const feedback = useActionFeedback();
-  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
   const [fromHost, setFromHost] = useState(`person:${viewer}`);
   const [disconnect, setDisconnect] = useState<PrayerConnection | null>(null);
   const [connectTarget, setConnectTarget] = useState<EventHost | null>(null);
@@ -185,36 +212,44 @@ export function ConnectionsPanel({ viewer, connections, context, onChange, onNav
   const hosts = eligibleEventHosts(viewer, context);
   const active = visibleManagedConnections(connections, viewer, context);
   const pending = visibleConnectionRequests(connections, viewer, context);
+  const requestRows = pending.filter(row => directoryFilter === 'all' || directoryFilter === 'groups' && row.other.kind === 'group' || directoryFilter === 'people' && row.other.kind === 'person');
+  const extraRequests = directoryFilter === 'groups' ? null : additionalRequests;
   const sourceHost = hosts.find(host => hostKey(host) === fromHost) ?? hosts[0];
+  const query = directorySearch ?? search;
   const needle = query.trim().replace(/^@/, '').toLowerCase();
+  const matches = (host: EventHost) => `${hostLabel(host, context)} ${hostUsername(host, context)}`.toLowerCase().includes(needle);
   const targets: EventHost[] = needle ? [
-    ...context.people.filter(person => person.active && person.id !== viewer && person.username.toLowerCase() === needle).map(person => ({ kind: 'person' as const, id: person.id })),
-    ...context.groups.filter(group => !group.archivedAt && group.username.toLowerCase() === needle).map(group => ({ kind: 'group' as const, id: group.id })),
-  ].filter(target => !hosts.some(host => hostKey(host) === hostKey(target)) && !(sourceHost?.kind === 'group' && target.kind === 'group') && !context.blocks?.some(pair => target.kind === 'person' && (pair.blockerId === viewer && pair.blockedId === target.id || pair.blockerId === target.id && pair.blockedId === viewer))) : [];
+    ...context.people.filter(person => person.active && person.id !== viewer && !hiddenSearchIds.includes(person.id)).map(person => ({ kind: 'person' as const, id: person.id })),
+    ...(view === 'all' ? context.groups.filter(group => !group.archivedAt).map(group => ({ kind: 'group' as const, id: group.id })) : []),
+  ].filter(target => matches(target) && !(view === 'directory' && sourceHost?.kind === 'person' && target.kind === 'person' && hiddenPersonIds.includes(target.id)) && directoryFilter !== 'groups' && !hosts.some(host => hostKey(host) === hostKey(target)) && !(sourceHost?.kind === 'group' && target.kind === 'group') && !context.blocks?.some(pair => target.kind === 'person' && (pair.blockerId === viewer && pair.blockedId === target.id || pair.blockerId === target.id && pair.blockedId === viewer))) : [];
+  const listed = active.filter(item => matches(item.other) && (view === 'all' || (view === 'groups' ? item.other.kind === 'group' || item.other.id === 'team' : item.other.kind === 'person' && item.other.id !== 'team' && !hiddenPersonIds.includes(item.other.id)))).sort((a,b) => Number(a.other.id === 'team') - Number(b.other.id === 'team'));
   const act = (operation: () => PrayerConnection[], title: string) => {
     feedback.prepare(); setError('');
     try { onChange(operation()); feedback.respond({ tone: 'success', title }); return true; }
     catch (failure) { const message = failure instanceof Error ? failure.message : 'This connection could not be changed.'; setError(message); feedback.respond({ tone: 'error', title: message }); return false; }
   };
   const routeFor = (host: EventHost) => host.kind === 'group' ? `group/${hostUsername(host, context)}` : `box/${host.id === 'elena' ? 'mine' : host.id === 'team' ? 'prayerbox' : host.id}`;
-  return <section className="prayer-connections" aria-labelledby="prayer-connections-title"><div className="prayer-event-section-heading"><div><p className="eyebrow">Your connections</p><h2 id="prayer-connections-title">Stay connected for prayer.</h2></div>{onNavigate && <button className="text-link" onClick={() => onNavigate('invitations')}>Prayer invitations<Icon name="mail" /></button>}</div><p>Both sides choose to connect. Connections let you share prayer event invitations; they do not grant access to private prayers, friendships, or group membership.</p>
-    {hosts.length > 0 ? <>
-      {error && !connectTarget && !disconnect && <p className="prayer-event-error" role="alert">{error}</p>}
-      <section className="prayer-connection-requests" aria-labelledby="connection-requests-title"><h3 id="connection-requests-title">New connection requests</h3>{additionalRequests}{pending.length ? pending.map(request => <article className="prayer-connection-row" key={request.connection.id}><div><h4>{hostLabel(request.other, context)}</h4><p>{request.direction === 'incoming' ? 'Wants to connect with' : 'Invitation sent from'} {hostLabel(request.as, context)}.</p><p className="quiet-copy">@{hostUsername(request.other, context)}</p></div><div className="prayer-event-actions">{request.direction === 'incoming' ? <><button className="button primary" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'accept', context), 'Connection accepted. You can share prayer invitations.')}>Accept<Icon name="check" /></button><button className="text-link" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'decline', context), 'Connection request declined.')}>Decline</button></> : <button className="text-link" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'withdraw', context), 'Connection request withdrawn.')}>Withdraw request</button>}</div></article>) : !additionalRequests && <p className="quiet-copy">No connection requests waiting right now.</p>}</section>
-      <div className="prayer-connection-search"><label>Find a person or group by @username<div className="prayer-connection-input"><Icon name="search" /><input type="search" value={query} onChange={change => setQuery(change.target.value)} placeholder="@username" autoComplete="off" maxLength={40} /></div></label>{hosts.length > 1 && <label>Connect as<select value={sourceHost ? hostKey(sourceHost) : ''} onChange={change => setFromHost(change.target.value)}>{hosts.map(host => <option key={hostKey(host)} value={hostKey(host)}>{hostLabel(host, context)}</option>)}</select></label>}</div>
-      {targets.map(target => {
-        const already = active.some(item => sourceHost && hostKey(item.as) === hostKey(sourceHost) && hostKey(item.other) === hostKey(target));
-        const waiting = pending.some(request => sourceHost && hostKey(request.as) === hostKey(sourceHost) && hostKey(request.other) === hostKey(target));
-        return <article className="prayer-connection-row" key={hostKey(target)}><div className="prayer-connection-identity"><span className="prayer-connection-icon"><Icon name={target.kind === 'group' ? 'people' : 'heart'} /></span><div><h3>{hostLabel(target, context)}</h3><p>@{hostUsername(target, context)}</p></div></div>{already ? <span className="prayer-connection-status">Connected</span> : waiting ? <span className="prayer-connection-status">Request pending</span> : <button className="button secondary" onClick={() => { setError(''); setConnectTarget(target); }}>Request connection<Icon name="plus" /></button>}</article>;
-      })}
-      {needle && !targets.length && <p className="quiet-copy" role="status">No available person or group matches that exact username.</p>}
-
-      <div className="prayer-connection-list">{active.map(item => {
-        const { connection, other } = item;
-        return <article className="prayer-connection-row" key={connection.id}><div className="prayer-connection-identity"><span className="prayer-connection-icon"><Icon name={other.kind === 'group' ? 'people' : 'heart'} /></span><div><h3>{hostLabel(other, context)}</h3><p>@{hostUsername(other, context)}</p>{item.as.kind === 'group' && <p className="quiet-copy">Connected with {hostLabel(item.as, context)}</p>}</div></div><div className="prayer-event-actions">{onNavigate && <button className="text-link" onClick={() => onNavigate(routeFor(other))}>Open box<Icon name="arrow" size={17} /></button>}<button className="text-link prayer-event-caution" onClick={() => { setError(''); setDisconnect(connection); }}>Disconnect</button></div></article>;
-      })}{!active.length && <p className="prayer-event-empty">No accepted connections yet. Find someone by their username, then send a request.</p>}</div>
-    </> : <p className="quiet-copy">Sign in to manage your own connections.</p>}
-    {connectTarget && sourceHost && <Modal title={`Connect with ${hostLabel(connectTarget, context)}?`} onClose={() => setConnectTarget(null)}><div className="prayer-event-form"><p>This shares {hostLabel(sourceHost, context)}’s profile name and username with {hostLabel(connectTarget, context)}. They must accept before the connection starts.</p><p className="quiet-copy">No prayer text, anonymous identity, or link to prayer activity is included. Private prayers stay private.</p>{error && <p className="prayer-event-error" role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setConnectTarget(null)}>Cancel</button><button className="button primary" onClick={() => { if (act(() => requestPrayerConnection(connections, viewer, connectTarget, context, { from: sourceHost }), 'Connection request sent. They can accept or decline.')) setConnectTarget(null); }}>Send connection request<Icon name="mail" /></button></div></div></Modal>}
-    {disconnect && <Modal title="Disconnect?" onClose={() => setDisconnect(null)}><div className="prayer-event-form"><p>Event invitations from this connection will no longer appear. This does not change accepted friendships or group membership. If you want to reconnect later, you will need to send a new connection request and the other person or group will need to accept it again.</p>{error && <p className="prayer-event-error" role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setDisconnect(null)}>Keep connection</button><button className="button primary" onClick={() => { if (act(() => disconnectPrayerConnection(connections, disconnect.id, viewer, context), 'Connection removed.')) setDisconnect(null); }}>Disconnect<Icon name="check" /></button></div></div></Modal>}
+  return <section className={`prayer-connections connection-view-${view}`} aria-label={view === 'directory' ? 'Find people and groups' : view === 'groups' ? 'Connected organizations' : 'Your connections'}>
+    {(view === 'all' || view === 'directory') && <>
+      <header className="prayer-event-section-heading"><div><p className="eyebrow">My Church</p><h1>People to pray with.</h1></div></header>
+      <div className="church-directory-toolbar">
+        <label className="prayer-connection-input"><Icon name="search" /><span className="sr-only">Find a person or group by name or username</span><input type="search" value={query} onChange={change => onDirectorySearch ? onDirectorySearch(change.target.value) : setSearch(change.target.value)} placeholder="Search names or @usernames" autoComplete="off" maxLength={80} /></label>
+        {onDirectoryFilter && <label className="church-directory-filter"><span className="sr-only">Show people or groups</span><select value={directoryFilter} onChange={event => onDirectoryFilter(event.target.value as 'all' | 'groups' | 'people')}><option value="all">Everyone</option><option value="groups">Groups & organizations</option><option value="people">Friends & people</option></select></label>}
+      </div>
+      {hosts.length > 0 && <section className="prayer-connection-requests" aria-labelledby="connection-requests-title"><h2 id="connection-requests-title">New connection requests</h2>{extraRequests}{requestRows.map(request => <article className="prayer-connection-row" key={request.connection.id}><div><h3>{hostLabel(request.other, context)}</h3><p>{request.direction === 'incoming' ? 'Wants to connect with' : 'Request sent from'} {hostLabel(request.as, context)}.</p><p className="quiet-copy">@{hostUsername(request.other, context)}</p></div><div className="prayer-event-actions">{request.direction === 'incoming' ? <><button className="button primary" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'accept', context), 'Connection accepted.')}>Accept</button><button className="text-link" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'decline', context), 'Connection request declined.')}>Decline</button></> : <button className="text-link" onClick={() => act(() => respondToPrayerConnection(connections, request.connection.id, viewer, 'withdraw', context), 'Connection request withdrawn.')}>Withdraw request</button>}</div></article>)}{!requestRows.length && !extraRequests && <p className="quiet-copy">No connection requests waiting right now.</p>}</section>}
+      {needle && hosts.length > 1 && <label className="connection-source">Connect as<select value={sourceHost ? hostKey(sourceHost) : ''} onChange={change => setFromHost(change.target.value)}>{hosts.map(host => <option key={hostKey(host)} value={hostKey(host)}>{hostLabel(host, context)}</option>)}</select></label>}
+      {needle && targets.length > 0 && <section className="church-directory-results" aria-label="Matching people and groups"><h2>Search results</h2>
+        {targets.map(target => {
+          const already = active.some(item => sourceHost && hostKey(item.as) === hostKey(sourceHost) && hostKey(item.other) === hostKey(target));
+          const waiting = pending.some(request => sourceHost && hostKey(request.as) === hostKey(sourceHost) && hostKey(request.other) === hostKey(target));
+          return <article className="prayer-connection-row" key={hostKey(target)}><div><h3>{hostLabel(target, context)}</h3><p>@{hostUsername(target, context)}</p></div><div className="prayer-event-actions"><button className="button secondary" onClick={() => onNavigate?.(routeFor(target))}>View prayer box</button>{already ? <span className="prayer-connection-status">Connected</span> : waiting ? <span className="prayer-connection-status">Request sent!</span> : <button className="button secondary" onClick={() => { if (!sourceHost) { onNavigate?.('signup'); return; } setError(''); setConnectTarget(target); }}>Connect</button>}</div></article>;
+        })}
+      </section>}
+      {needle && !targets.length && directoryFilter === 'people' && !context.people.some(person => hiddenPersonIds.includes(person.id) && `${person.name} ${person.username}`.toLowerCase().includes(needle)) && <p role="status">No available person matches your search.</p>}
+    </>}
+    {view !== 'directory' && <div className="prayer-connection-list">{listed.map(item => <article className="prayer-connection-row" key={item.connection.id}><div className="prayer-connection-identity"><span className="prayer-connection-icon"><Icon name={item.other.id === 'team' ? 'box' : item.other.kind === 'group' ? 'people' : 'heart'} /></span><div><h3>{hostLabel(item.other, context)}</h3><p>@{hostUsername(item.other, context)}</p>{item.as.kind === 'group' && <p className="quiet-copy">Connected with {hostLabel(item.as, context)}</p>}</div></div><div className="prayer-event-actions"><button className="button secondary" onClick={() => onNavigate?.(routeFor(item.other))}>View prayer box</button><button className="text-link prayer-event-caution" onClick={() => { setError(''); setDisconnect(item.connection); }}>Disconnect</button></div></article>)}</div>}
+    {error && !connectTarget && !disconnect && <p className="prayer-event-error" role="alert">{error}</p>}
+    {connectTarget && sourceHost && <Modal title={`Connect with ${hostLabel(connectTarget, context)}?`} onClose={() => setConnectTarget(null)}><div className="prayer-event-form"><p>This shares {hostLabel(sourceHost, context)}’s profile name and username with {hostLabel(connectTarget, context)}. They must accept before the connection starts.</p><p className="quiet-copy">No prayer text, anonymous identity, or link to prayer activity is included.</p>{error && <p role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setConnectTarget(null)}>Cancel</button><button className="button primary" onClick={() => { if (act(() => requestPrayerConnection(connections, viewer, connectTarget, context, { from: sourceHost }), 'Connection request sent.')) setConnectTarget(null); }}>Send connection request</button></div></div></Modal>}
+    {disconnect && <Modal title="Disconnect?" onClose={() => setDisconnect(null)}><div className="prayer-event-form"><p>If you want to reconnect later, you will need to send a new connection request and the other person or group will need to accept it again.</p>{error && <p role="alert">{error}</p>}<div className="prayer-event-actions"><button className="button secondary" onClick={() => setDisconnect(null)}>Keep connection</button><button className="button primary" onClick={() => { if (act(() => disconnectPrayerConnection(connections, disconnect.id, viewer, context), 'Connection removed.')) setDisconnect(null); }}>Disconnect</button></div></div></Modal>}
   </section>;
 }

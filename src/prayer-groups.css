@@ -89,3 +89,13 @@
 .group-form select, .group-role-control select, .group-role-control select:disabled { appearance:none; padding-right:2.8rem; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235c6880' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-position:right 1rem center; background-size:16px; background-repeat:no-repeat; }
 .group-reply-help { max-width:45rem; }
 @media(forced-colors:active) { .group-form select, .group-role-control select { appearance:auto; background-image:none; }.group-color-swatch { border:2px solid ButtonText; } }
+
+/* Compact identity above three clear group actions. */
+.group-card-heading { align-items:flex-start; flex-wrap:wrap; }
+.group-card-name { flex:1 1 9rem; min-width:0; }
+.group-card-role { margin-left:auto; display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
+.group-card-role .group-status { margin:0; font-size:.85rem; }
+.group-card-role .icon-button { width:2.5rem; height:2.5rem; }
+.group-card .group-actions { margin-top:.25rem; }
+.group-card-heading { width:100%; }
+@media(max-width:600px) { .group-card-role { order:-1; flex-basis:100%; }.group-card-name { flex-basis:8rem; } }

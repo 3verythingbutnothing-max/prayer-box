@@ -73,3 +73,13 @@
 .prayer-connection-status { padding:.4rem .65rem; border-radius:.6rem; color:#42604f; background:#e6f1e7; font-size:.95rem; }
 @media(max-width:600px) { .prayer-event-times { grid-template-columns:minmax(0,1fr); }.prayer-event-card { padding:1.1rem; }.prayer-event-title h3 { font-size:1.3rem; }.prayer-events-heading > .button { width:100%; }.prayer-event-date { width:3.2rem; }.prayer-event-heading { gap:.8rem; } }
 @media(max-width:390px) { .prayer-event-actions .button { width:100%; }.prayer-connection-row { padding:.9rem; }.prayer-event-form .prayer-event-check { padding:.8rem; }.prayer-event-card { padding:.95rem; } }
+
+.church-directory-toolbar { display:grid; grid-template-columns:minmax(0,1fr) minmax(11rem,auto); gap:.8rem; align-items:stretch; }
+.church-directory-filter select, .connection-source select { width:100%; height:100%; font:inherit; color:inherit; background:#f1f6fc; border:1px solid #b7c7d9; border-radius:.9rem; padding:.8rem 2.4rem .8rem 1rem; }
+.connection-source { display:grid; gap:.4rem; max-width:24rem; margin-bottom:1rem; }
+.church-directory-results { margin-top:1.7rem; }
+.connection-view-directory { margin-top:0; }
+.connection-view-directory h1 { font-size:clamp(1.9rem,4vw,2.65rem); margin:.35rem 0 1.2rem; }
+.prayer-connection-requests > h2 { font-size:1.35rem; margin:0 0 .35rem; }
+.event-invited-by { display:inline-block; padding:.3rem .65rem; border-radius:.6rem; background:#e3eef6; color:#345674; font-size:.95rem; font-weight:600; }
+@media(max-width:600px) { .church-directory-toolbar { grid-template-columns:minmax(0,1fr); }.church-directory-filter select { min-height:3rem; } }

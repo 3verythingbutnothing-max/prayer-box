@@ -51,3 +51,11 @@
     );
   }
 }
+
+@media(max-width:650px) { .mobile-nav { grid-template-columns:repeat(4,minmax(0,1fr)); }.mobile-nav a { min-width:0; font-size:.67rem; } }
+@media(min-width:651px) and (max-width:1100px) { .desktop-nav a { padding-inline:.65rem; gap:.4rem; }.header-inner { gap:.8rem; } }
+@media(min-width:651px) and (max-width:1000px) {
+  .app-header .header-inner { flex-wrap:wrap; padding-block:.65rem; gap:.5rem 1rem; }
+  .app-header .desktop-nav { order:3; flex:1 0 100%; margin:0; justify-content:center; }
+  .app-header .desktop-nav a { white-space:nowrap; }
+}
