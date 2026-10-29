@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  approvedRecipientCommunities,
   findPrayerRecipients,
   prayerRecipients,
   recipientActor,
@@ -13,6 +14,7 @@ import {
   prayerBoxUrl,
   visibleRequests,
 } from "./domain.ts";
+import { initialPrayerGroups } from "./prayer-groups.ts";
 import type { BoxId, PrayerRequest, Viewer } from "./domain.ts";
 
 const ids = (
@@ -321,4 +323,45 @@ test('edited account usernames are validated without changing stable identity or
   assert.equal(findPrayerRecipients('@maria_prays','elena',[],{...options,mariaVisible:false}).length,0);
   assert.equal(findPrayerRecipients('@maria_prays','elena',[],{...options,blocked:['maria']}).length,0);
   assert.equal(findPrayerRecipients('@maria_prays','maria',[],options).length,0);
+});
+
+
+test('community suggestions come only from the viewer’s active approved memberships', () => {
+  const groups = initialPrayerGroups();
+  assert.deepEqual(approvedRecipientCommunities(groups,'maria').map(group=>[group.id,group.availability]),[['grace','ready']]);
+  assert.deepEqual(approvedRecipientCommunities(groups,'elena').map(group=>[group.id,group.availability]),[['quiet-mornings','own']]);
+  assert.deepEqual(approvedRecipientCommunities(groups,'jordan'),[]);
+  assert.deepEqual(approvedRecipientCommunities(groups,'guest'),[]);
+  assert.deepEqual(ids('', 'elena', ['owner']),['prayerbox']);
+});
+test('closed, inactive, blocked, pending, and invited memberships are not suggestions', () => {
+  const groups = initialPrayerGroups();
+  assert.deepEqual(approvedRecipientCommunities(groups,'maria',['owner']),[]);
+  assert.deepEqual(approvedRecipientCommunities(groups.map(group=>({...group,archivedAt:100})),'maria'),[]);
+  for (const status of ['pending','invited','left','blocked'] as const) {
+    const changed=groups.map(group=>({...group,members:group.members.map(member=>member.id==='maria'?{...member,status}:member)}));
+    assert.deepEqual(approvedRecipientCommunities(changed,'maria'),[]);
+  }
+  const inactive=groups.map(group=>({...group,members:group.members.map(member=>member.id==='maria'?{...member,active:false}:member)}));
+  assert.deepEqual(approvedRecipientCommunities(inactive,'maria'),[]);
+});
+test('suggestions retain current community identity and disclose unavailable prototype routing', () => {
+  const groups=initialPrayerGroups();
+  const renamed=groups.map(group=>group.id==='grace'?{...group,name:'Grace prayer community',username:'grace-prayers'}:group);
+  const suggested=approvedRecipientCommunities(renamed,'member')[0];
+  assert.equal(suggested.name,'Grace prayer community');
+  assert.equal(suggested.username,'grace-prayers');
+  assert.equal(suggested.boxId,'grace');
+  assert.equal(approvedRecipientCommunities(groups,'daniel')[0].availability,'unavailable');
+  assert.equal(approvedRecipientCommunities(groups,'owner')[0].availability,'own');
+});
+test('current organization labels are searchable without returning membership data or changing choices', () => {
+  const groups=initialPrayerGroups(),group={...groups[0],name:'Grace prayer community',username:'grace-prayers'};
+  const selected: BoxId[]=['maria'];
+  const result=findPrayerRecipients('@grace-prayers','elena',[],{organization:group,selected})[0];
+  assert.equal(result.id,'grace');
+  assert.equal(result.name,'Grace prayer community');
+  assert.equal('members' in result,false);
+  assert.equal('ownerId' in result,false);
+  assert.deepEqual(selected,['maria']);
 });

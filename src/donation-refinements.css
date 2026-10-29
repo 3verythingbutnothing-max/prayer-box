@@ -117,16 +117,20 @@
 }
 .account-page-donations .account-amounts > label {
   min-width: 0;
+  display: flex;
 }
 .account-page-donations .account-amounts label > span {
   display: flex;
-  min-height: 48px;
+  width: 100%;
+  min-height: 58px;
+  height: 100%;
+  box-sizing: border-box;
   padding: 10px 3px;
   align-items: center;
   justify-content: center;
 }
 .account-page-donations .account-amounts .donation-custom-choice > span {
-  font-size: 0.8125rem;
+  font-size: 1rem;
 }
 .donation-custom-amount {
   margin-top: 18px;

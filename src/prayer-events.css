@@ -20,6 +20,10 @@
 .prayer-event-details p { display:flex; align-items:flex-start; gap:.7rem; margin:0; min-width:0; }
 .prayer-event-details p > svg { flex:none; margin-top:.2rem; color:#5a738d; }
 .prayer-event-details p > span, .prayer-event-details p > a { min-width:0; overflow-wrap:anywhere; }
+.prayer-event-details .prayer-event-link-row { align-items:center; }
+.prayer-event-details .prayer-event-link-row > svg { margin-top:0; }
+.prayer-event-link-row > a { display:inline-flex; align-items:center; gap:.45rem; }
+.prayer-event-link-row > a > svg { flex:none; }
 .prayer-event-address { white-space:pre-wrap; }
 .prayer-event-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem 1rem; min-width:0; }
 .prayer-event-actions .button, .prayer-events-heading > .button, .prayer-connection-row > .button { white-space:normal; text-align:center; }

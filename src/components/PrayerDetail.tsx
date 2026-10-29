@@ -597,7 +597,6 @@ export default function PrayerDetail({
             className="story-trail"
             aria-label="Follow this prayer story by date"
           >
-            <span className="story-trail-label">A story, still unfolding</span>
             <ol>
               <li>
                 <a

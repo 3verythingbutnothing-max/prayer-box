@@ -18,3 +18,10 @@
 .recipient-separate-note { display: flex; align-items: flex-start; gap: 9px; color: var(--muted); font-size: .7rem; line-height: 1.7; margin: 16px 0 0; }
 .recipient-separate-note svg { margin-top: 3px; }
 @media(max-width: 480px) { .recipient-picker { padding: 17px 14px; } .recipient-result { padding-inline: 10px; } }
+
+.recipient-result[aria-pressed="true"] { border-color:#ad93c1; background:#eee5f6; color:#49335f; box-shadow:inset 0 1px 0 #ffffffa3; }
+.recipient-result[aria-pressed="true"] > svg:last-child { color:#63457c; }
+.recipient-communities { margin-top:1rem; }
+.recipient-communities h3 { margin:0 0 .6rem; font-size:.85rem; }
+.recipient-result:disabled { background:#f4f2f6; color:#69616f; border-color:#d5cedb; cursor:not-allowed; }
+.recipient-result:disabled .recipient-result-icon { color:#82778d; }

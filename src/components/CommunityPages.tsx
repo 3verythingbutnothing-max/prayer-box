@@ -289,9 +289,11 @@ function ChurchPage(props: CommunityPagesProps) {
                     </span>
                     <div className="community-friend-copy">
                       <h3>{person.name}</h3>
+                      <span className="community-friend-username">@{props.usernames?.[person.id] ?? person.id}</span>
                       <span className="community-small">Accepted friend</span>
-                      <button className="button secondary compact friend-box-link" onClick={() => props.onNavigate(`box/${person.id}`)} aria-label={`View ${person.name}’s prayer box`}>View prayer box <Icon name="arrow" size={17}/></button>
                     </div>
+                    <div className="community-friend-actions">
+                      <button className="button secondary compact friend-box-link" onClick={() => props.onNavigate(`box/${person.id}`)} aria-label={`View ${person.name}’s prayer box`}>View prayer box</button>
                     <button
                       className="text-link community-quiet-action"
                       onClick={() => setRemoveId(person.id)}
@@ -299,6 +301,7 @@ function ChurchPage(props: CommunityPagesProps) {
                     >
                       Remove
                     </button>
+                    </div>
                   </article>
                 ))
               ) : (

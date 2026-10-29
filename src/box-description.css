@@ -1,0 +1,8 @@
+.box-description-form { display:grid; gap:14px; }
+.box-description-form label { font-weight:600; }
+.box-description-form textarea { width:100%; min-width:0; padding:14px; border:1px solid #b6a7c6; border-radius:12px; background:#fffdfa; color:var(--ink); font:inherit; line-height:1.6; resize:vertical; }
+.box-description-form p { margin:0; }
+.box-description-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:8px; }
+.box-description-edit { margin:0 0 16px; }
+.box-description-text, .group-box-description { white-space:pre-wrap; overflow-wrap:anywhere; }
+.box-description-settings .box-description-text { margin:12px 0 18px; }
