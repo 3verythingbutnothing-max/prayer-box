@@ -37,6 +37,8 @@ type Props = {
   onReuse: () => void;
   onNotice: (message: string) => void;
   onDelete?: () => void;
+  authorIdentity?: { name: string; username?: string; organization?: string };
+  authorUpdateForm?: ReactNode;
 };
 
 export default function PrayerDetail({
@@ -63,6 +65,8 @@ export default function PrayerDetail({
   onReuse,
   onNotice,
   onDelete,
+  authorIdentity,
+  authorUpdateForm,
 }: Props) {
   const feedback = useActionFeedback();
   const [safety, setSafety] = useState<
@@ -237,6 +241,11 @@ export default function PrayerDetail({
   }
 
   function beginResponse(scope: string, parentId: string | null = null) {
+    if (author && !parentId) {
+      setShowPrayers(false);
+      requestAnimationFrame(() => jumpToSection('story-author-update'));
+      return;
+    }
     setShowPrayers(false);
     setReplyPostId(scope);
     setParentReplyId(parentId);
@@ -339,7 +348,7 @@ export default function PrayerDetail({
           <span className={`avatar avatar-small ${request.anonymous ? "anonymous" : ""}`}>
             {request.anonymous ? <Icon name="heart" size={16} /> : authorLabel(request).slice(0, 1)}
           </span>
-          <span>{authorLabel(request)}</span>
+          <span className="request-identity"><strong>{authorIdentity?.name ?? authorLabel(request)}</strong>{!request.anonymous && authorIdentity?.username && <span className="request-username">@{authorIdentity.username}</span>}{authorIdentity?.organization && <span className="request-organization"><Icon name="people" size={14} /> In {authorIdentity.organization}</span>}</span>
         </div>
         <div className="story-card-utilities">
           <a
@@ -453,7 +462,7 @@ export default function PrayerDetail({
               <Icon name="heart" size={17} />
               {row.agreedBy?.includes(viewer) ? "Amen · agreed" : "Amen / I agree"}
             </button>
-            <button
+            {row.actorId !== viewer && <button
               className="text-link"
               disabled={postingRestricted}
               onClick={() => {
@@ -461,7 +470,7 @@ export default function PrayerDetail({
               }}
             >
               Reply to {row.name}<Icon name="arrow" size={16} />
-            </button>
+            </button>}
           </div>
         ) : null}
       </article>
@@ -481,7 +490,7 @@ export default function PrayerDetail({
 
   function sendReply() {
     feedback.prepare();
-    if (viewer === "guest" || held || !reply.trim()) return;
+    if (viewer === "guest" || held || !reply.trim() || author && !parentReply) return;
     if (parentReplyId && !parentReply) {
       setParentReplyId(null);
       setReplyReview(
@@ -797,13 +806,13 @@ export default function PrayerDetail({
                       <Icon name="link" size={16} />
                       Original prayer · {formatStoryDate(originalDate)}
                     </a>
-                    <button
+                    {!author && <button
                       className="button secondary compact"
                       onClick={() => beginResponse(post.id)}
                     >
                       Respond to this {post.kind}
                       <Icon name="heart" size={17} />
-                    </button>
+                    </button>}
                     <button
                       className="text-link story-read-prayers"
                       onClick={() => showConversation(post.id)}
@@ -817,7 +826,8 @@ export default function PrayerDetail({
           )}
           {!held && (
             <>
-              <section
+              {author && <section className="conversation panel story-author-update" id="story-author-update" tabIndex={-1} aria-labelledby="author-update-heading"><h2 id="author-update-heading">Add an update or testimony</h2>{authorUpdateForm}</section>}
+              {(!author || parentReplyId !== null) && <section
                 className="conversation panel story-conversation"
                 id="story-encouragement"
                 tabIndex={-1}
@@ -827,11 +837,6 @@ export default function PrayerDetail({
                   <h2 id="conversation-heading">A little encouragement</h2>
                   <Icon name="heart" size={20} />
                 </div>
-                <p className="quiet-copy">
-                  Prayers and kind words stay with the part of the story you
-                  choose, in this delivery’s conversation. A reply is never a
-                  promise of an outcome.
-                </p>
                 <label className="field story-scope-field">
                   Pray for
                   <select
@@ -1059,7 +1064,7 @@ export default function PrayerDetail({
                     )}
                   </div>
                 )}
-              </section>
+              </section>}
               {isFriend &&
                 !request.anonymous &&
                 !author &&
@@ -1198,7 +1203,7 @@ export default function PrayerDetail({
                   onNavigate("signup");
                 } else beginResponse(selectedScope);
               }}>
-                {viewer === "guest" ? "Sign in to encourage" : "Leave encouragement"}
+                {viewer === "guest" ? "Sign in to encourage" : author ? "Add update or testimony" : "Leave encouragement"}
                 <Icon name="heart" size={18} />
               </button>
             </div>

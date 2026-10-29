@@ -12,6 +12,8 @@ import CareResources from "./CareResources";
 import { PlatformAcknowledgment } from "./CareFlow";
 import { useActionFeedback } from "../action-feedback";
 import RecipientPicker from "./RecipientPicker";
+import { TagPicker } from "./TagPicker";
+import type { PrayerTag } from "../private-tags";
 import { recipientNames as names, recipientActor } from "../recipients";
 import "../request-refinements.css";
 
@@ -30,7 +32,9 @@ type Props = {
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
   onClose: () => void;
-  onCommit: (rows: PrayerRequest[]) => boolean;
+  tagCatalog?: readonly PrayerTag[];
+  initialTags?: PrayerTag[];
+  onCommit: (rows: PrayerRequest[], tags: PrayerTag[]) => boolean;
   onNavigate: (route: string) => void;
   onSignIn: () => void;
 };
@@ -77,6 +81,8 @@ export default function PrayerComposer({
   usernames,
   boxCeilings,
   initial,
+  tagCatalog = [],
+  initialTags = [],
   onClose,
   onCommit,
   onNavigate,
@@ -84,6 +90,7 @@ export default function PrayerComposer({
 }: Props) {
   const feedback = useActionFeedback();
   const isOwnDestination = (actor: string, box: BoxId) => isOwnPrayerBox(actor, box, organizationOwnerId);
+  const [tags, setTags] = useState<PrayerTag[]>(initialTags);
   const [selected, setSelected] = useState<BoxId[]>([initialRecipient]);
   const recipient = selected[0] ?? initialRecipient;
   const [step, setStep] = useState<
@@ -228,7 +235,7 @@ export default function PrayerComposer({
           reason: check.reason,
         };
       });
-      if (!onCommit(records)) {
+      if (!onCommit(records,tags)) {
         submitting.current = false;
         setStep("write");
         feedback.respond({
@@ -364,12 +371,6 @@ export default function PrayerComposer({
       }}
       wide
     >
-      {step !== "support" && (
-        <p className="prototype-note">
-          <Icon name="info" size={16} /> Fictional walkthrough. No prayer
-          request or media leaves this browser.
-        </p>
-      )}
       {(step === "write" || step === "preview") &&
         isOwnDestination(viewer, recipient) && (
           <div className="notice butter">
@@ -438,10 +439,6 @@ export default function PrayerComposer({
       )}
       {step === "write" && (
         <>
-          <p className="form-intro">
-            A few honest words are enough. You’re welcome to ask for prayer
-            while your story is still unfolding.
-          </p>
           {initial && (
             <div className="notice sage">
               <Icon name="link" />
@@ -495,6 +492,7 @@ export default function PrayerComposer({
               }}
             />
           </label>
+          <TagPicker value={tags} catalog={tagCatalog} onChange={setTags} />
           <div className="media-tools" aria-label="Fictional media examples">
             {(["photo", "audio", "video"] as const).map((kind) => (
               <button

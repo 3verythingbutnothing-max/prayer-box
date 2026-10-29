@@ -152,10 +152,10 @@ export function PrayerGroups({ standalone = false, directorySearch, people = gro
     if (membership?.status === 'blocked') return <p className="quiet-copy">This group is unavailable.</p>;
     if (membership?.status === 'invited') return <div className="group-actions"><button className="button primary" onClick={() => send(group, { type: 'accept_invite' }, 'You have joined this prayer group.')}>Accept invitation</button><button className="button secondary" onClick={() => send(group, { type: 'decline_invite' }, 'Invitation declined.')}>Decline</button></div>;
     if (membership?.status === 'pending') return <div className="group-actions"><span className="group-status">Awaiting approval</span><button className="text-link" onClick={() => send(group, { type: 'withdraw' }, 'Your join request was withdrawn.')}>Withdraw request</button></div>;
-    if (membership?.status === 'approved') return <div className="group-actions">
-      {canModerateGroup(group, viewer) && <button className="button secondary" onClick={() => { setManageId(group.id); setInvite(''); }}>{isGroupAdmin(group, viewer) ? 'Members & invitations' : 'Members & join requests'}</button>}
+    if (membership?.status === 'approved') return <div className="group-actions community-card-actions">
       {!selectedHandle && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)} aria-label={`View prayer box for ${group.name}`}>View prayer box</button>}
-      <button className="text-link" onClick={() => { setLeaveId(group.id); setSuccessor(''); }}>Leave group</button>
+      <button className="text-link" onClick={() => { setLeaveId(group.id); setSuccessor(''); }}>Leave community</button>
+      {canModerateGroup(group, viewer) && <button className="button secondary community-manage-action" onClick={() => { setManageId(group.id); setInvite(''); }}>{isGroupAdmin(group, viewer) ? 'Members & invitations' : 'Members & join requests'}</button>}
     </div>;
     return <button className="button secondary" onClick={() => send(group, { type: 'request_join' }, 'Your request to join is awaiting approval.')}>Request to join<Icon name="plus" /></button>;
   };

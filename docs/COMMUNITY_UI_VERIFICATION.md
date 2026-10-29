@@ -40,3 +40,23 @@ Removed the check from the group save button and the arrows from Pray with other
 - My Requests uses the orange surface if any surviving delivery has a published update/testimony; My Prayers and box cards use the same surface. Original-only requests remain purple.
 - Browser checks exercised group name search, person search, filters, direct invite selection, recipient attribution after switching sample roles, publishing an author update, and replying to move an updated request into My Prayers. Orange computed background confirmed as rgb(255, 240, 223) in both My Requests and My Prayers.
 - My Church and Events layout bounds checked at 320, 390, 768, 1132, and 1280 pixels; no page/card horizontal overflow. Mobile group actions, share dialog, four-tab navigation, and tablet header inspected visually. TypeScript/Pages build, 214 frontend tests, and existing stress/invariant checks passed locally. Real sign-in, message delivery, and payments remain disabled.
+
+## Request controls, private tags, and lavender actions
+
+| Before | After | Why |
+| --- | --- | --- |
+| Dark blue actions and a dark-on-dark request hover | Lavender primary surfaces with deep plum text; paper secondary controls and explicit hover/pressed/focus states | Keeps the pastel palette coherent and text readable. Primary default, hover, and pressed color pairs calculate to 8.29:1, 6.82:1, and 5.80:1 contrast. |
+| Different action placement and leave wording across community cards | View prayer box and Leave community use the same left-aligned order; authorized member management follows separately | Common actions are predictable without granting group administration to connection-only profiles. |
+| Self-encouragement form on an authored request | Shared inline update/testimony form, with the existing prayers/encouragement feed | Authors publish story posts to explicitly chosen surviving deliveries. They can still reply to another person's encouragement. |
+| Names only and redundant My Box controls | Nonanonymous @handles, actual group-delivery attribution, New prayer requests / Submitted prayers views, stronger near-black navigation | Identifies the conversation without inferring private membership or exposing anonymous handles. |
+
+Removed the selected friend descriptions, invitation explanation, My Requests introduction/toolbar note, own-box guidance/hero buttons, encouragement introduction, notification introduction, and two composer introductions.
+
+Private tags use per-viewer local state, separate from prayer records and recipient payloads. The composer offers gradient swatches and suggestions (including previously used custom tags); My Requests supports editing/removal and `#tag` search. Tag assignments are cleared when the last authored delivery is deleted, and the personal catalog remains available until demo reset/refresh. No tag is shown to a recipient or attached to an anonymous public byline. Durable, authenticated tag storage remains a launch task.
+
+Verified locally:
+- 222 frontend tests, including four request-identity privacy checks and four private-tag normalization/search/isolation checks; existing stress and invariant checks passed.
+- Authored inline publication updated only the selected personal copy; the anonymous organization copy stayed unchanged. Authors see an update form and prayers feed, while readers can still submit encouragement. A submitted reader prayer appeared in the new Submitted prayers view and retained its orange update card.
+- Existing tag editing, custom rose-gradient `peace` tag, tag autocomplete in a new composer, tagged fictional submission, and `#financial` / `#peace` search were exercised in the browser.
+- Actual hover states for Add a new prayer request, Accept friend request, Create prayer group, and Decline were inspected. The former three use rgb(73,51,95) on rgb(216,197,235); secondary hover uses the same text on rgb(240,232,247).
+- My Church, My Requests, an authored request, and My Box measured without page/card horizontal overflow at 320, 390, 768, 1132 and 1280 pixels. Mobile composer tags and the author/reader controls were visually inspected. Live sign-in, screening, delivery and payments remain disabled.
