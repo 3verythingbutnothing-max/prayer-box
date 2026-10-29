@@ -14,7 +14,8 @@ import { useActionFeedback } from "../action-feedback";
 import RecipientPicker from "./RecipientPicker";
 import { TagPicker } from "./TagPicker";
 import type { PrayerTag } from "../private-tags";
-import { recipientNames as names, recipientActor } from "../recipients";
+import { recipientNames, recipientActor } from "../recipients";
+import type { PrayerGroup } from '../prayer-groups';
 import "../request-refinements.css";
 
 type Props = {
@@ -28,6 +29,7 @@ type Props = {
   mariaVisible?: boolean;
   blockedActors?: readonly string[];
   organizationOwnerId?: string;
+  groups?: readonly PrayerGroup[];
   usernames?: Readonly<Record<string, string>>;
   boxCeilings?: Partial<Record<BoxId, Audience>>;
   initial?: PrayerRequest;
@@ -78,6 +80,7 @@ export default function PrayerComposer({
   mariaVisible = true,
   blockedActors = [],
   organizationOwnerId = "owner",
+  groups = [],
   usernames,
   boxCeilings,
   initial,
@@ -89,6 +92,7 @@ export default function PrayerComposer({
   onSignIn,
 }: Props) {
   const feedback = useActionFeedback();
+  const names = {...recipientNames,grace:groups.find(group => group.id === 'grace')?.name ?? recipientNames.grace};
   const isOwnDestination = (actor: string, box: BoxId) => isOwnPrayerBox(actor, box, organizationOwnerId);
   const [tags, setTags] = useState<PrayerTag[]>(initialTags);
   const [selected, setSelected] = useState<BoxId[]>([initialRecipient]);
@@ -521,7 +525,7 @@ export default function PrayerComposer({
               </p>
             </div>
           )}
-          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} usernames={usernames} />
+          <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} usernames={usernames} groups={groups} />
           {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnDestination(viewer, "grace") && (
             <p className="quiet-copy">Maria publicly displays her Grace Church association. Search @gracechurch if you would like to add a separate church delivery. Nothing is added automatically.</p>
           )}

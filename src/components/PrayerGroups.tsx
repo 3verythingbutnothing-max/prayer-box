@@ -8,7 +8,7 @@ import type { GroupCommand, GroupColor, GroupIcon, GroupPerson, GroupNotice, Gro
 import '../prayer-groups.css';
 import { makePicturePreview } from '../picture-preview';
 
-type Props = { people?: readonly GroupPerson[]; standalone?: boolean; directorySearch?: string; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
+type Props = { descriptions?: Readonly<Record<string,string>>; onEditDescription?: (groupId:string) => void; people?: readonly GroupPerson[]; standalone?: boolean; directorySearch?: string; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
 const date = (time: number) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(time);
 function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | 'name' | 'color'> }) {
   return <span className={`group-picture group-tone-${group.color ?? "lavender"}`}>{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
@@ -115,7 +115,7 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
   </Modal>;
 }
 
-export function PrayerGroups({ standalone = false, directorySearch, people = groupPeople, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
+export function PrayerGroups({ descriptions = {}, onEditDescription, standalone = false, directorySearch, people = groupPeople, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
   const feedback = useActionFeedback();
   const Heading = standalone ? 'h1' : 'h2';
   const actor = people.find(person => person.id === viewer);
@@ -163,6 +163,8 @@ export function PrayerGroups({ standalone = false, directorySearch, people = gro
     <div className="group-card-heading"><GroupPicture group={group} /><div className="group-card-name"><h3>{group.name}</h3><p>@{group.username}</p></div><div className="group-card-role">{isGroupAdmin(group, viewer) && <><span className="group-status">You are an admin</span><button className="icon-button" aria-label={`Edit ${group.name}`} onClick={() => setEditor(group)}><Icon name="edit" /></button></>}{isGroupModerator(group, viewer) && <span className="group-status moderator">You are a moderator</span>}</div></div>
     {isGroupAdmin(group, viewer) && group.deletionProposal && <button className="text-link group-caution-action" onClick={() => setManageId(group.id)}>Review group deletion proposal<Icon name="arrow" size={17} /></button>}
     {group.website && <a className="text-link" href={group.website} target="_blank" rel="noopener noreferrer nofollow">Visit website<Icon name="arrow" size={17} /></a>}
+    {selectedHandle && descriptions[`group:${group.id}`] && <p className="group-box-description">{descriptions[`group:${group.id}`]}</p>}
+    {selectedHandle && isGroupAdmin(group, viewer) && onEditDescription && <button className="text-link" onClick={() => onEditDescription(group.id)}><Icon name="edit" size={17}/>Edit description</button>}
     {action(group)}
     {!selectedHandle && !group.members.some(member => member.id === viewer && member.status === 'approved') && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)}>View prayer box</button>}
   </article>;

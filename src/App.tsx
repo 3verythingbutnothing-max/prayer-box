@@ -18,6 +18,7 @@ import AboutPage from "./components/AboutPage";
 import CommunityPages, { FriendInvitation } from "./components/CommunityPages";
 import { BoxConnectionButton } from "./components/BoxConnectionButton";
 import { UsernameSettings } from "./components/UsernameSettings";
+import { BoxDescriptionEditor } from "./components/BoxDescriptionEditor";
 import { PrayerGroups } from "./components/PrayerGroups";
 import { groupPeople, initialPrayerGroups, isGroupAdmin, canModerateGroup, visibleGroupNotices } from "./prayer-groups";
 import type { GroupState, GroupNotice } from "./prayer-groups";
@@ -319,6 +320,8 @@ export default function App() {
   const [requests, setRequests] = useState<PrayerRequest[]>(cloneFixtures);
   const [prayerGroups, setPrayerGroups] = useState<GroupState>(initialPrayerGroups);
   const [profileUsernames, setProfileUsernames] = useState<Partial<Record<Viewer, string>>>({});
+  const [boxDescriptions, setBoxDescriptions] = useState<Record<string,string>>({});
+  const [descriptionTarget, setDescriptionTarget] = useState<{kind:'person'|'group';id:string} | null>(null);
   const eventPeople = initialEventPeople.map(person => ({ ...person, username: profileUsernames[person.id as Viewer] ?? person.username }));
   const groupDirectoryPeople = eventPeople.filter(person => person.id !== "team");
   const requestUsernames: Record<string,string> = {nora:'nora',leah:'leah',ruth:'ruth',ben:'ben',...Object.fromEntries(eventPeople.map(person => [person.id,person.username]))};
@@ -335,6 +338,7 @@ export default function App() {
   const membership: Membership = !graceGroup.archivedAt && graceElena && ["pending", "invited", "approved"].includes(graceElena.status) ? graceElena.status as Membership : "none";
   const memberActive = graceMembers.some(member => member.id === "member");
   const groupAdmin = isGroupAdmin(graceGroup, viewer);
+  const canEditDescription = (target: {kind:'person'|'group';id:string}) => viewer !== 'guest' && (target.kind === 'person' ? target.id === viewer : prayerGroups.some(group => group.id === target.id && isGroupAdmin(group,viewer)));
   const isOwnBox = (actor: string, target: BoxId) => isOwnPrayerBox(actor, target, graceGroup.ownerId);
   const [groupNotices, setGroupNotices] = useState<GroupNotice[]>([]);
   function addGroupNotices(notices: GroupNotice[]) {
@@ -852,6 +856,9 @@ export default function App() {
   }
 
   function renderBox() {
+    const descriptionOwner = recipientActor(box, graceGroup.ownerId);
+    const descriptionKey = box === 'grace' ? 'group:grace' : `person:${descriptionOwner}`;
+    const boxDescriptionTarget = box === 'grace' ? {kind:'group' as const,id:'grace'} : {kind:'person' as const,id:descriptionOwner};
     const receivingOwnBox = isOwnBox(viewer, box);
     const showSubmitted = receivingOwnBox && postSegment === "submitted";
     const emptyBoxAction = () =>
@@ -923,13 +930,14 @@ export default function App() {
             <h1 id="box-title">
               {box === "prayerbox" ? "Prayer Box is here for you" : `${boxNames[box]}’s Prayer Box`}<span className="hero-dot">.</span>
             </h1>
-            <p className="hero-intro">
-              {box === "grace"
+            <p className="hero-intro box-description-text">
+              {boxDescriptions[descriptionKey] || (box === "grace"
                 ? "Bring your needs, your gratitude, and your unfinished stories. Our approved prayer community is here to receive them with care."
                 : mine
                   ? "There’s room for honest requests, kind encouragement, and stories still unfolding."
-                  : "You don’t have to carry it all alone. Leave a request, pray for someone, or share a little hope."}
+                  : "You don’t have to carry it all alone. Leave a request, pray for someone, or share a little hope.")}
             </p>
+            {canEditDescription(boxDescriptionTarget) && <button className="text-link box-description-edit" onClick={() => setDescriptionTarget(boxDescriptionTarget)}><Icon name="edit" size={17}/>Edit description</button>}
             {box === "grace" && (
               <OrganizationWebsiteLink value={organizationWebsite} />
             )}
@@ -1678,7 +1686,7 @@ export default function App() {
     if (page === 'signin') return <section className="panel empty-state"><h1>Sign-in is being prepared.</h1><p>Real accounts are not open in this preview. Password recovery needs a verified contact and a configured delivery service.</p><button className="button secondary" onClick={() => navigate('recovery')}>Forgot password?</button><button className="text-link" onClick={() => navigate('signup')}>View account setup</button></section>;
     if (page === 'events' || page === 'invitations') return <PrayerEvents key={`${viewer}/${resetVersion}/${page}`} viewer={viewer} state={prayerEvents} context={eventContext} onChange={setPrayerEvents} onNavigate={navigate} mode={page === 'events' ? 'events' : 'invitations'} />;
     if (page === 'connections') return <ConnectionsPanel key={`${viewer}/${resetVersion}`} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={updateConnections} onNavigate={navigate} />;
-    if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
+    if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} descriptions={boxDescriptions} onEditDescription={id => setDescriptionTarget({kind:"group",id})} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
     if (page === "prayers") return renderMyPrayers();
@@ -1726,7 +1734,7 @@ export default function App() {
         <>
           {page === "church" && <>
             <ConnectionsPanel key={`directory/${resetVersion}/${viewer}`} view="directory" hiddenSearchIds={canSeeMariaProfile ? [] : ["maria"]} hiddenPersonIds={friends} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} onDirectorySearch={setChurchSearch} directoryFilter={churchFilter} onDirectoryFilter={setChurchFilter} />
-            {churchFilter !== 'people' && <><PrayerGroups directorySearch={churchSearch} key={`${resetVersion}/${viewer}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} /><ConnectionsPanel view="groups" viewer={viewer} connections={connections} context={eventContext} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} /></>}
+            {churchFilter !== 'people' && <><PrayerGroups directorySearch={churchSearch} key={`${resetVersion}/${viewer}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} descriptions={boxDescriptions} onEditDescription={id => setDescriptionTarget({kind:"group",id})} onChange={updatePrayerGroups} onNavigate={navigate} /><ConnectionsPanel view="groups" viewer={viewer} connections={connections} context={eventContext} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} /></>}
           </>}
           {(page !== 'church' || churchFilter !== 'groups') && <>
           <CommunityPages
@@ -2159,7 +2167,7 @@ export default function App() {
                   : "settings"
             }
             viewer={viewer}
-            usernameControl={page === "settings" && viewer !== "guest" ? <UsernameSettings key={viewer} username={eventPeople.find(person => person.id === viewer)?.username ?? viewer} occupied={[...eventPeople.map(person => person.username), ...prayerGroups.map(group => group.username), "gracechurch"]} editable={eventPeople.some(person => person.id === viewer) && viewer !== "team"} onSave={username => { setProfileUsernames(previous => ({...previous,[viewer]:username})); setPrayerGroups(previous => previous.map(group => ({...group,members:group.members.map(member => member.id === viewer ? {...member,username} : member)}))); }} /> : null}
+            usernameControl={page === "settings" && viewer !== "guest" ? <><UsernameSettings key={viewer} username={eventPeople.find(person => person.id === viewer)?.username ?? viewer} occupied={[...eventPeople.map(person => person.username), ...prayerGroups.map(group => group.username), "gracechurch"]} editable={eventPeople.some(person => person.id === viewer) && viewer !== "team"} onSave={username => { setProfileUsernames(previous => ({...previous,[viewer]:username})); setPrayerGroups(previous => previous.map(group => ({...group,members:group.members.map(member => member.id === viewer ? {...member,username} : member)}))); }} /><section className="account-settings-section panel box-description-settings"><h2>Your Prayer Box description</h2><p className="box-description-text">{boxDescriptions[`person:${viewer}`] || 'Add a welcome for people visiting your prayer box.'}</p><button className="button secondary" onClick={() => setDescriptionTarget({kind:'person',id:viewer})}>Edit description</button></section></> : null}
             profilePictureControl={page === "settings" && viewer !== "guest" ? <ProfilePictureSettings
               key={viewer}
               name={viewerNames[viewer]}
@@ -2433,9 +2441,20 @@ export default function App() {
           </a>
         ))}
       </nav>
+      {descriptionTarget && canEditDescription(descriptionTarget) && <BoxDescriptionEditor
+        key={`${viewer}/${descriptionTarget.kind}/${descriptionTarget.id}`}
+        value={boxDescriptions[`${descriptionTarget.kind}:${descriptionTarget.id}`] ?? ''}
+        name={descriptionTarget.kind === 'group' ? prayerGroups.find(group => group.id === descriptionTarget.id)?.name ?? 'this group' : viewerNames[viewer]}
+        onClose={() => setDescriptionTarget(null)}
+        onSave={value => {
+          if (!canEditDescription(descriptionTarget)) throw new Error('Only the box owner or an active group admin can edit this description.');
+          setBoxDescriptions(previous => ({...previous,[`${descriptionTarget.kind}:${descriptionTarget.id}`]:value}));
+        }}
+      />}
       {composer && (
         <PrayerComposer
           organizationOwnerId={graceGroup.ownerId}
+          groups={prayerGroups}
           key={`${composer.recipient}-${composer.initial?.id ?? "new"}`}
           {...composer}
           viewer={viewer}
@@ -2579,6 +2598,8 @@ export default function App() {
                 setPrayerGroups(initialPrayerGroups());
                 setNotificationChoices({});
                 setProfileUsernames({});
+                setBoxDescriptions({});
+                setDescriptionTarget(null);
                 setConnections(initialConnections());
                 setPrayerEvents(initialEvents());
                 setConnectionSuggestions([]);

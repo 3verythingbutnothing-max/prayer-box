@@ -8,7 +8,7 @@
 .header-name { font-size: .85rem; }
 .desktop-nav a { font-size: .85rem; }
 .my-requests-page .own-request-list { grid-template-columns: minmax(0,1fr); max-width: 1000px; }
-.my-requests-page .page-toolbar { display: grid; grid-template-columns: auto minmax(250px,1fr); gap: 16px 22px; align-items: center; }
+.my-requests-page .page-toolbar { display: grid; grid-template-columns: auto minmax(250px,1fr); gap: 16px 22px; align-items: center; width:100%; max-width:1000px; }
 .my-requests-page .page-toolbar > .quiet-copy { grid-column: 1 / -1; max-width: none; margin: 0; }
 .button.new-request-button { color: var(--navy); background: var(--blue); border-color: #9db6ca; box-shadow: 0 3px 0 #a9bfd24a; }
 .request-search-field { display: flex; gap: 11px; align-items: center; padding: 0 14px; border: 1px solid var(--control-line); border-radius: 12px; background: #fffdfa; color: var(--navy); min-width: 0; }
