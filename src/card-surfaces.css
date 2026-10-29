@@ -28,7 +28,7 @@
 }
 
 .prayer-card:not(.testimony-card),
-.own-request,
+.own-request:not(.testimony-card),
 .inbox-card {
   background-color: #fcf9ff;
 }

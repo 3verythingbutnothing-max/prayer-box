@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialPrayerGroups } from './prayer-groups.ts';
-import { canManageEvent, canViewEvent, cancelPrayerEvent, createPrayerEvent, dismissPrayerInvitation, disconnectPrayerConnection, eligibleEventHosts, initialPrayerConnections, invitationsForViewer, requestPrayerConnection, respondToPrayerConnection, revokePrayerEventShare, sharePrayerEvent, updatePrayerEvent, validateEventInput, visibleConnectionRequests, visibleManagedConnections, visiblePrayerConnections } from './prayer-events.ts';
+import { invitePrayerEventToPerson, canManageEvent, canViewEvent, cancelPrayerEvent, createPrayerEvent, dismissPrayerInvitation, disconnectPrayerConnection, eligibleEventHosts, initialPrayerConnections, invitationsForViewer, requestPrayerConnection, respondToPrayerConnection, revokePrayerEventShare, sharePrayerEvent, updatePrayerEvent, validateEventInput, visibleConnectionRequests, visibleManagedConnections, visiblePrayerConnections } from './prayer-events.ts';
 import type { EventContext, EventHost, EventInput, PrayerConnection, PrayerEventState } from './prayer-events.ts';
 
 const now = Date.UTC(2026, 9, 29, 12);
@@ -215,4 +215,51 @@ test('event fields reject malformed dates, unknown zones, unsafe links and inval
   for (const input of bad) assert.throws(() => validateEventInput(values(input), p('elena'), now), undefined, JSON.stringify(input));
   const physical = validateEventInput(values({ format: 'in_person', address: 'Community hall', meetingUrl: 'https://ignored.example.org' }), p('elena'), now);
   assert.equal(physical.meetingUrl, undefined); assert.equal(physical.address, 'Community hall');
+});
+
+
+test('a direct repost reaches only its selected accepted connection and records its inviter', () => {
+  let ctx = connect(context(), 'maria', p('elena'));
+  ctx = connect(ctx, 'maria', p('daniel'));
+  ctx = connect(ctx, 'maria', p('jordan'));
+  const state = invitePrayerEventToPerson(created(ctx), 'event-a', 'maria', p('maria'), 'daniel', ctx, now + 2, 'direct-a');
+  assert.equal(canViewEvent(state, 'event-a', 'daniel', ctx), true);
+  assert.equal(canViewEvent(state, 'event-a', 'jordan', ctx), false);
+  assert.equal(invitationsForViewer(state, 'daniel', ctx)[0].viaHost.id, 'maria');
+  assert.equal(state.shares[0].recipientId, 'daniel');
+  assert.equal(invitationsForViewer(state, 'daniel', ctx).length, 1);
+  assert.equal(invitePrayerEventToPerson(state, 'event-a', 'maria', p('maria'), 'daniel', ctx, now + 3, 'duplicate'), state);
+});
+test('direct invitations respect blocks, connection acceptance, and parent revocation', () => {
+  let ctx = connect(context(), 'maria', p('elena'));
+  ctx = connect(ctx, 'maria', p('daniel'));
+  const base = created(ctx);
+  assert.throws(() => invitePrayerEventToPerson(base, 'event-a', 'maria', p('maria'), 'jordan', ctx, now));
+  assert.throws(() => invitePrayerEventToPerson(base, 'event-a', 'maria', p('elena'), 'daniel', ctx, now));
+  const state = invitePrayerEventToPerson(base, 'event-a', 'maria', p('maria'), 'daniel', ctx, now, 'direct-a');
+  const blocked = {...ctx, blocks:[{blockerId:'daniel',blockedId:'maria'}]};
+  assert.equal(canViewEvent(state,'event-a','daniel',blocked),false);
+  const ended = disconnectPrayerConnection(ctx.connections,ctx.connections.find(row=>row.personId==='maria'&&row.target.id==='daniel')!.id,'daniel',ctx,now+1);
+  assert.equal(canViewEvent(state,'event-a','daniel',{...ctx,connections:ended}),false);
+  const revoked = revokePrayerEventShare(state,'direct-a','maria',ctx,now+1);
+  assert.equal(canViewEvent(revoked,'event-a','daniel',ctx),false);
+});
+test('an organizer can invite a person but members-only events cannot be broadened', () => {
+  const ctx = connect(context(),'maria',p('elena'));
+  const state = created(ctx,p('elena'),values({shareable:false}));
+  const invited = invitePrayerEventToPerson(state,'event-a','elena',p('elena'),'maria',ctx,now,'direct-owner');
+  assert.equal(invitationsForViewer(invited,'maria',ctx)[0].viaHost.id,'elena');
+  assert.throws(()=>invitePrayerEventToPerson(invited,'event-a','maria',p('maria'),'elena',ctx,now));
+  const privateEvent = created(ctx,g(),values({audience:'members',shareable:false}),'owner');
+  assert.throws(()=>invitePrayerEventToPerson(privateEvent,'event-a','owner',g(),'maria',ctx,now));
+});
+test('a direct invitee can repost through the same canonical event and revoking the parent ends access', () => {
+  let ctx = connect(context(),'maria',p('elena'));
+  ctx = connect(ctx,'maria',p('daniel'));
+  ctx = connect(ctx,'daniel',p('jordan'));
+  let state = invitePrayerEventToPerson(created(ctx),'event-a','maria',p('maria'),'daniel',ctx,now,'direct-a');
+  state = sharePrayerEvent(state,'event-a','daniel',p('daniel'),ctx,now+1,'repost');
+  assert.equal(canViewEvent(state,'event-a','jordan',ctx),true);
+  state = revokePrayerEventShare(state,'direct-a','maria',ctx,now+2);
+  assert.equal(canViewEvent(state,'event-a','jordan',ctx),false);
 });

@@ -26,7 +26,7 @@ import { NotificationPreferences, defaultNotificationChoices } from "./component
 import type { NotificationChoices } from "./components/NotificationPreferences";
 import { AccountRecovery } from "./components/AccountRecovery";
 import { PrayerEvents, ConnectionsPanel } from "./components/PrayerEvents";
-import { initialPrayerConnections, requestPrayerConnection, invitationsForViewer, visibleConnectionRequests } from "./prayer-events";
+import { initialPrayerConnections, requestPrayerConnection, respondToPrayerConnection, disconnectPrayerConnection, invitationsForViewer, visibleConnectionRequests } from "./prayer-events";
 import type { EventContext, EventHost, PrayerConnection, PrayerEventState } from "./prayer-events";
 
 import CareResources from "./components/CareResources";
@@ -65,7 +65,16 @@ import "./story-list.css";
 import { recipientNames, prayerRecipients, recipientActor } from "./recipients";
 
 const initialEventPeople = [...groupPeople, { id: 'team', name: 'Prayer Box', username: 'prayerbox', active: true }];
-const initialConnections = () => initialEventPeople.flatMap(person => initialPrayerConnections(person.id));
+const initialConnections = () => {
+  let rows = initialEventPeople.flatMap(person => initialPrayerConnections(person.id));
+  // These two fictional friendships have already been mutually accepted.
+  for (const id of ['maria', 'daniel']) {
+    const context = { people: initialEventPeople, groups: initialPrayerGroups(), connections: rows };
+    rows = requestPrayerConnection(rows, id, {kind:'person',id:'elena'}, context);
+    rows = respondToPrayerConnection(rows, rows.at(-1)!.id, 'elena', 'accept', {...context,connections:rows});
+  }
+  return rows;
+};
 function initialEvents(): PrayerEventState {
   const now = Date.now();
   return { shares: [], dismissals: [], events: [{ id: 'sample-morning-prayer', host: { kind: 'person', id: 'team' }, title: 'Morning prayer together', description: 'A sample invitation to make a little space for prayer and gratitude. This preview has no live meeting.', format: 'virtual', meetingUrl: 'https://example.org/prayer-preview', startsAt: new Date(now + 2 * 86400000).toISOString(), endsAt: new Date(now + 2 * 86400000 + 1800000).toISOString(), timeZone: 'America/New_York', audience: 'connections', shareable: true, createdAt: now, updatedAt: now, version: 1 }] };
@@ -329,6 +338,8 @@ export default function App() {
   }
   const [friends, setFriends] = useState(["maria", "daniel"]);
   const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<string[]>([]);
+  const [churchSearch, setChurchSearch] = useState('');
+  const [churchFilter, setChurchFilter] = useState<'all' | 'groups' | 'people'>('all');
   const [friendInvitationStatus, setFriendInvitationStatus] = useState<"pending" | "accepted" | "declined">("pending");
   const [privacyByViewer, setPrivacyByViewer] = useState<
     Partial<Record<Viewer, Audience>>
@@ -357,6 +368,23 @@ export default function App() {
   >({});
   const eventContext: EventContext = { people: eventPeople, groups: prayerGroups, connections,
     blocks: Object.entries(blocked).flatMap(([blockerId, ids]) => (ids ?? []).map(blockedId => ({blockerId, blockedId}))) };
+  function updateConnections(next: PrayerConnection[]) {
+    setConnections(next);
+    setFriends(previous => previous.filter(id => !next.some(row => row.status === 'disconnected' && (row.personId === 'elena' && row.target.kind === 'person' && row.target.id === id || row.personId === id && row.target.kind === 'person' && row.target.id === 'elena'))));
+  }
+  function updateFriends(ids: string[]) {
+    let next = connections;
+    for (const id of friends.filter(id => !ids.includes(id))) {
+      const row = next.find(row => row.status === 'active' && row.target.kind === 'person' && (row.personId === 'elena' && row.target.id === id || row.personId === id && row.target.id === 'elena'));
+      if (row) next = disconnectPrayerConnection(next,row.id,'elena',{...eventContext,connections:next});
+    }
+    // The legacy sample invitation is accepted explicitly by the recipient.
+    if (ids.includes('jordan') && !friends.includes('jordan') && friendInvitationStatus === 'pending') {
+      next = requestPrayerConnection(next,'jordan',{kind:'person',id:'elena'},{...eventContext,connections:next});
+      next = respondToPrayerConnection(next,next.at(-1)!.id,'elena','accept',{...eventContext,connections:next});
+    }
+    setConnections(next); setFriends(ids);
+  }
   const currentInvitations = invitationsForViewer(prayerEvents, viewer, eventContext);
   const incomingConnections = visibleConnectionRequests(connections, viewer, eventContext).filter(row => row.direction === 'incoming');
   function offerConnection(hosts: EventHost[], showStatus = false) {
@@ -914,7 +942,7 @@ export default function App() {
               >
                 Pray with others
               </button>
-              {viewer !== 'guest' && !receivingOwnBox && <BoxConnectionButton key={`${viewer}/${box}`} viewer={viewer} target={box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}} name={boxNames[box]} context={eventContext} onChange={setConnections} onNavigate={navigate} />}
+              {viewer !== 'guest' && !receivingOwnBox && <BoxConnectionButton key={`${viewer}/${box}`} viewer={viewer} target={box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}} name={boxNames[box]} context={eventContext} onChange={updateConnections} onNavigate={navigate} />}
             </div>
             {receivingOwnBox && (
               <p className="own-box-guidance">
@@ -1135,7 +1163,7 @@ export default function App() {
               const copyTarget =
                 first.recipient === "maria" ? "grace" : "maria";
               return (
-                <article className="own-request panel" key={source}>
+                <article className={`own-request panel ${copies.some(copy => getStoryPosts(copy).length > 0) ? "testimony-card" : ""}`} key={source}>
                   <div className="section-heading">
                     <h2>{first.topic}</h2>
                     <span className="chip">Your authored request</span>
@@ -1609,13 +1637,13 @@ export default function App() {
     );
   }
 
-  const friendRequest = viewer === 'elena' && friendInvitationStatus === 'pending' && !friends.includes('jordan') && !blockedActors.includes('jordan') ? <FriendInvitation viewer={viewer} friends={friends} blockedActors={blockedActors} friendInvitationStatus={friendInvitationStatus} onFriendInvitationChange={setFriendInvitationStatus} onFriendsChange={setFriends} onNotice={notify} /> : null;
+  const friendRequest = viewer === 'elena' && friendInvitationStatus === 'pending' && !friends.includes('jordan') && !blockedActors.includes('jordan') ? <FriendInvitation viewer={viewer} friends={friends} blockedActors={blockedActors} friendInvitationStatus={friendInvitationStatus} onFriendInvitationChange={setFriendInvitationStatus} onFriendsChange={updateFriends} onNotice={notify} /> : null;
   function renderPage() {
     if (page === 'notification-preferences') return <><NotificationPreferences key={`${viewer}/${resetVersion}`} viewer={viewer} value={notificationChoices[viewer] ?? defaultNotificationChoices} onChange={value => setNotificationChoices(previous => ({...previous,[viewer]:value}))} /><button className="button secondary" onClick={() => navigate(`box/${ownBox}`)}>Continue to My Box <Icon name="arrow" /></button></>;
     if (page === 'recovery') return <AccountRecovery onNavigate={navigate} />;
     if (page === 'signin') return <section className="panel empty-state"><h1>Sign-in is being prepared.</h1><p>Real accounts are not open in this preview. Password recovery needs a verified contact and a configured delivery service.</p><button className="button secondary" onClick={() => navigate('recovery')}>Forgot password?</button><button className="text-link" onClick={() => navigate('signup')}>View account setup</button></section>;
-    if (page === 'events' || page === 'invitations') return <><nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`}>Prayers & testimonies</a><a className="button secondary" href="#invitations" aria-current={page === 'invitations' ? 'page' : undefined}>Invitations</a></nav><PrayerEvents key={`${viewer}/${resetVersion}/${page}`} viewer={viewer} state={prayerEvents} context={eventContext} onChange={setPrayerEvents} onNavigate={navigate} mode={page === 'events' ? 'events' : 'invitations'} /></>;
-    if (page === 'connections') return <ConnectionsPanel key={`${viewer}/${resetVersion}`} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={setConnections} onNavigate={navigate} />;
+    if (page === 'events' || page === 'invitations') return <PrayerEvents key={`${viewer}/${resetVersion}/${page}`} viewer={viewer} state={prayerEvents} context={eventContext} onChange={setPrayerEvents} onNavigate={navigate} mode={page === 'events' ? 'events' : 'invitations'} />;
+    if (page === 'connections') return <ConnectionsPanel key={`${viewer}/${resetVersion}`} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={updateConnections} onNavigate={navigate} />;
     if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
     if (page === "box" || page === "") return renderBox();
     if (page === "requests") return renderMyRequests();
@@ -1662,8 +1690,14 @@ export default function App() {
     )
       return (
         <>
-          {page === "church" && <><PrayerGroups key={`${resetVersion}/${viewer}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} /><ConnectionsPanel key={`connections/${resetVersion}/${viewer}`} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={setConnections} onNavigate={navigate} /><div className="box-section-links"><button className="button secondary" onClick={() => navigate('events')}>Create or manage prayer events <Icon name="arrow" size={18} /></button><button className="button secondary" onClick={() => navigate('invitations')}>Your invitations</button></div></>}
+          {page === "church" && <>
+            <ConnectionsPanel key={`directory/${resetVersion}/${viewer}`} view="directory" hiddenSearchIds={canSeeMariaProfile ? [] : ["maria"]} hiddenPersonIds={friends} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} onDirectorySearch={setChurchSearch} directoryFilter={churchFilter} onDirectoryFilter={setChurchFilter} />
+            {churchFilter !== 'people' && <><PrayerGroups directorySearch={churchSearch} key={`${resetVersion}/${viewer}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} onChange={updatePrayerGroups} onNavigate={navigate} /><ConnectionsPanel view="groups" viewer={viewer} connections={connections} context={eventContext} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} /></>}
+          </>}
+          {(page !== 'church' || churchFilter !== 'groups') && <>
           <CommunityPages
+            compactChurch={page === "church"}
+            directorySearch={page === "church" ? churchSearch : undefined}
             language={language}
             onLanguageChange={setLanguage}
             key={resetVersion}
@@ -1689,12 +1723,14 @@ export default function App() {
             onFriendInvitationChange={setFriendInvitationStatus}
             discoverableMaria={canSeeMariaProfile}
             blockedActors={blockedActors}
-            onFriendsChange={setFriends}
+            onFriendsChange={updateFriends}
             memberActive={memberActive}
             onMemberActiveChange={() => navigate("group/grace-church")}
             officialReplyAllowed={officialAllowed}
             onOfficialReplyChange={() => navigate('group/grace-church')}
           />
+          {page === "church" && <ConnectionsPanel view="people" hiddenPersonIds={friends} viewer={viewer} connections={connections} context={eventContext} onChange={updateConnections} onNavigate={navigate} directorySearch={churchSearch} />}
+          </>}
           {page === "review" && viewer === "operator" && (
             <CareReviewQueue
               concerns={careConcerns}
@@ -1912,6 +1948,7 @@ export default function App() {
                 icon: "people",
                 active: page === "church",
               },
+              { route: "events", label: "Events", icon: "mail", active: page === "events" || page === "invitations" },
             ].map((item) => (
               <a
                 href={`#${item.route}`}
@@ -2349,6 +2386,7 @@ export default function App() {
             icon: "people",
             active: page === "church",
           },
+          { route: "events", label: "Events", icon: "mail", active: page === "events" || page === "invitations" },
         ].map((item) => (
           <a
             href={`#${item.route}`}

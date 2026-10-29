@@ -17,6 +17,8 @@ type MembershipStatus = "none" | "pending" | "invited" | "approved";
 type CommunityPage = "church" | "members" | "signup" | "review";
 
 interface CommunityPagesProps {
+  directorySearch?: string;
+  compactChurch?: boolean;
   page: CommunityPage;
   viewer: Viewer;
   requests: PrayerRequest[];
@@ -192,7 +194,8 @@ export function FriendInvitation(props: Pick<CommunityPagesProps, 'viewer' | 'fr
 
 function ChurchPage(props: CommunityPagesProps) {
   const feedback = useActionFeedback();
-  const [search, setSearch] = useState("");
+  const [localSearch, setSearch] = useState("");
+  const search = props.directorySearch ?? localSearch;
   const invitation = props.friendInvitationStatus;
   const [removeId, setRemoveId] = useState<string | null>(null);
   // Local walkthrough state only. Sending a request never grants friendship access.
@@ -222,6 +225,7 @@ function ChurchPage(props: CommunityPagesProps) {
     return <button className="button secondary compact" aria-label={`${pending ? "Cancel" : "Send"} friend request to ${name}`}
       onClick={() => toggleFriendRequest(id, name)}>{pending ? "Cancel request" : "Send friend request"}<Icon name={pending ? "close" : "people"} size={17} /></button>;
   }
+  if (props.compactChurch && props.viewer !== "elena") return null;
   if (props.viewer !== "elena")
     return (
       <div className="community-page">
@@ -247,6 +251,7 @@ function ChurchPage(props: CommunityPagesProps) {
   const removePerson = people.find((person) => person.id === removeId);
   return (
     <div className="community-page">
+      {!props.compactChurch && <>
       <Heading
         eyebrow="My Church · only you"
         title="Life is better with prayer."
@@ -267,6 +272,7 @@ function ChurchPage(props: CommunityPagesProps) {
         </article>)}
         {search.trim() && !discoveries.length && <p className="quiet-copy" role="status">No available matching box in this demo. Try @maria, @daniel, @jordan or @prayerbox.</p>}
       </div>
+      </>}
       <div className="community-layout">
         <div className="community-main">
           <section aria-labelledby="accepted-friends-heading">
@@ -302,10 +308,9 @@ function ChurchPage(props: CommunityPagesProps) {
               ) : (
                 <div className="panel community-empty">
                   <Icon name="heart" size={28} />
-                  <h3>A little room to begin</h3>
+                  <h3>{search.trim() ? "No matching friends" : "A little room to begin"}</h3>
                   <p>
-                    Your accepted friends will appear here. No one is added by
-                    church membership alone.
+                    {search.trim() ? 'Try another name or username.' : 'Your accepted friends will appear here. No one is added by church membership alone.'}
                   </p>
                 </div>
               )}
@@ -314,7 +319,7 @@ function ChurchPage(props: CommunityPagesProps) {
           {invitation === "declined" && !props.blockedActors?.includes("jordan") && (
             <p className="quiet-copy">Jordan’s invitation was declined. A future friendship still needs mutual acceptance.</p>
           )}
-          {removed.length > 0 && (
+          {!props.compactChurch && removed.length > 0 && (
             <section className="panel community-invitation" aria-label="People outside your accepted circle">
               <h2>A little room to reconnect</h2>
               <p>Sending a friend request invites someone to reconnect. Access changes only after they accept.</p>

@@ -8,7 +8,7 @@ import type { GroupCommand, GroupColor, GroupIcon, GroupPerson, GroupNotice, Gro
 import '../prayer-groups.css';
 import { makePicturePreview } from '../picture-preview';
 
-type Props = { people?: readonly GroupPerson[]; standalone?: boolean; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
+type Props = { people?: readonly GroupPerson[]; standalone?: boolean; directorySearch?: string; viewer: string; state: GroupState; onChange: (state: GroupState, notices?: GroupNotice[]) => void; selectedHandle?: string; onNavigate?: (route: string) => void };
 const date = (time: number) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(time);
 function GroupPicture({ group }: { group: Pick<PrayerGroup, 'image' | 'icon' | 'name' | 'color'> }) {
   return <span className={`group-picture group-tone-${group.color ?? "lavender"}`}>{group.image ? <img src={group.image} alt="" /> : <Icon name={group.icon} size={32} />}</span>;
@@ -115,7 +115,7 @@ function GroupEditor({ group, onSave, onClose }: { group?: PrayerGroup; onSave: 
   </Modal>;
 }
 
-export function PrayerGroups({ standalone = false, people = groupPeople, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
+export function PrayerGroups({ standalone = false, directorySearch, people = groupPeople, viewer, state, onChange, selectedHandle, onNavigate }: Props) {
   const feedback = useActionFeedback();
   const Heading = standalone ? 'h1' : 'h2';
   const actor = people.find(person => person.id === viewer);
@@ -143,8 +143,9 @@ export function PrayerGroups({ standalone = false, people = groupPeople, viewer,
     } catch (error) { feedback.respond({ tone: 'error', title: error instanceof Error ? error.message : 'This change could not be saved.' }); }
   };
   const myGroups = actor ? state.filter(group => !group.archivedAt && group.members.some(member => member.id === actor.id && ['approved', 'invited', 'pending'].includes(member.status))) : [];
-  const query = search.trim().replace(/^@/, '').toLowerCase();
-  const found = query ? state.filter(group => !group.archivedAt && group.username === query && !myGroups.some(mine => mine.id === group.id)) : [];
+  const query = (directorySearch ?? search).trim().replace(/^@/, '').toLowerCase();
+  const matches = (group: PrayerGroup) => `${group.name} ${group.username}`.toLowerCase().includes(query);
+  const found = query ? state.filter(group => !group.archivedAt && matches(group) && !myGroups.some(mine => mine.id === group.id) && !group.members.some(member => member.id === viewer && member.status === 'blocked')) : [];
   const action = (group: PrayerGroup) => {
     const membership = group.members.find(member => member.id === viewer);
     if (!actor) return <button className="button secondary" onClick={() => onNavigate?.('signup')}>Sign in to join</button>;
@@ -153,20 +154,17 @@ export function PrayerGroups({ standalone = false, people = groupPeople, viewer,
     if (membership?.status === 'pending') return <div className="group-actions"><span className="group-status">Awaiting approval</span><button className="text-link" onClick={() => send(group, { type: 'withdraw' }, 'Your join request was withdrawn.')}>Withdraw request</button></div>;
     if (membership?.status === 'approved') return <div className="group-actions">
       {canModerateGroup(group, viewer) && <button className="button secondary" onClick={() => { setManageId(group.id); setInvite(''); }}>{isGroupAdmin(group, viewer) ? 'Members & invitations' : 'Members & join requests'}</button>}
-      {isGroupAdmin(group, viewer) && <button className="icon-button" aria-label={`Edit ${group.name}`} onClick={() => setEditor(group)}><Icon name="edit" /></button>}
+      {!selectedHandle && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)} aria-label={`View prayer box for ${group.name}`}>View prayer box</button>}
       <button className="text-link" onClick={() => { setLeaveId(group.id); setSuccessor(''); }}>Leave group</button>
     </div>;
     return <button className="button secondary" onClick={() => send(group, { type: 'request_join' }, 'Your request to join is awaiting approval.')}>Request to join<Icon name="plus" /></button>;
   };
   const card = (group: PrayerGroup) => <article className="panel group-card" key={group.id}>
-    <div className="group-card-heading"><GroupPicture group={group} /><div><h3>{group.name}</h3><p>@{group.username}</p></div></div>
-    {isGroupAdmin(group, viewer) && <span className="group-status"><Icon name="shield" size={17} />You are an admin</span>}
-    {isGroupModerator(group, viewer) && <span className="group-status moderator"><Icon name="shield" size={17} />You are a moderator</span>}
+    <div className="group-card-heading"><GroupPicture group={group} /><div className="group-card-name"><h3>{group.name}</h3><p>@{group.username}</p></div><div className="group-card-role">{isGroupAdmin(group, viewer) && <><span className="group-status">You are an admin</span><button className="icon-button" aria-label={`Edit ${group.name}`} onClick={() => setEditor(group)}><Icon name="edit" /></button></>}{isGroupModerator(group, viewer) && <span className="group-status moderator">You are a moderator</span>}</div></div>
     {isGroupAdmin(group, viewer) && group.deletionProposal && <button className="text-link group-caution-action" onClick={() => setManageId(group.id)}>Review group deletion proposal<Icon name="arrow" size={17} /></button>}
     {group.website && <a className="text-link" href={group.website} target="_blank" rel="noopener noreferrer nofollow">Visit website<Icon name="arrow" size={17} /></a>}
-    <p className="quiet-copy">A prayer group with its own box. Personal requests and friendships stay separate.</p>
     {action(group)}
-    {!selectedHandle && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)} aria-label={`View prayer box for ${group.name}`}>View prayer box<Icon name="arrow" size={17} /></button>}
+    {!selectedHandle && !group.members.some(member => member.id === viewer && member.status === 'approved') && <button className="button secondary" onClick={() => onNavigate?.(group.id === 'grace' ? 'box/grace' : `group/${group.username}`)}>View prayer box</button>}
   </article>;
   let departure: ReturnType<typeof planGroupDeparture> | undefined;
   let departureError = '';
@@ -175,10 +173,9 @@ export function PrayerGroups({ standalone = false, people = groupPeople, viewer,
     <div className="group-section-heading"><div><p className="eyebrow">Your organizations</p><Heading id="prayer-groups-title" tabIndex={-1}>{selected ? selected.name : 'A little community for prayer.'}</Heading></div>{actor && !selectedHandle && <button className="button primary" onClick={() => setEditor('new')}><Icon name="plus" />Create prayer group</button>}</div>
     {!actor && <p className="quiet-copy">Sign in to create a group, manage memberships, or accept an invitation.</p>}
     {selectedHandle ? selected ? <>{card(selected)}<div className="group-inbox panel"><Icon name="box" size={32} /><h3>Room for prayer, together.</h3><p>Approved members share this group’s prayer inbox. Personal deliveries stay in each person’s own box.</p>{selected.id === 'grace' ? <button className="button secondary" onClick={() => onNavigate?.('box/grace')}>Open prayer inbox<Icon name="arrow" /></button> : <p className="quiet-copy">This new group has no prayer requests yet. Request delivery for newly created groups is still being connected.</p>}</div></> : <p role="status">This group is not available.</p> : <>
-      <label className="group-search"><Icon name="search" /><span className="sr-only">Find a prayer group by its exact username</span><input type="search" placeholder="Find a group by @username" value={search} onChange={event => setSearch(event.target.value)} maxLength={33} /></label>
-      <p className="quiet-copy">Use the group’s exact username, such as @grace-church. Joining always needs approval.</p>
-      <div className="group-grid">{myGroups.filter(group => !query || group.username.includes(query)).map(card)}{found.map(card)}</div>
-      {query && !found.length && !myGroups.some(group => group.username.includes(query)) && <p role="status">No available group matches that username.</p>}
+      {directorySearch === undefined && <label className="group-search"><Icon name="search" /><span className="sr-only">Find a prayer group by name or username</span><input type="search" placeholder="Find a group by name or @username" value={search} onChange={event => setSearch(event.target.value)} maxLength={80} /></label>}
+      <div className="group-grid">{myGroups.filter(group => !query || matches(group)).map(card)}{found.map(card)}</div>
+      {query && !found.length && !myGroups.some(matches) && <p role="status">No available group matches your search.</p>}
       {!myGroups.length && !query && <p className="group-empty">You have no prayer groups yet. Create a small group, search its username, or accept an invitation here.</p>}
     </>}
     {editor && actor && <GroupEditor group={editor === 'new' ? undefined : editor} onClose={() => setEditor(null)} onSave={values => {

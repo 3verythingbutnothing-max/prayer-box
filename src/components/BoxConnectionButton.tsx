@@ -29,7 +29,7 @@ export function BoxConnectionButton({ viewer, target, name, context, onChange, o
     {error && <span className="connection-action-error" role="status">{error}</span>}
     {confirm && active && <Modal title={`Disconnect from ${name}?`} onClose={() => setConfirm(false)}>
       <p>Are you sure you want to disconnect? Invitations from this connection will no longer appear.</p>
-      <p>If you want to reconnect later, you will need to send a new connection request and {name} will need to accept it again. Friendships and group membership are managed separately.</p>
+      <p>If you want to reconnect later, you will need to send a new connection request and {name} will need to accept it again. Group membership is managed separately.</p>
       <div className="form-actions"><button className="button secondary" onClick={() => setConfirm(false)}>Keep connection</button><button className="button" onClick={() => { feedback.prepare(); try { onChange(disconnectPrayerConnection(context.connections,active.connection.id,viewer,context)); setConfirm(false); feedback.respond({tone:'success',title:'Connection removed.'}); } catch(failure) {setError(failure instanceof Error ? failure.message : 'Please try again.');setConfirm(false);} }}>Disconnect <Icon name="check" /></button></div>
     </Modal>}
   </>;

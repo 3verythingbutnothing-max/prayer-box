@@ -131,7 +131,7 @@
 .connection-suggestion strong { overflow-wrap:anywhere; }
 .connection-suggestion .button { grid-column:1/-1; width:100%; }
 
-.prayer-card.testimony-card { background-color:#fff0df; border-color:#e4c6a8; --note-edge:#efbd91; }
+.prayer-card.testimony-card, .own-request.testimony-card { background-color:#fff0df; border-color:#e4c6a8; --note-edge:#efbd91; }
 .box-list > .my-prayers-section:first-child { margin-top:0; margin-bottom:2rem; padding-bottom:1.6rem; border-bottom:1px solid var(--line); }
 .box-connection-button { white-space:normal; }
 .connection-action-error { flex-basis:100%; color:#8b4451; }
