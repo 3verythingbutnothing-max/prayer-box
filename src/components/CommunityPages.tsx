@@ -140,10 +140,7 @@ export function FriendInvitation(props: Pick<CommunityPagesProps, 'viewer' | 'fr
                   <h2 id="friend-invitation-heading">
                     Jordan would like to join your circle.
                   </h2>
-                  <p>
-                    Accepting makes this a mutual friendship. It does not grant
-                    membership in Grace Church.
-                  </p>
+
                 </div>
               </div>
               <div className="community-actions">
@@ -293,7 +290,6 @@ function ChurchPage(props: CommunityPagesProps) {
                     <div className="community-friend-copy">
                       <h3>{person.name}</h3>
                       <span className="community-small">Accepted friend</span>
-                      <p>{person.note}</p>
                       <button className="button secondary compact friend-box-link" onClick={() => props.onNavigate(`box/${person.id}`)} aria-label={`View ${person.name}’s prayer box`}>View prayer box <Icon name="arrow" size={17}/></button>
                     </div>
                     <button

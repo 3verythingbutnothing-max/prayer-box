@@ -6,6 +6,7 @@ import "./card-surfaces.css";
 import "./control-feedback.css";
 import "./mobile-shell.css";
 import "./founder-refinements.css";
+import "./button-palette.css";
 
 // Vite replaces MODE at build time, so the backend bundle excludes the fictional demo.
 const App = import.meta.env.MODE === "backend"

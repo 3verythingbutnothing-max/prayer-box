@@ -62,6 +62,12 @@ import {
 import type { CareConcern, SupportNote } from "./care";
 import "./account.css";
 import "./story-list.css";
+import { StoryUpdateForm } from "./components/StoryUpdateForm";
+import type { StoryUpdateDraft } from "./components/StoryUpdateForm";
+import { requestIdentity } from "./request-identity";
+import { emptyPrivateTags, savePrivateTags, requestMatchesSearch } from "./private-tags";
+import type { PrivateTagState } from "./private-tags";
+import { TagPicker, TagChips } from "./components/TagPicker";
 import { recipientNames, prayerRecipients, recipientActor } from "./recipients";
 
 const initialEventPeople = [...groupPeople, { id: 'team', name: 'Prayer Box', username: 'prayerbox', active: true }];
@@ -80,7 +86,6 @@ function initialEvents(): PrayerEventState {
   return { shares: [], dismissals: [], events: [{ id: 'sample-morning-prayer', host: { kind: 'person', id: 'team' }, title: 'Morning prayer together', description: 'A sample invitation to make a little space for prayer and gratitude. This preview has no live meeting.', format: 'virtual', meetingUrl: 'https://example.org/prayer-preview', startsAt: new Date(now + 2 * 86400000).toISOString(), endsAt: new Date(now + 2 * 86400000 + 1800000).toISOString(), timeZone: 'America/New_York', audience: 'connections', shareable: true, createdAt: now, updatedAt: now, version: 1 }] };
 }
 
-const initialUpdateText = "The story is still unfolding. I am thankful for a little more peace today, and I am still asking for wisdom for the next step.";
 
 function FeedbackUnavailable() {
   return (
@@ -170,13 +175,18 @@ function PrayerCard({
   row,
   onNavigate,
   outsideAudience,
+  usernames,
+  organizationName,
 }: {
   row: PrayerRequest;
   onNavigate: (route: string) => void;
   outsideAudience: Audience;
+  usernames: Readonly<Record<string,string>>;
+  organizationName: string;
 }) {
   const posts = getStoryPosts(row);
   const latest = posts.at(-1);
+  const identity = requestIdentity(row, usernames, organizationName);
   return (
     <article className={`prayer-card panel ${latest ? "testimony-card" : ""}`}>
       <div className="card-topline">
@@ -190,7 +200,7 @@ function PrayerCard({
               authorLabel(row).slice(0, 1)
             )}
           </span>
-          <span>{authorLabel(row)}</span>
+          <span className="request-identity"><strong>{identity.name}</strong>{identity.username && <span className="request-username">@{identity.username}</span>}{identity.organization && <span className="request-organization"><Icon name="people" size={14}/> In {identity.organization}</span>}</span>
         </div>
         <span className="card-date">
           {row.postedAt ? formatStoryDate(row.postedAt) : row.createdAt}
@@ -311,6 +321,7 @@ export default function App() {
   const [profileUsernames, setProfileUsernames] = useState<Partial<Record<Viewer, string>>>({});
   const eventPeople = initialEventPeople.map(person => ({ ...person, username: profileUsernames[person.id as Viewer] ?? person.username }));
   const groupDirectoryPeople = eventPeople.filter(person => person.id !== "team");
+  const requestUsernames: Record<string,string> = {nora:'nora',leah:'leah',ruth:'ruth',ben:'ben',...Object.fromEntries(eventPeople.map(person => [person.id,person.username]))};
   const [connections, setConnections] = useState<PrayerConnection[]>(initialConnections);
   const [prayerEvents, setPrayerEvents] = useState<PrayerEventState>(initialEvents);
   const [connectionSuggestions, setConnectionSuggestions] = useState<EventHost[]>([]);
@@ -412,15 +423,13 @@ export default function App() {
   const [dialog, setDialog] = useState<
     "demo" | "notifications" | "blocked" | "share" | "support" | null
   >(null);
+  const [privateTagsByViewer, setPrivateTagsByViewer] = useState<Partial<Record<Viewer,PrivateTagState>>>({});
+  const privateTags = privateTagsByViewer[viewer] ?? emptyPrivateTags();
+  const [editingTagsSource, setEditingTagsSource] = useState<string | null>(null);
   const [requestSearch, setRequestSearch] = useState("");
   const [deleteStory, setDeleteStory] = useState<string | null>(null);
   const [resetVersion, setResetVersion] = useState(0);
   const [updateStory, setUpdateStory] = useState<string | null>(null);
-  const [updateKind, setUpdateKind] = useState<"testimony" | "update">(
-    "update",
-  );
-  const [updateText, setUpdateText] = useState(initialUpdateText);
-  const [updateDestinations, setUpdateDestinations] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [storyReadByViewer, setStoryReadByViewer] = useState<Partial<Record<Viewer, string[]>>>({});
   const readStoryNoticeIds = storyReadByViewer[viewer] ?? [];
@@ -507,9 +516,6 @@ export default function App() {
     if (next !== viewer) {
       setConnectionSuggestions([]);
       setUpdateStory(null);
-      setUpdateText(initialUpdateText);
-      setUpdateKind("update");
-      setUpdateDestinations([]);
     }
     if (next !== viewer && viewer !== "guest") setComposer(null);
     setViewer(next);
@@ -806,9 +812,12 @@ export default function App() {
         }))
         .filter((story) => story.destinations.length > 0),
     );
-    setUpdateDestinations((previous) =>
-      previous.filter((id) => !removedIds.includes(id)),
-    );
+    setPrivateTagsByViewer(previous => {
+      const state = previous[viewer]; if (!state) return previous;
+      const retained = new Set(requests.filter(row => row.authorId === viewer && !removedIds.includes(row.id)).map(row=>row.sourceId));
+      return {...previous,[viewer]:{...state,requests:Object.fromEntries(Object.entries(state.requests).filter(([source])=>retained.has(source)))}};
+    });
+    setEditingTagsSource(null);
     setDeleteStory(null);
     navigate("requests");
     acknowledge(
@@ -818,8 +827,33 @@ export default function App() {
     );
   }
 
+  function storyDeliveries(sourceId: string) {
+    return requests.filter(row => row.sourceId === sourceId && row.authorId === viewer && !row.groupRemoval && !(row.recipient === 'grace' && graceGroup.archivedAt) && row.moderation === 'approved');
+  }
+  function publishAuthorStory(sourceId: string, draft: StoryUpdateDraft): boolean {
+    feedback.prepare();
+    const plan = storyPublicationPlan(storyDeliveries(sourceId), viewer, draft.destinations, restricted.includes(viewer));
+    if (!draft.text.trim() || !plan.ready.length || plan.held.length) {
+      acknowledge('error','Check the selected prayer boxes.','Your draft is still here. Review the available destinations before sharing.');
+      return false;
+    }
+    const check = screenText(draft.text);
+    if (check.state === 'approved') {
+      setRequests(previous => publishStoryPost(previous,viewer,plan.ready,{text:draft.text,kind:draft.kind,createdAt:new Date().toISOString()},()=>`story-${crypto.randomUUID()}`));
+      acknowledge('success',draft.kind === 'testimony' ? 'Thank you for sharing your testimony!' : 'Your prayer update has been added!');
+    } else {
+      setHeldStories(previous => [...previous,{id:crypto.randomUUID(),authorId:viewer,sourceId,destinations:[...plan.ready],text:draft.text,kind:draft.kind,state:check.state === 'changes' ? 'changes' : 'pending',reason:check.reason}]);
+      acknowledge('pending','Your story is waiting for review.','It has not been shared with recipients.');
+    }
+    return true;
+  }
+  function renderStoryUpdateForm(sourceId: string, defaultDestination?: string, modal = false) {
+    return <StoryUpdateForm key={`${viewer}/${sourceId}/${defaultDestination ?? 'all'}`} deliveries={storyDeliveries(sourceId)} names={boxNames} defaultDestination={defaultDestination} restricted={restricted.includes(viewer)} onCancel={modal ? () => setUpdateStory(null) : undefined} onPublish={draft => { const saved = publishAuthorStory(sourceId,draft); if (saved && modal) setUpdateStory(null); return saved; }} />;
+  }
+
   function renderBox() {
     const receivingOwnBox = isOwnBox(viewer, box);
+    const showSubmitted = receivingOwnBox && postSegment === "submitted";
     const emptyBoxAction = () =>
       receivingOwnBox
         ? navigate(viewer === "maria" ? "box/grace" : "box/maria")
@@ -917,7 +951,7 @@ export default function App() {
                 <Icon name="arrow" size={13} />
               </button>
             )}
-            <div className="hero-actions">
+            {!receivingOwnBox && <div className="hero-actions">
               <button
                 className="button"
                 onClick={() =>
@@ -943,13 +977,7 @@ export default function App() {
                 Pray with others
               </button>
               {viewer !== 'guest' && !receivingOwnBox && <BoxConnectionButton key={`${viewer}/${box}`} viewer={viewer} target={box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}} name={boxNames[box]} context={eventContext} onChange={updateConnections} onNavigate={navigate} />}
-            </div>
-            {receivingOwnBox && (
-              <p className="own-box-guidance">
-                This box receives requests from others. Ask for prayer in
-                someone else’s box.
-              </p>
-            )}
+            </div>}
           </div>
           <div className="hero-art">
             <BoxArt />
@@ -974,22 +1002,22 @@ export default function App() {
             </button>
           </section>
         )}
-        {box === ownBox && viewer !== 'guest' && <nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${ownBox}`} aria-current="page">Prayers & testimonies</a><a className="button secondary" href="#invitations">Invitations</a></nav>}
+        {receivingOwnBox && viewer !== 'guest' && <nav className="box-section-links" aria-label="My prayer box sections"><a className="button secondary" href={`#box/${box}`} aria-current={!showSubmitted ? 'page' : undefined}>New prayer requests</a><a className="button secondary" href={`#box/${box}/submitted`} aria-current={showSubmitted ? 'page' : undefined}>Submitted prayers</a></nav>}
 
         <div className="box-layout">
           <section
             id="box-requests"
             className="box-list"
-            aria-labelledby="list-heading"
+            aria-labelledby={showSubmitted ? "box-my-prayers-title" : "list-heading"}
           >
-            {!inaccessible && viewer !== "guest" && (
+            {!inaccessible && viewer !== "guest" && (!receivingOwnBox || showSubmitted) && (
               <section
                 className="my-prayers-section"
                 aria-labelledby="box-my-prayers-title"
               >
                 <div className="section-heading">
                   <h2 id="box-my-prayers-title">
-                    <Icon name="heart" size={20} /> My Prayers
+                    <Icon name="heart" size={20} /> {showSubmitted ? "Submitted prayers" : "My Prayers"}
                   </h2>
                   <button
                     className="text-link"
@@ -1008,6 +1036,8 @@ export default function App() {
                       <PrayerCard
                         key={row.id}
                         row={row}
+                        usernames={requestUsernames}
+                        organizationName={graceGroup.name}
                         outsideAudience={outsideAudience(row)}
                         onNavigate={navigate}
                       />
@@ -1022,8 +1052,9 @@ export default function App() {
                 </div>
               </section>
             )}
+            <div hidden={showSubmitted}>
             <div className="list-toolbar">
-              <h2 id="list-heading">A place to pray together</h2>
+              <h2 id="list-heading">{receivingOwnBox ? 'New prayer requests' : 'A place to pray together'}</h2>
               <button
                 className="button secondary compact qr-share-trigger"
                 aria-label="Share this prayer box"
@@ -1045,6 +1076,8 @@ export default function App() {
                   <PrayerCard
                     key={row.id}
                     row={row}
+                        usernames={requestUsernames}
+                        organizationName={graceGroup.name}
                     outsideAudience={outsideAudience(row)}
                     onNavigate={navigate}
                   />
@@ -1061,6 +1094,7 @@ export default function App() {
               <Icon name="heart" size={14} />
               Small words, shared with care.
             </p>
+            </div>
           </section>
           <aside className="box-sidebar">
             <div className="side-note butter-wash">
@@ -1126,7 +1160,7 @@ export default function App() {
   function renderMyRequests() {
     if (viewer === "guest")
       return <EmptyState kind="denied" onAction={() => navigate("signup")} />;
-    const own = requests.filter((r) => r.authorId === viewer && (!requestSearch.trim() || [r.topic, r.text, ...getStoryPosts(r).map(post => post.text)].join(" ").toLowerCase().includes(requestSearch.trim().toLowerCase())));
+    const own = requests.filter(row => row.authorId === viewer && requestMatchesSearch(row,requestSearch,privateTags.requests[row.sourceId] ?? []));
     const sourceIds = [...new Set(own.map((r) => r.sourceId))];
     return (
       <div className="my-requests-page">
@@ -1138,10 +1172,6 @@ export default function App() {
           <h1 className="page-title">
             My Requests<span className="hero-dot">.</span>
           </h1>
-          <p className="page-intro">
-            Your words, with room to return. Each recipient has a separate
-            delivery and conversation.
-          </p>
         </header>
         <div className="page-toolbar">
           <button
@@ -1150,10 +1180,7 @@ export default function App() {
           >
             <Icon name="note" size={22} />Add a new prayer request
           </button>
-          <label className="request-search-field"><Icon name="search" size={22} /><span className="sr-only">Search my prayer requests</span><input type="search" value={requestSearch} onChange={event => setRequestSearch(event.target.value)} placeholder="Search your prayer requests" /></label>
-          <span className="quiet-copy">
-            An update can be hopeful, difficult, or still unfinished.
-          </span>
+          <label className="request-search-field"><Icon name="search" size={22} /><span className="sr-only">Search my prayer requests</span><input type="search" value={requestSearch} onChange={event => setRequestSearch(event.target.value)} placeholder="Search requests or #tags" /></label>
         </div>
         {sourceIds.length ? (
           <div className="own-request-list">
@@ -1170,6 +1197,8 @@ export default function App() {
                   </div>
                   <time className="own-request-date" dateTime={first.postedAt}>Requested {formatStoryDate(first.postedAt ?? "")}</time>
                   <p>{first.text}</p>
+                  <div className="own-request-tags"><TagChips tags={privateTags.requests[source] ?? []} onSearch={tag=>setRequestSearch(`#${tag.label}`)} /><button className="text-link" onClick={()=>setEditingTagsSource(editingTagsSource === source ? null : source)}>{editingTagsSource === source ? 'Done editing tags' : 'Edit tags'}</button></div>
+                  {editingTagsSource === source && <TagPicker value={privateTags.requests[source] ?? []} catalog={privateTags.catalog} onChange={tags=>setPrivateTagsByViewer(previous=>({...previous,[viewer]:savePrivateTags(previous[viewer] ?? emptyPrivateTags(),source,tags)}))}/>}
                   <div className="delivery-list">
                     {copies.map((copy) => (
                       <div className="delivery-list-row" key={copy.id}>
@@ -1215,7 +1244,6 @@ export default function App() {
                       className="button secondary compact"
                       onClick={() => {
                         setUpdateStory(source);
-                        setUpdateDestinations([]);
                       }}
                     >
                       Add update or testimony
@@ -1292,6 +1320,8 @@ export default function App() {
               <PrayerCard
                 key={row.id}
                 row={row}
+                        usernames={requestUsernames}
+                        organizationName={graceGroup.name}
                 outsideAudience={outsideAudience(row)}
                 onNavigate={navigate}
               />
@@ -1546,6 +1576,8 @@ export default function App() {
                 <PrayerCard
                   key={row.id}
                   row={row}
+                        usernames={requestUsernames}
+                        organizationName={graceGroup.name}
                   outsideAudience={outsideAudience(row)}
                   onNavigate={navigate}
                 />
@@ -1580,6 +1612,8 @@ export default function App() {
         key={`${row.id}-${viewer}-${focusedPostId ?? "latest"}`}
         focusedPostId={focusedPostId}
         request={row}
+        authorIdentity={requestIdentity(row,requestUsernames,graceGroup.name)}
+        authorUpdateForm={row.authorId === viewer ? renderStoryUpdateForm(row.sourceId,row.id) : undefined}
         viewer={viewer}
         groupMember={groupMember}
         officialAllowed={officialAllowed}
@@ -2415,7 +2449,9 @@ export default function App() {
           blockedActors={blockedActors}
           boxCeilings={accessContext.boxCeilings}
           onClose={() => setComposer(null)}
-          onCommit={commitRequests}
+          tagCatalog={privateTags.catalog}
+          initialTags={composer.initial ? privateTags.requests[composer.initial.sourceId] ?? [] : []}
+          onCommit={(rows,tags) => { const saved = commitRequests(rows); if (saved && rows.length) setPrivateTagsByViewer(previous=>({...previous,[viewer]:savePrivateTags(previous[viewer] ?? emptyPrivateTags(),rows[0].sourceId,tags)})); return saved; }}
           onNavigate={navigate}
           onSignIn={() => changeViewer("elena")}
         />
@@ -2529,6 +2565,8 @@ export default function App() {
               className="text-link"
               onClick={() => {
                 setRequests(cloneFixtures());
+                setPrivateTagsByViewer({});
+                setEditingTagsSource(null);
                 setBlocked({});
                 setBoxRemoved({});
                 setReports([]);
@@ -2574,7 +2612,7 @@ export default function App() {
       )}
       {dialog === "notifications" && (
         <Modal title="Your updates" onClose={() => setDialog(null)} wide>
-          <p className="quiet-copy">Prayer updates follow the original delivery’s access. Group decisions are private to your account and stay available after membership ends. No external notification has been sent.</p>
+
           <PrivateSupportNotifications notes={privateSupportNotes} onOpen={() => setDialog("support")} onDismiss={id => setDismissedSupportNotes(previous => [...previous,id])} />
           <div className="story-notifications">
             {incomingConnections.length > 0 && <article className="story-notification"><h3>New requests to connect</h3><p>Review who would like to share prayer invitations with you.</p><button className="button secondary" onClick={() => {setDialog(null);navigate('church');}}>Review in My Church</button></article>}
@@ -2682,158 +2720,8 @@ export default function App() {
           </p>
         </Modal>
       )}
-      {updateStory && (
-        <Modal
-          title="There’s room for your unfolding story"
-          onClose={() => setUpdateStory(null)}
-          wide
-        >
-          <p>
-            An update can share a little hope, a difficult day, or something
-            that is still unresolved. Choose exactly which existing deliveries
-            should receive it.
-          </p>
-          <label className="field">
-            Kind of story
-            <select
-              value={updateKind}
-              onChange={(event) =>
-                setUpdateKind(event.target.value as "testimony" | "update")
-              }
-            >
-              <option value="update">Update · still unfolding</option>
-              <option value="testimony">Testimony · gratitude and hope</option>
-            </select>
-          </label>
-          <label className="field">
-            Fictional update
-            <textarea
-              rows={5}
-              value={updateText}
-              maxLength={5000}
-              onChange={(event) => setUpdateText(event.target.value)}
-            />
-          </label>
-          <fieldset className="destination-fieldset">
-            <legend>Update these deliveries</legend>
-            {requests
-              .filter(
-                (r) =>
-                  r.sourceId === updateStory &&
-                  r.authorId === viewer &&
-                  !r.groupRemoval && !(r.recipient === "grace" && graceGroup.archivedAt) &&
-                  r.moderation === "approved",
-              )
-              .map((row) => (
-                <label className="check-row" key={row.id}>
-                  <input
-                    type="checkbox"
-                    checked={updateDestinations.includes(row.id)}
-                    onChange={(event) =>
-                      setUpdateDestinations((previous) =>
-                        event.target.checked
-                          ? [...previous, row.id]
-                          : previous.filter((id) => id !== row.id),
-                      )
-                    }
-                  />
-                  <span>
-                    <strong>{boxNames[row.recipient]}</strong>
-                    <small>
-                      {row.anonymous ? "Anonymous" : "Name shown"} · inherits{" "}
-                      {getAudienceLabel(row.audience, row.recipient)} and any
-                      stricter account limit
-                    </small>
-                  </span>
-                </label>
-              ))}
-          </fieldset>
-          <p className="quiet-copy">
-            No other destination, reply or conversation is copied. The linked
-            story inherits this delivery’s audience and anonymous identity.
-            Media would have its own review.
-          </p>
-          <div className="modal-actions">
-            <button
-              className="button secondary"
-              onClick={() => setUpdateStory(null)}
-            >
-              Cancel
-            </button>
-            <button
-              className="button"
-              disabled={
-                restricted.includes(viewer) ||
-                !updateDestinations.length ||
-                !updateText.trim()
-              }
-              onClick={() => {
-                feedback.prepare();
-                const plan = storyPublicationPlan(
-                  requests.filter(row => row.recipient !== 'grace' || !graceGroup.archivedAt),
-                  viewer,
-                  updateDestinations,
-                  restricted.includes(viewer),
-                );
-                if (!plan.ready.length || plan.held.length) {
-                  setUpdateDestinations(plan.ready);
-                  acknowledge(
-                    "error",
-                    "Check the selected prayer boxes.",
-                    "The selected delivery or posting permissions have changed. Your draft is still here; review the available destinations before sharing.",
-                  );
-                  return;
-                }
-                const check = screenText(updateText);
-                if (check.state === "approved") {
-                  setRequests((previous) =>
-                    publishStoryPost(
-                      previous,
-                      viewer,
-                      updateDestinations,
-                      {
-                        text: updateText,
-                        kind: updateKind,
-                        createdAt: new Date().toISOString(),
-                      },
-                      () => `story-${crypto.randomUUID()}`,
-                    ),
-                  );
-                  acknowledge(
-                    "success",
-                    updateKind === "testimony"
-                      ? "Thank you for sharing your testimony!"
-                      : "Your prayer update has been added!",
-                    "Fictional linked story added only to the selected deliveries after the demo check.",
-                  );
-                } else {
-                  setHeldStories((previous) => [
-                    ...previous,
-                    {
-                      id: crypto.randomUUID(),
-                      authorId: viewer,
-                      sourceId: updateStory,
-                      destinations: [...updateDestinations],
-                      text: updateText,
-                      kind: updateKind,
-                      state: check.state === "changes" ? "changes" : "pending",
-                      reason: check.reason,
-                    },
-                  ]);
-                  acknowledge(
-                    "pending",
-                    "Your story is waiting for review.",
-                    "Story held for review in My Requests. It has not been shared with recipients.",
-                  );
-                }
-                setUpdateStory(null);
-              }}
-            >
-              Add example story
-            </button>
-          </div>
-        </Modal>
-      )}
+      {updateStory && <Modal title="Add an update or testimony" onClose={() => setUpdateStory(null)} wide>{renderStoryUpdateForm(updateStory,undefined,true)}</Modal>}
+
     </>
   );
 }

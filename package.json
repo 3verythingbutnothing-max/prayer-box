@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && vite build --base=/prayer-box/",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts src/qr.test.ts src/feedback-cues.test.ts src/widgets.test.ts src/donation-amount.test.ts src/story-replies.test.ts src/funding-window.test.ts src/recipients.test.ts src/request-edits.test.ts src/prayer-groups.test.ts src/picture-preview.test.ts src/group-moderation.test.ts src/prayer-events.test.ts src/event-calendar.test.ts",
+    "test": "node --experimental-strip-types --test src/domain.test.ts src/care.test.ts src/story.test.ts src/organization.test.ts src/qr.test.ts src/feedback-cues.test.ts src/widgets.test.ts src/donation-amount.test.ts src/story-replies.test.ts src/funding-window.test.ts src/recipients.test.ts src/request-edits.test.ts src/prayer-groups.test.ts src/picture-preview.test.ts src/group-moderation.test.ts src/prayer-events.test.ts src/event-calendar.test.ts src/request-identity.test.ts src/private-tags.test.ts",
     "test:stress": "node --experimental-strip-types scripts/stress-domain.ts && node --experimental-strip-types scripts/audit-invariants.ts",
     "backend:types": "wrangler types --config backend/wrangler.jsonc backend/worker-configuration.d.ts",
     "backend:check": "tsc --project backend/tsconfig.json --noEmit",
