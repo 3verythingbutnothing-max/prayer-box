@@ -18,6 +18,7 @@ const ttl=10*60_000;
 const maxAttempts=5;
 
 export function recoveryAvailable(env:BackendEnv) {
+  if (env.APP_ENV !== 'local' || env.AUTH_PROVIDER === 'cognito' || env.COGNITO_USER_POOL_ID) return false;
   return Boolean(env.RECOVERY_CODE_SECRET && env.RECOVERY_CODE_SECRET.length>=32 && env.RECOVERY_DELIVERY && env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY);
 }
 async function digest(env:BackendEnv,value:string) {
@@ -64,6 +65,7 @@ async function sendCode(env:BackendEnv,input:Delivery,deps:RecoveryDependencies)
 export async function handleRecoveryRoute(request:Request,env:BackendEnv,db:Database,deps:RecoveryDependencies={}):Promise<Response|null> {
   const path=new URL(request.url).pathname;
   if(!['/api/recovery/start','/api/recovery/complete'].includes(path))return null;
+  if(env.APP_ENV !== 'local' || env.AUTH_PROVIDER === 'cognito' || env.COGNITO_USER_POOL_ID) throw unavailable();
   if(request.method!=='POST')throw new HttpError(405,'method_not_allowed','Use the recovery form.');
   requireTrustedOrigin(request,[env.APP_ORIGIN]);
   if(!env.RECOVERY_CODE_SECRET || env.RECOVERY_CODE_SECRET.length<32 || (!env.RECOVERY_DELIVERY && !deps.deliverRecoveryCode) || !env.TURNSTILE_SECRET || !deps.waitUntil)throw unavailable();

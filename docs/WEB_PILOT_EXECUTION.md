@@ -4,8 +4,8 @@ Updated October 30, 2026. This records the founder-approved web-first plan and i
 
 ## Current phase and gates
 
-1. **Design completion, current:** finish responsive screens and test fictional interactions. Real signup, credentials, microphone/camera access, service uploads, provider calls, messages, payments, and pilot registration stay closed. Present screenshots and core flows for founder design sign-off.
-2. **Connected staging:** after design sign-off, connect the approved components to typed APIs and isolated resources; prove the real services using test data and authorized test accounts. The minimal backend demonstration is not the intended final interface.
+1. **Design completion:** finish responsive screens and test fictional interactions. Real signup, credentials, microphone/camera access, service uploads, provider calls, messages, payments, and pilot registration stay closed. Present screenshots and core flows for founder design sign-off.
+2. **Connected staging, implementation started by founder instruction:** connect the approved components to typed APIs and isolated resources; registration code is now implemented with capability flags off and no AWS credentials; prove the real services using test data and authorized test accounts. The minimal backend demonstration is not the intended final interface.
 3. **Operational readiness:** configure production providers, staff/support access, monitoring, spending controls, retention and recovery; pass an independent review and a timed restore drill.
 4. **Invited web pilot:** obtain explicit founder release approval, begin with ten invited testers, and expand toward fifty only as review capacity and measured costs allow. The first real-user pilot includes photos, recorded prayers and transcripts; it must not open early with simulated media presented as functional.
 5. **Proof of concept:** verify that people can create a request, receive permitted encouragement, return and add an update. Collect private, minimal feedback about clarity, trust and willingness to keep using the app. No public popularity metrics.

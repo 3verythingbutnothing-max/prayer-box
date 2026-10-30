@@ -27,7 +27,7 @@ function loadTurnstile(): Promise<void> {
   return turnstileScript;
 }
 
-export default function BotCheck({ siteKey, attempt, onToken, action = 'feedback' }: { siteKey: string; attempt: number; onToken: (value: string) => void; action?: 'feedback' | 'recovery' }) {
+export default function BotCheck({ siteKey, attempt, onToken, action = 'feedback' }: { siteKey: string; attempt: number; onToken: (value: string) => void; action?: 'feedback' | 'recovery' | 'register' | 'signin' | 'recover' }) {
   const target = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   useEffect(() => {

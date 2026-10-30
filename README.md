@@ -1,5 +1,7 @@
 # Prayer Box
 
+Registration-service implementation has started in the separate connected build: Cognito-backed account creation/sign-in, invitation gates, private profiles/boxes, opaque cookie sessions and contact-free recovery kits. Provider credentials are absent and all auth capability flags remain off. GitHub Pages remains the fictional design preview; payments remain deferred. See [Cognito setup and proof](docs/COGNITO_SETUP.md) and [registration verification](docs/REGISTRATION_VERIFICATION.md) before configuring isolated staging.
+
 The current release direction is **web first**. The [approved execution contract](docs/WEB_PILOT_EXECUTION.md) records the design sign-off, connected staging, operations and invited-pilot gates. This increment finishes fictional account and photo/audio/transcript design flows; it does not open real registration or activate services. Native apps, widgets, video, browser push and payments are deferred.
 
 This is the approved design direction expressed as a responsive React frontend for public design review. Every name, prayer, membership, media state, notification, report and donation is fictional. Demo input stays in browser memory and is cleared on reload. The prototype is not production security.

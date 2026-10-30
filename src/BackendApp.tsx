@@ -6,7 +6,8 @@ import { Icon, PrayerBoxMark } from './ui';
 import { BackendError, getBackendNotifications, getBackendSession, sendBackendFeedback, uploadBackendPicture } from './backend-client';
 import type { BackendNotification, BackendSession } from './backend-client';
 import './backend.css';
-import { AccountRecovery } from './components/AccountRecovery';
+import RegistrationServices, { RecoveryKitSettings } from './components/RegistrationServices';
+import { signOutAccount } from './registration-client';
 
 import BotCheck from './components/BackendBotCheck';
 
@@ -145,6 +146,8 @@ export default function BackendApp() {
   const [notifications, setNotifications] = useState<BackendNotification[]>([]);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const signingOutRef = useRef(false);
   const sessionRequest = useRef(0);
   const currentActor = useRef<string | null>(null);
   const notificationRequest = useRef(0);
@@ -193,22 +196,36 @@ export default function BackendApp() {
     setNotificationMessage(''); setSessionError(''); setRefreshing(false);
     refreshSession();
   }
-  if (route === 'recovery') return <div className="backend-app"><header className="backend-header"><a href="#signin" className="brand"><PrayerBoxMark size={42} />Prayer Box</a></header><main className="backend-main"><AccountRecovery onReset={recoveryCompleted} onNavigate={destination => { window.location.hash = destination; }} /></main></div>;
+  async function signOut() {
+    if (signingOutRef.current || !session?.csrfToken) return;
+    signingOutRef.current = true; setSigningOut(true); prepare();
+    try {
+      await signOutAccount(session.csrfToken);
+      recoveryCompleted(); window.location.hash = 'signin';
+      respond({ tone: 'success', title: 'You’re signed out.' });
+    } catch (failure) {
+      respond({ tone: 'info', title: 'Sign-out could not be confirmed.', message: failure instanceof Error ? failure.message : 'Please try again.' });
+    } finally { signingOutRef.current = false; setSigningOut(false); }
+  }
+  const explicitAccountRoute = ['signup', 'signin', 'recovery'].includes(route);
+  const accountMode = route === 'signin' ? 'signin' : route === 'recovery' ? 'recovery' : 'signup';
+  const showAccounts = explicitAccountRoute || !!session && !session.authenticated && !draftOwner;
+
   return <div className="backend-app">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="backend-header"><a href="#main-content" className="brand"><PrayerBoxMark size={42} /><span>Prayer Box</span></a>
-      <nav aria-label="Main navigation"><a href="#help">Get help</a><span className="backend-stage">Local integration</span></nav></header>
+      <nav aria-label="Main navigation">{!session?.authenticated && <><a href="#signup">Create account</a><a href="#signin">Sign in</a></>}<a href="#help">Get help</a>{session?.authenticated && <button type="button" className="text-link" disabled={signingOut} onClick={() => void signOut()}>{signingOut ? "Signing out…" : "Sign out"}</button>}<span className="backend-stage">Local integration</span></nav></header>
     <main id="main-content" tabIndex={-1} className="backend-main">
-      <section className="backend-intro"><p className="eyebrow">A little space, built with care</p><h1>Keeping prayer at the heart.</h1>
-        <p>The next chapter of Prayer Box is taking shape, with private accounts and a safer place to share.</p></section>
+      {!showAccounts && <section className="backend-intro"><p className="eyebrow">A little space, built with care</p><h1>Keeping prayer at the heart.</h1>
+        <p>The next chapter of Prayer Box is taking shape, with private accounts and a safer place to share.</p></section>}
+      {showAccounts ? <RegistrationServices key={accountMode} mode={accountMode} onNavigate={destination => {window.location.hash = destination;}} onReset={recoveryCompleted} onAuthenticated={() => {setSession(null);window.location.hash='';refreshSession();}} /> : <>
       {sessionError && <section className="backend-card backend-connection" role="status"><h2>Let’s reconnect.</h2><p>{sessionError}</p><button className="button secondary" onClick={refreshSession}>Try again</button></section>}
       {!session ? !sessionError && <p role="status">Connecting to Prayer Box…</p>
-          : !session.authenticated && !draftOwner ? <section className="backend-card backend-connection"><span className="backend-icon"><Icon name="lock" size={28} /></span>
-            <h2>Sign-in is not open yet.</h2><p>This local integration is being checked before accounts and prayer submissions open. No password or personal information is needed here.</p>
-            <button className="button secondary" onClick={refreshSession}>Refresh connection</button><a className="text-link" href="#recovery">Forgot password?</a></section> : <>
+          : <>
             <p className="backend-signed-in">{session.authenticated ? <>Connected as <strong>{session.actor?.displayName}</strong>.</>
               : 'Your session has ended. Your draft remains below, and sending is unavailable until your connection is restored.'}</p>
             <FeedbackForm key={draftOwner} session={session} refreshSession={refreshSession} />
+            {session.authenticated && <RecoveryKitSettings key={session.actor?.id} csrfToken={session.csrfToken} />}
             <section className="backend-card" aria-labelledby="backend-notifications-title"><div className="backend-section-top"><h2 id="backend-notifications-title"><Icon name="bell" size={24} /> Your updates</h2>
               <button className="button secondary compact" disabled={refreshing || !session.authenticated} onClick={refreshNotifications}>{refreshing ? 'Refreshing…' : 'Refresh'}</button></div>
               <p className="backend-helper">Updates are saved to your account. Refresh to check for new ones.</p>
@@ -216,10 +233,11 @@ export default function BackendApp() {
               {notifications.length > 0 && <ul className="backend-notifications">{notifications.map(notification => <li key={notification.id}><p>{notification.message}</p><time dateTime={new Date(notification.createdAt).toISOString()}>{new Date(notification.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></li>)}</ul>}
             </section>
           </>}
+      </>}
       <section id="help" className="backend-card backend-help" aria-labelledby="backend-help-title"><p className="eyebrow">We can take it one step at a time</p>
         <h2 id="backend-help-title">A little help getting connected.</h2><p>If verification is unavailable, keep your draft on this page and choose <strong>Try again</strong>. Check your connection and allow the verification frame if your browser blocks it.</p>
         <p>Verification never grants church membership or changes who can see a prayer. If it still cannot connect, sending stays unavailable until the service is restored.</p>
-        <p className="backend-helper">Live sign-in, staffed support, and crisis monitoring are not available in this local integration.</p></section>
+        <p className="backend-helper">Registration remains invitation only and depends on the account services being ready. This integration is not an emergency service or continuous crisis monitoring.</p></section>
     </main><footer className="backend-footer"><PrayerBoxMark size={30} /><p>A small space for prayer, encouragement, and hope.</p></footer>
   </div>;
 }

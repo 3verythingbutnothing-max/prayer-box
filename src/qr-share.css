@@ -84,8 +84,27 @@
 .qr-share-tools .qr-share-error {
   color: #903d44;
 }
-.list-toolbar .qr-share-trigger {
+.box-share-art .qr-share-trigger {
   flex-shrink: 0;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+.hero-art.box-share-art {
+  gap: 12px;
+  pointer-events: auto;
+}
+@media (max-width: 650px) {
+  .box-hero .hero-art.box-share-art {
+    position: static;
+    width: auto;
+    padding-top: 8px;
+    opacity: 1;
+  }
+  .box-hero .box-share-art .box-art {
+    width: 110px;
+    max-width: 100%;
+  }
 }
 @media (max-width: 560px) {
   .qr-share-layout {
@@ -105,7 +124,7 @@
   .qr-share-downloads {
     margin-block: 15px;
   }
-  .list-toolbar .qr-share-trigger {
+  .box-share-art .qr-share-trigger {
     padding-inline: 10px;
     gap: 6px;
     font-size: 0.9375rem;

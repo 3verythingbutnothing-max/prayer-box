@@ -1014,8 +1014,15 @@ export default function App() {
               {viewer !== 'guest' && !receivingOwnBox && <BoxConnectionButton key={`${viewer}/${box}`} viewer={viewer} target={box === 'grace' ? {kind:'group',id:'grace'} : {kind:'person',id:recipientActor(box,graceGroup.ownerId)}} name={boxNames[box]} context={eventContext} onChange={updateConnections} onNavigate={navigate} />}
             </div>}
           </div>
-          <div className="hero-art">
+          <div className="hero-art box-share-art">
             <BoxArt />
+            <button
+              className="button secondary compact qr-share-trigger"
+              aria-label="Share this prayer box"
+              onClick={() => setDialog("share")}
+            >
+              <Icon name="upload" size={18} /> Share box
+            </button>
           </div>
         </section>
         {box === "grace" && (
@@ -1090,15 +1097,6 @@ export default function App() {
             <div hidden={showSubmitted}>
             <div className="list-toolbar">
               <h2 id="list-heading">{receivingOwnBox ? 'New prayer requests' : 'A place to pray together'}</h2>
-              <button
-                className="button secondary compact qr-share-trigger"
-                aria-label="Share this prayer box"
-                onClick={() => {
-                  setDialog("share");
-                }}
-              >
-                <Icon name="qr" size={18} /> Share box
-              </button>
             </div>
             <div id="request-list" className="request-list">
               {inaccessible ? (
