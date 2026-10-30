@@ -30,6 +30,12 @@ export class CognitoError extends Error {
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const opaqueUsername = /^pb-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+// AWS documents sub as opaque, not an RFC UUID. These are only the transport
+// bounds of the administrative Username parameter; identity comes from the
+// authenticated provider response and exact pool/subject binding, not its shape.
+export function isCognitoSubject(value: unknown): value is string {
+  return typeof value === 'string' && /^[\p{L}\p{M}\p{S}\p{N}\p{P}]{1,128}$/u.test(value);
+}
 // Commercial AWS partition only. No caller-controlled host, path, URL or proxy.
 const regionPattern = /^(?:af|ap|ca|eu|il|me|mx|sa|us)-(?:central|east|west|north|south|southeast|northeast)-[1-9]$/;
 const defaultFetch: CognitoFetcher = (url, init) => fetch(url, init);
@@ -124,7 +130,7 @@ async function request(value: Config, operation: string, payload: Record<string,
 function identity(value: Record<string, unknown>, providerUsername: string, attributesKey: 'Attributes' | 'UserAttributes'): CognitoIdentity {
   if (value.Username !== providerUsername || !Array.isArray(value[attributesKey])) throw new CognitoError('protocol_error');
   const sub = value[attributesKey].filter((attribute: unknown) => object(attribute) && attribute.Name === 'sub');
-  if (sub.length !== 1 || !object(sub[0]) || typeof sub[0].Value !== 'string' || !uuid.test(sub[0].Value)) throw new CognitoError('protocol_error');
+  if (sub.length !== 1 || !object(sub[0]) || !isCognitoSubject(sub[0].Value)) throw new CognitoError('protocol_error');
   return { sub: sub[0].Value, providerUsername };
 }
 function pendingIdentity(value: Record<string, unknown>, providerUsername: string, attributesKey: 'Attributes' | 'UserAttributes'): CognitoIdentity {
@@ -181,7 +187,7 @@ export async function authenticateCognito(env: CognitoEnvironment, input: { prov
 export async function resetCognitoPassword(env: CognitoEnvironment, input: { providerUsername: string; password: string; expectedSub: string },
   fetcher: CognitoFetcher = defaultFetch, timeoutMs = 8000): Promise<void> {
   const value = config(env); checkUsername(input.providerUsername); validateCognitoPassword(input.password);
-  if (!uuid.test(input.expectedSub)) throw new CognitoError('protocol_error');
+  if (!isCognitoSubject(input.expectedSub)) throw new CognitoError('protocol_error');
   const existing = await request(value, 'AdminGetUser', { UserPoolId: value.poolId, Username: input.providerUsername }, fetcher, timeoutMs);
   const found = identity(existing, input.providerUsername, 'UserAttributes');
   if (found.sub !== input.expectedSub || existing.Enabled !== true || !['CONFIRMED', 'RESET_REQUIRED'].includes(String(existing.UserStatus))
@@ -192,7 +198,7 @@ export async function resetCognitoPassword(env: CognitoEnvironment, input: { pro
 export async function revokeCognitoSessions(env: CognitoEnvironment, providerUsername: string, expectedSub: string,
   fetcher: CognitoFetcher = defaultFetch, timeoutMs = 8000): Promise<void> {
   const value = config(env); checkUsername(providerUsername);
-  if (!uuid.test(expectedSub)) throw new CognitoError('protocol_error');
+  if (!isCognitoSubject(expectedSub)) throw new CognitoError('protocol_error');
   // Both values come from the trusted application mapping; target the immutable
   // subject so an administrator's later username reuse cannot revoke another user.
   await request(value, 'AdminUserGlobalSignOut', { UserPoolId: value.poolId, Username: expectedSub }, fetcher, timeoutMs);
@@ -202,7 +208,7 @@ export async function revokeCognitoSessions(env: CognitoEnvironment, providerUse
 export async function deleteCognitoOrphan(env: CognitoEnvironment, input: { providerUsername: string; requestId: string; expectedSub: string },
   fetcher: CognitoFetcher = defaultFetch, timeoutMs = 8000): Promise<void> {
   const value = config(env);
-  if (!uuid.test(input.requestId) || !uuid.test(input.expectedSub) || input.providerUsername !== `pb-${input.requestId}`) throw new CognitoError('protocol_error');
+  if (!uuid.test(input.requestId) || !isCognitoSubject(input.expectedSub) || input.providerUsername !== `pb-${input.requestId}`) throw new CognitoError('protocol_error');
   const existing = await request(value, 'AdminGetUser', { UserPoolId: value.poolId, Username: input.providerUsername }, fetcher, timeoutMs);
   const found = pendingIdentity(existing, input.providerUsername, 'UserAttributes');
   if (found.sub !== input.expectedSub) throw new CognitoError('protocol_error');

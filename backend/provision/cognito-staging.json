@@ -1,0 +1,54 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Prayer Box isolated Cognito staging directory. No IAM grants, credentials, users, messaging, domain, or public signup.",
+  "Resources": {
+    "StagingUserPool": {
+      "Type": "AWS::Cognito::UserPool",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "UserPoolName": "prayer-box-staging",
+        "UserPoolTier": "LITE",
+        "DeletionProtection": "ACTIVE",
+        "UsernameConfiguration": { "CaseSensitive": false },
+        "AdminCreateUserConfig": { "AllowAdminCreateUserOnly": true },
+        "AccountRecoverySetting": { "RecoveryMechanisms": [{ "Name": "admin_only", "Priority": 1 }] },
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 15,
+            "RequireUppercase": false,
+            "RequireLowercase": false,
+            "RequireNumbers": false,
+            "RequireSymbols": false,
+            "TemporaryPasswordValidityDays": 7
+          }
+        },
+        "MfaConfiguration": "OPTIONAL",
+        "EnabledMfas": ["SOFTWARE_TOKEN_MFA"],
+        "UserPoolTags": { "Project": "PrayerBox", "Environment": "staging" }
+      }
+    },
+    "StagingServerClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "UserPoolId": { "Ref": "StagingUserPool" },
+        "ClientName": "prayer-box-staging-server",
+        "GenerateSecret": false,
+        "ExplicitAuthFlows": ["ALLOW_ADMIN_USER_PASSWORD_AUTH"],
+        "PreventUserExistenceErrors": "ENABLED",
+        "AllowedOAuthFlowsUserPoolClient": false,
+        "EnableTokenRevocation": true,
+        "AccessTokenValidity": 5,
+        "IdTokenValidity": 5,
+        "RefreshTokenValidity": 1,
+        "TokenValidityUnits": { "AccessToken": "minutes", "IdToken": "minutes", "RefreshToken": "days" }
+      }
+    }
+  },
+  "Outputs": {
+    "Region": { "Value": { "Ref": "AWS::Region" } },
+    "UserPoolId": { "Value": { "Ref": "StagingUserPool" } },
+    "UserPoolArn": { "Value": { "Fn::GetAtt": ["StagingUserPool", "Arn"] } },
+    "ClientId": { "Value": { "Ref": "StagingServerClient" } }
+  }
+}
