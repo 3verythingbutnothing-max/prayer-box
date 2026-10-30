@@ -1,0 +1,14 @@
+.account-deletion-preview h3 { display:flex; gap:10px; align-items:center; margin:0 0 14px; font-size:1.2rem; line-height:1.35; }
+.account-deletion-preview h3:focus { outline:none; }
+.account-deletion-preview p, .account-deletion-preview dd, .account-deletion-preview label { font-size:1rem; line-height:1.65; overflow-wrap:anywhere; }
+.account-deletion-preview .account-dialog-actions .button { font-size:1rem; white-space:normal; }
+.account-deletion-effects { display:grid; gap:14px; padding:18px; margin:20px 0; background:#f2edf8; border:1px solid #d8c9e5; border-radius:16px; }
+.account-deletion-effects dt { color:var(--plum); font-weight:650; margin-bottom:4px; }
+.account-deletion-effects dd { margin:0; }
+.account-deletion-handoff { padding:16px; border:1px solid #d9cfaa; border-radius:14px; background:#fff7db; margin:18px 0; }
+.account-deletion-handoff p { margin:8px 0; }
+.account-deletion-auth { display:flex; align-items:flex-start; gap:10px; padding:14px; background:#eaf1f8; border:1px solid #c4d5e7; border-radius:14px; }
+.account-deletion-auth svg { flex:none; margin-top:4px; }
+.account-deletion-ack { display:flex; gap:12px; align-items:flex-start; margin:22px 0; }
+.account-deletion-ack input { flex:none; margin:5px 0 0; width:20px; height:20px; accent-color:var(--plum); }
+@media (max-width:480px) { .account-deletion-preview { padding:22px 18px; }.account-deletion-effects { padding:14px; }.account-deletion-preview .account-dialog-actions { align-items:stretch; }.account-deletion-preview .account-dialog-actions .button { width:100%; }.account-deletion-preview .account-dialog-actions .text-link { min-height:44px; } }

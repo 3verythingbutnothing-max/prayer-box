@@ -9,6 +9,11 @@ import type { TextEditTarget } from "../story";
 import { useActionFeedback } from "../action-feedback";
 import { scopedStoryReplies } from "../story-replies";
 import "../story-detail.css";
+import { MediaDraftPreview } from './MediaDraftPreview';
+import { MediaDraftSummary } from './MediaDraftSummary';
+import { emptyMediaDraft, hasMedia, mediaReady } from '../media-draft';
+import type { MediaDraftSnapshot } from '../media-draft';
+import type { MediaReplyDraft, MediaReplyQueueResult } from '../media-reply-review';
 import { groupRemovalReasons } from "../group-moderation";
 import type { GroupRemovalInput, GroupRemovalReason } from "../group-moderation";
 
@@ -29,6 +34,7 @@ type Props = {
   blockedActors: string[];
   onRemindersChange: (enabled: boolean) => void;
   onUpdate: (update: (row: PrayerRequest) => PrayerRequest) => void;
+  onQueueMediaReply: (draft: MediaReplyDraft) => MediaReplyQueueResult;
   onNavigate: (route: string) => void;
   onReport: (reason: string, actorId: string, replyId?: string, postId?: string) => void;
   onBlock: (actorId: string) => void;
@@ -57,6 +63,7 @@ export default function PrayerDetail({
   focusedPostId,
   onRemindersChange,
   onUpdate,
+  onQueueMediaReply,
   onNavigate,
   onReport,
   onBlock,
@@ -89,13 +96,8 @@ export default function PrayerDetail({
     "Father, please give peace for today and wisdom for the next step. Help us trust you, through Jesus Christ, with the help of the Holy Spirit. Amen.",
   );
   const [replyAs, setReplyAs] = useState("personal");
-  const [replyKind, setReplyKind] = useState<"text" | "audio">("text");
-  const [recording, setRecording] = useState<"idle" | "recording" | "preview">(
-    "idle",
-  );
+  const [replyMedia, setReplyMedia] = useState<MediaDraftSnapshot>(emptyMediaDraft);
   const [replyReview, setReplyReview] = useState("");
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [previewPlaying, setPreviewPlaying] = useState(false);
   const [replyPostId, setReplyPostId] = useState(() =>
     focusedPostId === "original" ||
     getStoryPosts(request).some((post) => post.id === focusedPostId)
@@ -119,14 +121,6 @@ export default function PrayerDetail({
       appealStatus.current?.focus();
     }
   }, [request.id, request.moderation]);
-  useEffect(() => {
-    if (recording !== "recording") return;
-    const timer = setInterval(
-      () => setRecordingSeconds((seconds) => Math.min(seconds + 1, 120)),
-      1000,
-    );
-    return () => clearInterval(timer);
-  }, [recording]);
   const author = viewer !== "guest" && request.authorId === viewer;
   const organization = request.recipient === "grace";
   const held = request.moderation !== "approved";
@@ -157,8 +151,6 @@ export default function PrayerDetail({
     setEditing(null);
     setSavingEdit(null);
     setRemovingReply(null);
-    setRecording("idle");
-    setPreviewPlaying(false);
   }, [request.id, request.authorId, focusedPostId, request.moderation]);
   useEffect(() => {
     if (!focusedPostId || held) return;
@@ -175,8 +167,13 @@ export default function PrayerDetail({
     section?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [request.id, focusedPostId, held]);
   useEffect(() => {
-    if (parentReplyId && replyKind === "text") replyField.current?.focus();
-  }, [parentReplyId, replyKind]);
+    if (parentReplyId) replyField.current?.focus();
+  }, [parentReplyId]);
+  useEffect(() => {
+    setReplyMedia(emptyMediaDraft());
+    setReplyReview('');
+    setReply('Father, please give peace for today and wisdom for the next step. Help us trust you, through Jesus Christ, with the help of the Holy Spirit. Amen.');
+  }, [request.id, viewer, selectedScope, parentReplyId]);
   const memberName =
     viewer === "owner"
       ? "Grace Church account"
@@ -249,7 +246,6 @@ export default function PrayerDetail({
     setShowPrayers(false);
     setReplyPostId(scope);
     setParentReplyId(parentId);
-    setReplyKind("text");
     setReplyReview("");
     // Wait for the feed dialog to close before moving focus to the form.
     requestAnimationFrame(() => {
@@ -441,6 +437,7 @@ export default function PrayerDetail({
           )}
         </div>
         <p>{row.deletedAt ? "This encouragement was removed by its author." : row.text}</p>
+        {!row.deletedAt && row.previewMedia && row.mediaReview === "approved" && <MediaDraftSummary snapshot={row.previewMedia} status="approved" heading="Response attachments" />}
         {renderEditStatus(row, row.actorId === viewer, { postId: row.testimonyId, replyId: row.id })}
         {row.automatic ? (
           <small>
@@ -490,7 +487,13 @@ export default function PrayerDetail({
 
   function sendReply() {
     feedback.prepare();
-    if (viewer === "guest" || held || !reply.trim() || author && !parentReply) return;
+    const draftText = reply.trim() || replyMedia.audio?.transcript.trim() || '';
+    if (viewer === "guest" || held || !draftText || author && !parentReply) return;
+    if (!mediaReady(replyMedia)) {
+      setReplyReview('Finish checking the sample transcript or discard the pending attachment. Your draft has not been submitted.');
+      feedback.respond({ tone: 'info', title: 'Your attachment needs a little attention.' });
+      return;
+    }
     if (parentReplyId && !parentReply) {
       setParentReplyId(null);
       setReplyReview(
@@ -516,22 +519,16 @@ export default function PrayerDetail({
       });
       return;
     }
-    const result = screenText(reply);
-    if (result.state !== "approved" || replyKind === "audio") {
-      setReplyReview(
-        replyKind === "audio"
-          ? "The simulated audio prayer is held for transcription and media review. No recording or transcript is visible to recipients yet. You can return to its draft or try text."
-          : `${result.reason} Your reply is not published. You can revise it or request human review.`,
-      );
-      feedback.respond({
-        tone: "pending",
-        title:
-          replyKind === "audio"
-            ? "Your audio example is awaiting review."
-            : "Your encouragement needs a little review.",
-        message:
-          "This example remains unpublished. Please read the guidance below; your draft is still here.",
-      });
+    const result = screenText(draftText);
+    if (hasMedia(replyMedia)) {
+      const queued = onQueueMediaReply({ requestId: request.id, actorId: viewer, postId: selectedPost?.id, parentReplyId: parentReply?.id, text: draftText, media: replyMedia, storyRevision: storyRevision(request), byline: replyAs === "official" && canReplyOfficially ? organizationName : personalByline, official: replyAs === "official" && canReplyOfficially, membershipRequired: organization && groupMember && !author });
+      setReplyReview(queued.message);
+      feedback.respond({ tone: queued.ok ? 'pending' : 'error', title: queued.ok ? 'Your sample response is awaiting review.' : 'Your response has not been submitted.', message: queued.ok ? 'Find it in Your responses in review below or in My Requests. Nothing is shared or moved into My Prayers until approval.' : 'Your draft and attachments are unchanged.' });
+      return;
+    }
+    if (result.state !== "approved") {
+      setReplyReview(`${result.reason} Your reply is not published. You can revise it or request human review.`);
+      feedback.respond({ tone: 'pending', title: 'Your encouragement needs a little review.', message: 'Nothing has been added to the conversation or moved into My Prayers. Your draft is still here.' });
       return;
     }
     onUpdate((row) => ({
@@ -550,7 +547,7 @@ export default function PrayerDetail({
               ? organizationName
               : personalByline,
           official: replyAs === "official" && canReplyOfficially,
-          text: reply,
+          text: draftText,
         },
       ],
     }));
@@ -707,7 +704,8 @@ export default function PrayerDetail({
                 </div>
               </div>
             )}
-            {!held && request.media && (
+            {request.previewMedia && (author || request.media?.status === 'approved') && <MediaDraftSummary snapshot={request.previewMedia} status={request.media?.status === 'approved' ? 'approved' : 'pending'} heading={author && request.media?.status !== 'approved' ? 'Your pending attachments' : 'Attachments'} />}
+            {!held && request.media && !request.previewMedia && (
               <div
                 className={`media-state ${request.media.status === "pending" ? "pending" : ""}`}
               >
@@ -792,6 +790,7 @@ export default function PrayerDetail({
                   <h2 id={`${postAnchor(post.id)}-title`}>{request.topic}</h2>
                   <p className="prayer-text">{post.text}</p>
                   {renderEditStatus(post, author, { postId: post.id })}
+                  {post.previewMedia && (author || post.mediaReview === "approved") && <MediaDraftSummary snapshot={post.previewMedia} status={post.mediaReview === "approved" ? "approved" : "pending"} heading="Story attachments" />}
                   <div className="story-post-footer">
                     {author && <button className="button secondary compact" disabled={postingRestricted} onClick={() => beginEdit({ postId: post.id })}>Edit {post.kind}</button>}
                     <a
@@ -907,130 +906,13 @@ export default function PrayerDetail({
                         Every active approved member can read it.
                       </p>
                     )}
-                    <div
-                      className="reply-kind"
-                      aria-label="Encouragement format"
-                    >
-                      <button
-                        className={`tab ${replyKind === "text" ? "active" : ""}`}
-                        onClick={() => {
-                          setReplyKind("text");
-                          setReplyReview("");
-                        }}
-                      >
-                        Text
-                      </button>
-                      <button
-                        className={`tab ${replyKind === "audio" ? "active" : ""}`}
-                        onClick={() => {
-                          setReplyKind("audio");
-                          setReplyReview("");
-                        }}
-                      >
-                        <Icon name="audio" size={16} /> Recorded prayer
-                      </button>
-                    </div>
-                    {replyKind === "text" ? (
-                      <label className="field">
-                        <span className="sr-only">Your encouragement</span>
-                        <textarea
-                          ref={replyField}
-                          rows={4}
-                          value={reply}
-                          maxLength={5000}
-                          onChange={(event) => setReply(event.target.value)}
-                        />
-                      </label>
-                    ) : (
-                      <div className="recording-demo">
-                        <Icon name="audio" size={27} />
-                        <strong>
-                          {recording === "recording"
-                            ? "Recording state · simulated"
-                            : recording === "preview"
-                              ? "A prayer ready for review"
-                              : "Try a recorded prayer"}
-                        </strong>
-                        <p>
-                          No microphone is opened. This demonstrates start,
-                          stop, preview, retry, and review states.
-                        </p>
-                        <p className="recording-duration">
-                          {Math.floor(recordingSeconds / 60)}:
-                          {String(recordingSeconds % 60).padStart(2, "0")} ·
-                          demo duration
-                        </p>
-                        <p className="quiet-copy">
-                          A voice can identify its speaker even with an
-                          organization byline. Review what you share.
-                        </p>
-                        {recording === "idle" ? (
-                          <button
-                            className="button secondary"
-                            onClick={() => {
-                              setRecordingSeconds(0);
-                              setPreviewPlaying(false);
-                              setRecording("recording");
-                            }}
-                          >
-                            Start demo recording
-                          </button>
-                        ) : recording === "recording" ? (
-                          <button
-                            className="button secondary"
-                            onClick={() => setRecording("preview")}
-                          >
-                            Stop demo recording
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              className="button secondary"
-                              aria-pressed={previewPlaying}
-                              onClick={() =>
-                                setPreviewPlaying((value) => !value)
-                              }
-                            >
-                              {previewPlaying
-                                ? "Pause playback example"
-                                : "Preview playback example"}
-                            </button>
-                            <p>
-                              {previewPlaying
-                                ? "Playing state · simulated. No audio file or voice is played."
-                                : "Playback is a UI example. Read the fictional transcript below."}
-                            </p>
-                            <details>
-                              <summary>
-                                Preview the fictional transcript
-                              </summary>
-                              <p>{reply}</p>
-                            </details>
-                            <button
-                              className="text-link"
-                              onClick={() => {
-                                setRecording("idle");
-                                setReplyReview("");
-                              }}
-                            >
-                              Discard and try again
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    <button
-                      className="button"
-                      disabled={
-                        replyKind === "text"
-                          ? !reply.trim()
-                          : recording !== "preview"
-                      }
-                      onClick={sendReply}
-                    >
-                      {replyKind === "audio"
-                        ? "Submit for review"
-                        : parentReply ? "Send reply" : "Leave encouragement"}{" "}
+                    <label className="field">
+                      Your encouragement
+                      <textarea ref={replyField} rows={4} value={reply} maxLength={5000} onChange={event => setReply(event.target.value)} />
+                    </label>
+                    <MediaDraftPreview key={`${request.id}/${viewer}/${selectedScope}/${parentReplyId ?? 'root'}`} context={parentReply ? 'reply to encouragement' : `${selectedPost?.kind ?? 'prayer request'} response`} disabled={postingRestricted} onChange={setReplyMedia} />
+                    <button className="button" disabled={postingRestricted || !mediaReady(replyMedia) || !(reply.trim() || replyMedia.audio?.transcript.trim())} onClick={sendReply}>
+                      {hasMedia(replyMedia) ? 'Submit response for review' : parentReply ? 'Send reply' : 'Leave encouragement'}
                       <Icon name="arrow" size={17} />
                     </button>
                     {replyReview && (
@@ -1038,7 +920,7 @@ export default function PrayerDetail({
                         <Icon name="info" />
                         <div>
                           <p>{replyReview}</p>
-                          {!replyReview.startsWith("Your encouragement was added") && (
+                          {!hasMedia(replyMedia) && !replyReview.startsWith("Your encouragement was added") && (
                             <button
                               className="text-link"
                               onClick={() => {
@@ -1127,8 +1009,8 @@ export default function PrayerDetail({
             </p>
             {organization && (
               <p className="quiet-copy">
-                Proposed: later approved members may read retained group
-                requests. For confidentiality from a member, choose a trusted
+                Members approved later may read this request while it remains
+                available to the organization. For confidentiality from a member, choose a trusted
                 individual instead.
               </p>
             )}

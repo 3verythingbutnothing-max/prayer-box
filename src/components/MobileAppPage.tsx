@@ -1,8 +1,5 @@
 import type { AppInstall } from "../app-install";
 import { Icon, PrayerBoxMark } from "../ui";
-import PrayerWidgets from "./PrayerWidgets";
-import type { WidgetPreferences } from "../widgets";
-import type { UiLanguage } from "../localization";
 import "./MobileAppPage.css";
 
 function PocketPreview() {
@@ -68,23 +65,15 @@ function PocketPreview() {
 
 export default function MobileAppPage({
   app,
-  widgetPreferences,
-  onWidgetSave,
-  language,
-  onNavigate,
 }: {
   app: AppInstall;
-  widgetPreferences: WidgetPreferences;
-  onWidgetSave: (preferences: WidgetPreferences) => void;
-  language: UiLanguage;
-  onNavigate: (route: string) => void;
 }) {
   return (
     <div className="mobile-app-page">
       <div className="breadcrumb">
         <a href="#home">Prayer Box</a>
         <Icon name="chevron" size={12} />
-        <span>Mobile app</span>
+        <span>Use on your phone</span>
       </div>
       <section
         className="mobile-app-hero panel"
@@ -138,21 +127,7 @@ export default function MobileAppPage({
             <a className="text-link" href="#box/maria">
               Explore the example <Icon name="arrow" size={16} />
             </a>
-            <a
-              className="text-link"
-              href="#prayer-widgets"
-              onClick={(event) => {
-                event.preventDefault();
-                const widgets = document.getElementById("prayer-widgets");
-                widgets?.scrollIntoView({
-                  block: "start",
-                  behavior: "instant",
-                });
-                widgets?.focus({ preventScroll: true });
-              }}
-            >
-              Preview prayer widgets <Icon name="arrow" size={16} />
-            </a>
+
           </div>
           <p className="mobile-app-status" role="status" aria-live="polite">
             {app.message}
@@ -168,12 +143,7 @@ export default function MobileAppPage({
         <PocketPreview />
       </section>
 
-      <PrayerWidgets
-        preferences={widgetPreferences}
-        onSave={onWidgetSave}
-        language={language}
-        onNavigate={onNavigate}
-      />
+      <p className="mobile-app-demo web-pilot-phone-note"><Icon name="info" size={17}/><span>We’re preparing the web app first. App Store downloads, native widgets, video, and payments are deferred while we validate the web experience.</span></p>
 
       <section
         id="phone-install-steps"

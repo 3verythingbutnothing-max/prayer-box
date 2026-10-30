@@ -26,6 +26,12 @@ import { groupRemovalReasons, removeGroupContent } from "./group-moderation";
 import { NotificationPreferences, defaultNotificationChoices } from "./components/NotificationPreferences";
 import type { NotificationChoices } from "./components/NotificationPreferences";
 import { AccountRecovery } from "./components/AccountRecovery";
+import { SignInPreview } from "./components/SignInPreview";
+import { hasMedia, mediaReady, mediaSummary } from './media-draft';
+import type { MediaDraftSnapshot } from './media-draft';
+import { MediaDraftSummary } from './components/MediaDraftSummary';
+import { approveMediaReply, cancelMediaReply, queueMediaReply } from './media-reply-review';
+import type { HeldMediaReply, MediaReplyContext, MediaReplyDraft, MediaReplyQueueResult } from './media-reply-review';
 import { PrayerEvents, ConnectionsPanel } from "./components/PrayerEvents";
 import { initialPrayerConnections, requestPrayerConnection, respondToPrayerConnection, disconnectPrayerConnection, invitationsForViewer, visibleConnectionRequests } from "./prayer-events";
 import type { EventContext, EventHost, PrayerConnection, PrayerEventState } from "./prayer-events";
@@ -38,8 +44,6 @@ import SharePrayerBoxQr from "./components/SharePrayerBoxQr";
 import { useAppInstall } from "./app-install";
 import { useActionFeedback } from "./action-feedback";
 import type { FeedbackTone } from "./feedback-cues";
-import { defaultWidgetPreferences } from "./widgets";
-import type { WidgetPreferences } from "./widgets";
 import type { UiLanguage } from "./localization";
 import {
   formatStoryDate,
@@ -133,6 +137,7 @@ type Report = {
   evaluation?: boolean;
 };
 type HeldStory = {
+  media?: MediaDraftSnapshot;
   id: string;
   authorId: Viewer;
   sourceId: string;
@@ -311,9 +316,6 @@ export default function App() {
   );
   const [viewer, setViewer] = useState<Viewer>("elena");
   const [language, setLanguage] = useState<UiLanguage>("en");
-  const [widgetPreferences, setWidgetPreferences] = useState<WidgetPreferences>(
-    defaultWidgetPreferences,
-  );
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
@@ -418,6 +420,10 @@ export default function App() {
   );
   const [readSupportNotes, setReadSupportNotes] = useState<string[]>([]);
   const [heldStories, setHeldStories] = useState<HeldStory[]>([]);
+  const [heldMediaReplies, setHeldMediaReplies] = useState<HeldMediaReply[]>([]);
+  const heldMediaRepliesRef = useRef<HeldMediaReply[]>([]);
+  const [mediaReplyQueueSeen, setMediaReplyQueueSeen] = useState<Partial<Record<Viewer, boolean>>>({});
+  function saveHeldMediaReplies(next: HeldMediaReply[]) { heldMediaRepliesRef.current = next; setHeldMediaReplies(next); }
   const storyAppealFocusFor = useRef<string | null>(null);
   const [restricted, setRestricted] = useState<string[]>([]);
   const [composer, setComposer] = useState<{
@@ -480,6 +486,27 @@ export default function App() {
     (row.recipient !== "grace" || !graceGroup.archivedAt && !graceGroup.members.some(member => member.id === viewer && member.status === "blocked")) &&
     !blockedActors.includes(row.authorId) &&
     !(boxRemoved[row.recipient] ?? []).includes(row.authorId);
+  const mediaReplyContext: MediaReplyContext = { requests, groups: prayerGroups, restricted, blocks: eventContext.blocks ?? [], removedByBox: boxRemoved, access: accessContext };
+  function enqueueMediaResponse(draft: MediaReplyDraft): MediaReplyQueueResult {
+    if (draft.actorId !== viewer) return { ok: false, message: 'The responding account changed. Your draft has not been submitted.' };
+    const result = queueMediaReply(heldMediaRepliesRef.current, draft, mediaReplyContext, `media-response-${crypto.randomUUID()}`, new Date().toISOString());
+    if (result.ok) { saveHeldMediaReplies(result.queue); setMediaReplyQueueSeen(previous => ({ ...previous, [viewer]: true })); }
+    return { ok: result.ok, message: result.message };
+  }
+  function cancelMediaResponse(id: string) {
+    const next = cancelMediaReply(heldMediaRepliesRef.current, id, viewer);
+    if (next.length === heldMediaRepliesRef.current.length) return;
+    saveHeldMediaReplies(next);
+    acknowledge('info', 'Pending response cancelled.', 'It was never shared. You can return to the conversation to submit a revised response.');
+    requestAnimationFrame(() => document.getElementById('pending-media-responses')?.focus());
+  }
+  function reviewMediaResponse(id: string) {
+    const result = approveMediaReply(heldMediaRepliesRef.current, id, viewer, mediaReplyContext, `reply-${crypto.randomUUID()}`, new Date().toISOString());
+    saveHeldMediaReplies(result.queue);
+    if (result.ok) setRequests(result.requests);
+    acknowledge(result.ok ? 'success' : 'pending', result.ok ? 'Response review completed.' : 'This response remains unpublished.', result.message);
+    requestAnimationFrame(() => document.getElementById('review-media-responses')?.focus());
+  }
   const outsideAudience = (row: PrayerRequest) =>
     getEffectiveAudience(
       row.audience,
@@ -561,7 +588,7 @@ export default function App() {
 
   }, [route]);
   useEffect(() => {
-    const titles: Record<string, string> = { requests: 'My Requests', prayers: 'My Prayers', help: 'Get Help', feedback: 'Report a bug', app: 'Mobile app', church: 'My Church', 'donation-history': 'My Donations', donations: 'Donations', settings: 'Settings', signup: 'Create your prayer box', groups: 'Your prayer groups', events: 'Prayer events', invitations: 'Invitations', connections: 'Connections', recovery: 'Account recovery', signin: 'Sign in', 'notification-preferences': 'Notification choices' };
+    const titles: Record<string, string> = { requests: 'My Requests', prayers: 'My Prayers', help: 'Get Help', feedback: 'Report a bug', app: 'Use on your phone', church: 'My Church', 'donation-history': 'My Donations', donations: 'Donations', settings: 'Settings', signup: 'Create your prayer box', groups: 'Your prayer groups', events: 'Prayer events', invitations: 'Invitations', connections: 'Connections', recovery: 'Account recovery', signin: 'Sign in', 'notification-preferences': 'Notification choices' };
     const title = isAbout ? 'About' : page === 'box' ? `${boxNames[box]}’s Prayer Box` : page === 'inbox' ? `${graceGroup.name} inbox` : page === 'members' ? graceGroup.name : page === 'group' ? prayerGroups.find(group => group.username === resource && !group.archivedAt)?.name ?? 'Prayer group' : titles[page];
     document.title = title ? `${title} · Prayer Box` : 'Prayer Box';
   }, [page, resource, box, isAbout, graceGroup.name, prayerGroups]);
@@ -837,16 +864,16 @@ export default function App() {
   function publishAuthorStory(sourceId: string, draft: StoryUpdateDraft): boolean {
     feedback.prepare();
     const plan = storyPublicationPlan(storyDeliveries(sourceId), viewer, draft.destinations, restricted.includes(viewer));
-    if (!draft.text.trim() || !plan.ready.length || plan.held.length) {
+    if (!draft.text.trim() || !plan.ready.length || plan.held.length || draft.media && !mediaReady(draft.media)) {
       acknowledge('error','Check the selected prayer boxes.','Your draft is still here. Review the available destinations before sharing.');
       return false;
     }
     const check = screenText(draft.text);
-    if (check.state === 'approved') {
+    if (check.state === 'approved' && !(draft.media && hasMedia(draft.media))) {
       setRequests(previous => publishStoryPost(previous,viewer,plan.ready,{text:draft.text,kind:draft.kind,createdAt:new Date().toISOString()},()=>`story-${crypto.randomUUID()}`));
       acknowledge('success',draft.kind === 'testimony' ? 'Thank you for sharing your testimony!' : 'Your prayer update has been added!');
     } else {
-      setHeldStories(previous => [...previous,{id:crypto.randomUUID(),authorId:viewer,sourceId,destinations:[...plan.ready],text:draft.text,kind:draft.kind,state:check.state === 'changes' ? 'changes' : 'pending',reason:check.reason}]);
+      setHeldStories(previous => [...previous,{id:crypto.randomUUID(),authorId:viewer,sourceId,destinations:[...plan.ready],text:draft.text,kind:draft.kind,media:draft.media,state:check.state === 'changes' ? 'changes' : 'pending',reason:check.state === 'approved' ? 'Photos, recorded prayers and checked transcripts require human review before sharing.' : check.reason}]);
       acknowledge('pending','Your story is waiting for review.','It has not been shared with recipients.');
     }
     return true;
@@ -1655,6 +1682,7 @@ export default function App() {
           setRequests(previous => previous.map(r => r.id === row.id ? next : r));
           if (!row.anonymous && next.replies.some(reply => reply.actorId === viewer && !reply.automatic && !row.replies.some(old => old.id === reply.id))) offerConnection([{kind:'person',id:row.authorId}]);
         }}
+        onQueueMediaReply={enqueueMediaResponse}
         onNavigate={navigate}
         onReport={(reason, actor, replyId, postId) => {
           const evidence = storyReportEvidence(row, actor, replyId, postId);
@@ -1683,7 +1711,7 @@ export default function App() {
   function renderPage() {
     if (page === 'notification-preferences') return <><NotificationPreferences key={`${viewer}/${resetVersion}`} viewer={viewer} value={notificationChoices[viewer] ?? defaultNotificationChoices} onChange={value => setNotificationChoices(previous => ({...previous,[viewer]:value}))} /><button className="button secondary" onClick={() => navigate(`box/${ownBox}`)}>Continue to My Box <Icon name="arrow" /></button></>;
     if (page === 'recovery') return <AccountRecovery onNavigate={navigate} />;
-    if (page === 'signin') return <section className="panel empty-state"><h1>Sign-in is being prepared.</h1><p>Real accounts are not open in this preview. Password recovery needs a verified contact and a configured delivery service.</p><button className="button secondary" onClick={() => navigate('recovery')}>Forgot password?</button><button className="text-link" onClick={() => navigate('signup')}>View account setup</button></section>;
+    if (page === 'signin') return <SignInPreview onNavigate={navigate} onSignIn={() => { changeViewer('elena'); navigate('box/mine'); }} />;
     if (page === 'events' || page === 'invitations') return <PrayerEvents key={`${viewer}/${resetVersion}/${page}`} viewer={viewer} state={prayerEvents} context={eventContext} onChange={setPrayerEvents} onNavigate={navigate} mode={page === 'events' ? 'events' : 'invitations'} />;
     if (page === 'connections') return <ConnectionsPanel key={`${viewer}/${resetVersion}`} viewer={viewer} connections={connections} context={eventContext} additionalRequests={friendRequest} onChange={updateConnections} onNavigate={navigate} />;
     if (page === "group" || page === "groups" || page === "members") return <PrayerGroups standalone key={`${resetVersion}/${viewer}/${page}/${resource ?? ""}`} viewer={viewer} people={groupDirectoryPeople} state={prayerGroups} descriptions={boxDescriptions} onEditDescription={id => setDescriptionTarget({kind:"group",id})} onChange={updatePrayerGroups} selectedHandle={page === "members" ? "grace-church" : resource} onNavigate={navigate} />;
@@ -1695,10 +1723,6 @@ export default function App() {
         <Suspense fallback={null}>
           <MobileAppPage
             app={appInstall}
-            widgetPreferences={widgetPreferences}
-            onWidgetSave={setWidgetPreferences}
-            language={language}
-            onNavigate={navigate}
           />
         </Suspense>
       );
@@ -2229,10 +2253,38 @@ export default function App() {
           />
         </div>
         {renderPage()}
+        {['request', 'testimony', 'requests', 'prayers', 'box', 'inbox'].includes(page) && (heldMediaReplies.some(row => row.actorId === viewer) || mediaReplyQueueSeen[viewer]) && <section className="held-stories panel" aria-labelledby="pending-media-responses">
+          <h2 id="pending-media-responses" tabIndex={-1}>Your responses in review</h2>
+          <p className="quiet-copy">Fictional review queue · kept during this preview session. Not shared with recipients.</p>
+          {!heldMediaReplies.some(row => row.actorId === viewer) && <p role="status">You have no responses waiting for review.</p>}
+          {heldMediaReplies.filter(row => row.actorId === viewer).map(row => <article className="report-case" key={row.id}>
+            <span className="chip">{row.state === 'changes' ? 'Changes requested' : row.state === 'appeal' ? 'Appeal awaiting review' : 'Review pending'}</span>
+            <p><time dateTime={row.submittedAt}>{formatStoryDate(row.submittedAt)}</time> · {row.postId ? 'Update or testimony response' : 'Original request response'}{row.parentReplyId ? ' · Reply to encouragement' : ''}</p>
+            <p>{row.text}</p><MediaDraftSummary snapshot={row.media} status="pending" heading="Your response attachments" />
+            <p className="quiet-copy">{row.reason}</p>
+            <div className="inline-actions">
+              <button className="button secondary compact" onClick={() => navigate(`request/${row.requestId}/post/${encodeURIComponent(row.postId ?? 'original')}`)}>View conversation</button>
+              {row.state === 'changes' && <button className="text-link" onClick={() => { saveHeldMediaReplies(heldMediaRepliesRef.current.map(item => item.id === row.id && item.actorId === viewer ? { ...item, state: 'appeal', reason: 'The author asked a person to reconsider this response.' } : item)); acknowledge('pending', 'Your response appeal is awaiting review.'); requestAnimationFrame(() => document.getElementById('pending-media-responses')?.focus()); }}>Appeal decision</button>}
+              <button className="text-link story-delete" onClick={() => cancelMediaResponse(row.id)}>Cancel pending response</button>
+            </div>
+          </article>)}
+        </section>}
+        {page === 'review' && viewer === 'operator' && <section className="held-stories panel" aria-labelledby="review-media-responses">
+          <h2 id="review-media-responses" tabIndex={-1}>Media responses awaiting review</h2>
+          <p className="quiet-copy">Fictional decisions only. Every approval rechecks the original delivery, exact post, reply, current permissions, and blocks.</p>
+          {heldMediaReplies.length === 0 && <p role="status">No media responses are waiting for review.</p>}
+          {heldMediaReplies.map(row => <article className="report-case" key={row.id}>
+            <span className="chip">{row.state === 'changes' ? 'Changes requested' : row.state === 'appeal' ? 'Author appeal' : 'Response awaiting review'}</span>
+            <h3>{row.byline}{row.official ? ' · Group identity' : ''}</h3>
+            <p><time dateTime={row.submittedAt}>{formatStoryDate(row.submittedAt)}</time> · {row.postId ? 'Update or testimony response' : 'Original request response'}{row.parentReplyId ? ' · Reply to encouragement' : ''}</p>
+            <p>{row.text}</p><MediaDraftSummary snapshot={row.media} status="pending" heading="Response attachments" /><p className="quiet-copy">{row.reason}</p>
+            <div className="inline-actions"><button className="button secondary compact" disabled={row.state === 'changes'} onClick={() => reviewMediaResponse(row.id)}>Simulate human approval</button><button className="text-link" disabled={row.state === 'changes'} onClick={() => { saveHeldMediaReplies(heldMediaRepliesRef.current.map(item => item.id === row.id ? { ...item, state: 'changes', reason: 'A reviewer requested changes. Cancel this pending response and submit a revised version, or appeal for another human decision.' } : item)); acknowledge('pending', 'Changes requested.', 'The response and attachments remain unpublished.'); requestAnimationFrame(() => document.getElementById('review-media-responses')?.focus()); }}>Request changes</button></div>
+          </article>)}
+        </section>}
         {page === "requests" &&
           heldStories.some((story) => story.authorId === viewer) && (
             <section className="held-stories panel">
-              <h2>Your story drafts in review</h2>
+              <h2 id="held-story-drafts-title" tabIndex={-1}>Your story drafts in review</h2>
               {heldStories
                 .filter((story) => story.authorId === viewer)
                 .map((story) => (
@@ -2249,6 +2301,7 @@ export default function App() {
                           : "Review pending"}
                     </span>
                     <p>{story.text}</p>
+                    {story.media && <p className="notice butter">{mediaSummary(story.media)}. Not shared with recipients.</p>}
                     <p className="quiet-copy">
                       {story.reason} This story is not visible on the original
                       request or any recipient’s linked page.
@@ -2275,6 +2328,11 @@ export default function App() {
                         Appeal for human review
                       </button>
                     )}
+                    <button className="text-link story-delete" onClick={() => {
+                      setHeldStories(previous => previous.filter(item => item.id !== story.id || item.authorId !== viewer));
+                      acknowledge('info', 'Pending story cancelled.', 'This draft was never shared. Published parts of the story stay unchanged.');
+                      requestAnimationFrame(() => { const target = document.getElementById('held-story-drafts-title') ?? mainRef.current?.querySelector('h1'); if (target instanceof HTMLElement) { target.tabIndex = -1; target.focus(); } });
+                    }}>Cancel pending story</button>
                   </article>
                 ))}
             </section>
@@ -2292,6 +2350,7 @@ export default function App() {
                       : "Held story draft"}
                   </span>
                   <p>{story.text}</p>
+                  {story.media && <div className="notice butter"><Icon name="lock"/><div><p>{mediaSummary(story.media)}</p>{story.media.audio && <p>Checked sample transcript · revision {story.media.audio.revision}: {story.media.audio.transcript}</p>}<p>Fictional media only. No photo, voice or provider is connected.</p></div></div>}
                   <p className="quiet-copy">{story.reason}</p>
                   <div className="inline-actions">
                     <button
@@ -2321,6 +2380,8 @@ export default function App() {
                             {
                               text: story.text,
                               kind: story.kind,
+                              previewMedia: story.media,
+                              mediaReview: story.media ? 'approved' : undefined,
                               createdAt: new Date().toISOString(),
                             },
                             () => `story-${crypto.randomUUID()}`,
@@ -2398,7 +2459,7 @@ export default function App() {
           <a href="#donations">Donations</a>
           <a href="#help">Get Help</a>
           <a href="#feedback">Report a bug</a>
-          <a href="#app">Mobile app</a>
+          <a href="#app">Use on your phone</a>
           <button onClick={() => setDialog("support")}>
             Support resources
           </button>
@@ -2573,11 +2634,11 @@ export default function App() {
           <p className="quiet-copy">
             Confirmed: church-approved access, sender-chosen separate
             deliveries, anonymous identity protection, and a Trinitarian
-            foundation. English and NIV reading links are confirmed. Still
-            unresolved: exact editorial wording, NIV quotation rights, native
-            widget packaging, future-member history, retention, block/group
-            semantics, moderation operations, providers and donation surplus
-            policy.
+            foundation. The web pilot comes first. English, NIV reading links,
+            disclosed future-member group history, explicit group/block boundaries,
+            and author-controlled retention are confirmed. Native apps, widgets,
+            video and payments are deferred. Real accounts, providers, staff
+            operations and the pilot remain closed through design review.
           </p>
           <div className="modal-actions">
             <button
@@ -2612,11 +2673,12 @@ export default function App() {
                 setCountryByViewer({ maria: { country: "us", show: true } });
                 setAssociationByViewer({ maria: true });
                 setHeldStories([]);
+                saveHeldMediaReplies([]);
+                setMediaReplyQueueSeen({});
                 setInPersonReminders({});
                 setAutomatic({ mine: false, maria: false, grace: false });
                 setAutomaticMessages({});
                 setLanguage("en");
-                setWidgetPreferences(defaultWidgetPreferences);
                 setResetVersion((version) => version + 1);
                 notify(
                   "Fictional requests, memberships, reports and safety choices reset.",

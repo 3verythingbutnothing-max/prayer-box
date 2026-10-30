@@ -16,6 +16,9 @@ import { TagPicker } from "./TagPicker";
 import type { PrayerTag } from "../private-tags";
 import { recipientNames, recipientActor } from "../recipients";
 import type { PrayerGroup } from '../prayer-groups';
+import MediaDraftPreview from './MediaDraftPreview';
+import { emptyMediaDraft, hasMedia, mediaReady, mediaSummary } from '../media-draft';
+import type { MediaDraftSnapshot } from '../media-draft';
 import "../request-refinements.css";
 
 type Props = {
@@ -108,9 +111,8 @@ export default function PrayerComposer({
   };
   const setPreference = (target: BoxId, next: Partial<{ anonymous: boolean; audience: Audience }>) =>
     setPreferences(previous => ({ ...previous, [target]: { ...preference(target), ...next } }));
-  const [media, setMedia] = useState<"photo" | "video" | "audio" | undefined>(
-    initial?.media?.status === "approved" ? initial.media.kind : undefined,
-  );
+  const [mediaDraft, setMediaDraft] = useState<MediaDraftSnapshot>(emptyMediaDraft);
+  const media = hasMedia(mediaDraft);
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
   const [acknowledgments, setAcknowledgments] = useState<PrayerRequest[]>([]);
@@ -144,7 +146,7 @@ export default function PrayerComposer({
   const signedIn = viewer !== "guest";
 
   function submit(retryOnly = false) {
-    if (submitting.current) return;
+    if (submitting.current || !mediaReady(mediaDraft)) return;
     const targets = retryOnly
       ? outcomes.filter((o) => o.status === "failed").map((o) => o.recipient)
       : destinations;
@@ -167,7 +169,10 @@ export default function PrayerComposer({
     submitting.current = true;
     setStep("checking");
     timer.current = setTimeout(() => {
-      const check = screenText(text);
+      const textCheck = screenText(text);
+      const check = media && textCheck.state === 'approved'
+        ? { state: 'pending' as const, reason: 'Photos, recorded prayers and checked transcripts require human review before this request is shared.' }
+        : textCheck;
       const records: PrayerRequest[] = [];
       const results = targets.map((target): Outcome => {
         if (simulateFailure && !retryOnly && target === "grace")
@@ -205,7 +210,9 @@ export default function PrayerComposer({
           topic,
           createdAt: "Just now · example",
           postedAt: new Date().toISOString(),
-          media: media ? { kind: media, status: "pending" } : undefined,
+          media: media ? { kind: mediaDraft.audio ? 'audio' : 'photo', status: "pending" } : undefined,
+          previewMedia: media ? mediaDraft : undefined,
+          reviewReason: check.state !== 'approved' ? check.reason : undefined,
           platformAcknowledgment:
             check.state === "approved"
               ? buildPlatformAcknowledgment(text, topic)
@@ -447,7 +454,7 @@ export default function PrayerComposer({
             <div className="notice sage">
               <Icon name="link" />
               <p>
-                Only your selected authored text and approved media are reused.
+                Only your selected authored text is reused. Choose any sample attachments again.
                 Conversations, other recipients, and earlier updates stay in
                 their original threads.
               </p>
@@ -497,34 +504,7 @@ export default function PrayerComposer({
             />
           </label>
           <TagPicker value={tags} catalog={tagCatalog} onChange={setTags} />
-          <div className="media-tools" aria-label="Fictional media examples">
-            {(["photo", "audio", "video"] as const).map((kind) => (
-              <button
-                className={`button secondary compact ${media === kind ? "is-selected" : ""}`}
-                aria-pressed={media === kind}
-                onClick={() => setMedia(media === kind ? undefined : kind)}
-                key={kind}
-              >
-                <Icon name={kind} size={17} />
-                {kind === "photo"
-                  ? "Photo"
-                  : kind === "audio"
-                    ? "Audio"
-                    : "Video"}{" "}
-                example
-              </button>
-            ))}
-          </div>
-          {media && (
-            <div className="notice butter">
-              <Icon name={media} />
-              <p>
-                Fictional {media} selected. Media stays unavailable until its
-                own review passes. Approved text can be delivered while media is
-                held. No file picker or microphone is connected.
-              </p>
-            </div>
-          )}
+          <MediaDraftPreview context="prayer request" initialSnapshot={mediaDraft} onChange={setMediaDraft} />
           <RecipientPicker selected={selected} onChange={setSelected} viewer={viewer} friends={friends} mariaVisible={mariaVisible} blocked={blockedActors} organizationOwnerId={organizationOwnerId} usernames={usernames} groups={groups} />
           {offerGrace && destinations.includes("maria") && !destinations.includes("grace") && !isOwnDestination(viewer, "grace") && (
             <p className="quiet-copy">Maria publicly displays her Grace Church association. Search @gracechurch if you would like to add a separate church delivery. Nothing is added automatically.</p>
@@ -546,11 +526,11 @@ export default function PrayerComposer({
               {target === "prayerbox" && <p className="group-disclosure"><Icon name="people" size={20} /><span>Only you and the Prayer Box prayer team can read this delivery. It stays separate from your friends’ and churches’ boxes. Anonymous hides your account identity from the team. This is a demo of the intended team inbox; no real team is contacted.</span></p>}
               {target === "grace" && <>
                 <p className="group-disclosure"><Icon name="people" size={20} /><span>This request will be visible to <strong>all active members approved by Grace Church</strong>, not just its pastor, prayer leader or assignee. {preference(target).audience === "private" ? "It will not appear publicly." : "The outside audience does not narrow that group."}</span></p>
-                <p className="quiet-copy"><strong>Proposed history policy:</strong> Members approved later may also read retained organization requests. Group delivery cannot guarantee confidentiality from someone who belongs to the group.</p>
+                <p className="quiet-copy"><strong>Group history:</strong> Members approved later may also read this request while it remains available to the organization. Group delivery cannot guarantee confidentiality from someone who belongs to the group.</p>
               </>}
             </div>
           ))}
-          {destinations.some(target => preference(target).anonymous) && <p className="notice butter">Anonymous hides your account identity from recipients. Your words, photos, video or voice may still identify you. Review what you share.</p>}
+          {destinations.some(target => preference(target).anonymous) && <p className="notice butter">Anonymous hides your account identity from recipients. Your words, photos or voice may still identify you. Review what you share.</p>}
           <p className="quiet-copy">
             Prayer requests only. Please remove payment handles and fundraising
             links. For financial support, refer to your local church or a
@@ -563,7 +543,7 @@ export default function PrayerComposer({
             </button>
             <button
               className="button"
-              disabled={!text.trim() || !destinations.length}
+              disabled={!text.trim() || !destinations.length || !mediaReady(mediaDraft)}
               onClick={() =>
                 setStep(
                   hasSupportLanguage(text) && supportShownFor !== text
@@ -584,14 +564,15 @@ export default function PrayerComposer({
             A separate delivery to each box.
           </h3>
           <blockquote className="draft-quote">{text}</blockquote>
+          {media && <div className="notice butter"><Icon name="lock" /><p>{mediaSummary(mediaDraft)}. This request will await human review before sharing.</p></div>}
+          {mediaDraft.audio && <details><summary>Checked sample transcript · revision {mediaDraft.audio.revision}</summary><p>{mediaDraft.audio.transcript}</p></details>}
           <div className="preview-destinations">
             {destinations.map(destinationPreview)}
           </div>
           {church && (
             <p className="quiet-copy">
               <strong>Grace Church:</strong> All active approved members receive
-              this delivery. Proposed shared history includes members approved
-              later. Choosing Simulate sending confirms this fictional
+              this delivery, including members approved later while the request remains available. Choosing Simulate sending confirms this fictional
               group-audience preview.
             </p>
           )}
@@ -640,7 +621,7 @@ export default function PrayerComposer({
             </button>
             <button
               className="button"
-              disabled={!signedIn || !destinations.length}
+              disabled={!signedIn || !destinations.length || !mediaReady(mediaDraft)}
               onClick={() => submit()}
             >
               Simulate sending <Icon name="arrow" size={18} />
@@ -656,7 +637,7 @@ export default function PrayerComposer({
           <h3 ref={stepHeading} tabIndex={-1}>
             Trying the review flow…
           </h3>
-          <p>Text and media have separate review states.</p>
+          <p>Checking text and attachment review requirements.</p>
           <p className="quiet-copy">
             Limited demo rules only. Automated screening and bot protection are
             not connected.
@@ -685,7 +666,7 @@ export default function PrayerComposer({
             </p>
           </div>
           {allSent && <div className="request-sent-encouragement">
-            <p>Prayer Box is actively praying for you, and we’re glad you took this step of faith in asking for prayer.</p>
+            <p>Thank you for taking this step of faith in asking for prayer. Your request is welcome here.</p>
             <p>Let the prayers of others accompany your own relationship with God. We encourage you to pray personally and keep pursuing Him through prayer and reading your Bible.</p>
             <p>You’ll find new replies and updates in your in-app notifications.</p>
             <small>Preview of the planned welcome. No real delivery, prayer-team alert or notification was sent.</small>
@@ -716,7 +697,7 @@ export default function PrayerComposer({
                 <p>{outcome.reason}</p>
                 {media && outcome.status === "sent" && (
                   <p>
-                    <strong>{media} review pending.</strong> The attachment is
+                    <strong>Attachment review pending.</strong> The attachment is
                     unavailable to recipients.
                   </p>
                 )}
