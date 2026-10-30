@@ -12,9 +12,11 @@ import { handleGroupModerationRoute } from './group-moderation.ts';
 import { handlePrayerEventRoute } from './prayer-events.ts';
 import { handleRecoveryRoute, recoveryAvailable } from './account-recovery.ts';
 import type { RecoveryDependencies } from './account-recovery.ts';
+import { handleAuthRoute, authCapabilities, cognitoMode, mappedActor } from './registration.ts';
+import type { AuthDependencies } from './registration.ts';
 import { submitPostEdit, loadOwnPostEdits, cancelOwnPostEdit } from './post-edits.ts';
 
-type Dependencies = RecoveryDependencies;
+type Dependencies = RecoveryDependencies & AuthDependencies;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 function sessionToken(request: Request): string | null {
@@ -127,14 +129,16 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
     }
     if (url.pathname === '/api/health' && request.method === 'GET') return jsonResponse({ status: 'local', liveIntake: false });
     const db = primary(env.DB);
+    const authResponse = await handleAuthRoute(request, env, db, dependencies);
+    if (authResponse) return authResponse;
     const recoveryResponse = await handleRecoveryRoute(request, env, db, dependencies);
     if (recoveryResponse) return recoveryResponse;
     const token = sessionToken(request);
-    const actor = await loadActor(db, token);
+    const actor = await mappedActor(db, await loadActor(db, token), env);
     if (url.pathname === '/api/session' && request.method === 'GET') {
       return jsonResponse({ authenticated: Boolean(actor), actor: actor ? { id: actor.id, username: actor.username, displayName: actor.displayName } : null,
         csrfToken: actor && token ? await hashSecret(`csrf:${token}`) : null,
-        capabilities: { signIn: false, recovery: recoveryAvailable(env), feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
+        capabilities: { signIn: authCapabilities(env).signInAvailable, registration: authCapabilities(env).registrationAvailable, recovery: cognitoMode(env) ? authCapabilities(env).recoveryAvailable : recoveryAvailable(env), feedback: Boolean(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY), turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null } });
     }
     if (request.method === 'GET') {
       const eventResponse = await handlePrayerEventRoute(request, env, actor, db);
@@ -177,7 +181,7 @@ export async function handleRequest(request: Request, env: BackendEnv, dependenc
       }
     }
     throw new HttpError(404, 'not_found', 'This item is not available.');
-  } catch (error) { return errorResponse(error); }
+  } catch (error) { const response = errorResponse(error); if (response.status === 429) response.headers.set('Retry-After', '900'); return response; }
 }
 
 export default {

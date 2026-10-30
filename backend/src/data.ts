@@ -23,6 +23,7 @@ export async function loadActor(database: Database, token: string | null | undef
     WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?
       AND s.created_at <= ? AND s.authenticated_at <= ?
       AND s.session_epoch = u.session_epoch AND u.status = 'active'
+      AND NOT EXISTS(SELECT 1 FROM auth_identities i WHERE i.user_id=u.id AND i.recovery_lock IS NOT NULL)
     LIMIT 1
   `).bind(await hashSecret(token), now, now, now).first<{
     id: string; username: string; display_name: string; visibility: Visibility; session_id: string;

@@ -10,7 +10,15 @@
   "vars": {
     "APP_ENV": "local",
     "APP_ORIGIN": "http://localhost:8787",
-    "TURNSTILE_HOSTNAMES": "localhost,127.0.0.1"
+    "TURNSTILE_HOSTNAMES": "localhost,127.0.0.1",
+    "AUTH_PROVIDER": "disabled",
+    "AUTH_REGISTRATION_ENABLED": "false",
+    "AUTH_SIGNIN_ENABLED": "false",
+    "AUTH_RECOVERY_ENABLED": "false",
+    "AUTH_TEEN_REGISTRATION_ENABLED": "false",
+    "COGNITO_REGION": "",
+    "COGNITO_USER_POOL_ID": "",
+    "COGNITO_CLIENT_ID": ""
   },
   "assets": {
     "directory": "../dist-backend",
