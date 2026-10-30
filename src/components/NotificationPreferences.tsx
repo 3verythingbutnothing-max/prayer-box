@@ -40,20 +40,8 @@ export function NotificationPreferences({ viewer, value, onChange }: {
   const [draft, setDraft] = useState(value);
   const [preview, setPreview] = useState(0);
   const [error, setError] = useState('');
-  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() => typeof Notification === 'undefined' || !window.isSecureContext ? 'unsupported' : Notification.permission);
-  const [asking, setAsking] = useState(false);
   useEffect(() => { setDraft(value); setError(''); }, [viewer, value]);
   const change = (key: keyof NotificationChoices, next: boolean | string) => setDraft(previous => ({ ...previous, [key]: next }));
-  async function requestBrowserPermission() {
-    feedback.prepare(); setError('');
-    if (permission === 'unsupported' || permission === 'denied' || asking) return;
-    setAsking(true);
-    try {
-      const result = await Notification.requestPermission(); setPermission(result);
-      feedback.respond({ tone: result === 'granted' ? 'success' : 'info', title: result === 'granted' ? 'Browser permission enabled.' : 'Your choice is saved by this browser.', message: 'Notification delivery still needs setup. No alerts have been scheduled.' });
-    } catch { setError('This browser could not open its permission request. You can keep using Prayer Box without notifications.'); }
-    finally { setAsking(false); }
-  }
   return <section className="notification-preferences" aria-labelledby="notification-preferences-title">
     <header className="notification-preferences-heading"><p className="eyebrow">Your own quiet rhythm</p><h1 id="notification-preferences-title">A little encouragement, on your terms.</h1><p className="page-intro">Choose what you would like to hear about. Every option is optional, and you can change your mind.</p></header>
     <div className="notification-preferences-layout"><form className="panel notification-choices" onSubmit={event => { event.preventDefault(); feedback.prepare(); if (draft.prayerReminders && !validReminderTime(draft.reminderTime)) { setError('Choose a valid reminder time.'); return; } onChange({ ...draft }); setError(''); feedback.respond({ tone: 'success', title: 'Your notification choices are saved.', message: 'Delivery setup is still in progress. No alerts are scheduled from this page.' }); }}>
@@ -61,7 +49,7 @@ export function NotificationPreferences({ viewer, value, onChange }: {
       <fieldset disabled={!draft.enabled}><legend className="sr-only">Notification categories</legend>{categories.map(category => <label className="notification-choice" key={category.key}><span className="notification-category-icon"><Icon name={category.icon} /></span><span><strong>{category.title}</strong><small>{category.text}</small></span><PreferenceSwitch checked={draft[category.key]} onChange={checked => change(category.key, checked)} disabled={!draft.enabled} /></label>)}</fieldset>
       {draft.prayerReminders && <label className="notification-time">Preferred reminder time<input type="time" value={draft.reminderTime} disabled={!draft.enabled} onChange={event => change('reminderTime', event.target.value)} required /><span className="quiet-copy">Your local time · {Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll('_', ' ')}</span></label>}
       <p className="notification-privacy"><Icon name="lock" /><span>Phone previews keep prayer details and anonymous identities private. These choices do not sign you up for marketing.</span></p>
-      <div className="notification-browser-permission"><h2>Browser permission</h2><p>{permission === 'unsupported' ? 'This browser does not support notification permission here. Your choices can still be saved.' : permission === 'granted' ? 'This browser allows notifications. Delivery setup is still in progress.' : permission === 'denied' ? 'Notifications are blocked in this browser. You can change that in its site settings if you wish.' : 'You decide whether to open your browser’s permission request.'}</p>{permission === 'default' && <button className="button secondary" type="button" disabled={!draft.enabled || asking} onClick={() => void requestBrowserPermission()}>{asking ? 'Waiting for your choice…' : 'Enable browser permission'}<Icon name="bell" /></button>}<p className="quiet-copy">No phone alerts or recurring reminders are scheduled from this page yet.</p></div>
+      <div className="notification-browser-permission"><h2>Notifications for the web pilot</h2><p>Prayer updates will appear in your account. Optional email will use a verified address and your permission.</p><p className="quiet-copy">Browser push and phone alerts are deferred. This design preview does not request device permission or send messages.</p></div>
       {error && <p className="notification-preference-error" role="alert">{error}</p>}
       <button className="button primary" type="submit">Save my choices<Icon name="check" /></button>
     </form>

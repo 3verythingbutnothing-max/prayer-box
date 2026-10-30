@@ -5,6 +5,7 @@ import { useActionFeedback } from '../action-feedback';
 import { getBackendSession } from '../backend-client';
 import type { BackendSession } from '../backend-client';
 import BotCheck from './BackendBotCheck';
+import { AccountRecoveryPreview } from './AccountRecoveryPreview';
 import '../notification-preferences.css';
 
 type StartResult = { challengeId: string; message: string };
@@ -26,7 +27,7 @@ async function recoveryRequest<T>(path: string, body: Record<string, string>): P
   } finally { window.clearTimeout(timeout); }
 }
 
-export function AccountRecovery({ onNavigate, onReset }: { onNavigate: (route: string) => void; onReset?: () => void }) {
+function BackendAccountRecovery({ onNavigate, onReset }: { onNavigate: (route: string) => void; onReset?: () => void }) {
   const feedback = useActionFeedback();
   const apiMode = import.meta.env.MODE === 'backend';
   const [session, setSession] = useState<BackendSession | null>(null);
@@ -93,4 +94,9 @@ export function AccountRecovery({ onNavigate, onReset }: { onNavigate: (route: s
       </>}
       <button className="text-link" onClick={() => onNavigate('help')}>Find help & support<Icon name="arrow" size={18} /></button>
     </div></section>;
+}
+
+/** Keep synthetic design interaction separate from the guarded real recovery client. */
+export function AccountRecovery(props: { onNavigate: (route: string) => void; onReset?: () => void }) {
+  return import.meta.env.MODE === 'backend' ? <BackendAccountRecovery {...props}/> : <AccountRecoveryPreview onNavigate={props.onNavigate}/>;
 }

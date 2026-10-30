@@ -1,4 +1,5 @@
 import type { GroupRemoval } from "./group-moderation.ts";
+import type { MediaDraftSnapshot } from "./media-draft.ts";
 /**
  * Fictional fixtures and presentation rules for the local frontend prototype.
  * Every fixture is bundled in the browser. This is NOT authorization, anonymity,
@@ -48,6 +49,9 @@ export interface PendingTextEdit {
 }
 
 export interface Reply {
+  /** Synthetic attachments approved only within the isolated design preview. */
+  previewMedia?: MediaDraftSnapshot;
+  mediaReview?: 'approved';
   groupRemoval?: GroupRemoval;
   editedAt?: string;
   deletedAt?: string;
@@ -69,6 +73,9 @@ export interface Reply {
 }
 
 export interface PrayerPost {
+  /** Synthetic attachments used only by the isolated design preview. */
+  previewMedia?: MediaDraftSnapshot;
+  mediaReview?: 'approved';
   groupRemoval?: GroupRemoval;
   editedAt?: string;
   revision?: number;
@@ -80,6 +87,8 @@ export interface PrayerPost {
 }
 
 export interface PrayerRequest {
+  /** Synthetic attachments used only by the isolated design preview. */
+  previewMedia?: MediaDraftSnapshot;
   groupRemoval?: GroupRemoval;
   editedAt?: string;
   revision?: number;

@@ -9,6 +9,7 @@ import type { ContributionAmount } from "../donation-amount";
 import { buildMonthlyFunding, fundingToday, nextMonthlyFundingDate, validateFundingContribution } from "../funding-window";
 import type { FundingInput, FundingWindow } from "../funding-window";
 import "../donation-refinements.css";
+import "../account-deletion-preview.css";
 
 type AccountPage = "donations" | "donation-history" | "settings";
 type Privacy = "public" | "friends" | "private";
@@ -209,6 +210,54 @@ function AccountDialog({
       {children}
     </dialog>
   );
+}
+
+function AccountDeletionPreview({ onClose, adminGroups, onManageGroups }: {
+  onClose: () => void;
+  adminGroups: readonly string[];
+  onManageGroups: () => void;
+}) {
+  const feedback = useActionFeedback();
+  const [step, setStep] = useState<'review' | 'confirm' | 'complete'>('review');
+  const [acknowledged, setAcknowledged] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const acknowledgementId = useId();
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [step]);
+  return <AccountDialog
+    title={step === 'complete' ? 'Deletion preview complete' : step === 'confirm' ? 'Confirm your choice' : 'Your account, your choice'}
+    onClose={onClose}
+    className="account-deletion-preview"
+  >
+    <p className="account-dialog-note">Design preview · no real account or data will be deleted</p>
+    {step === 'review' ? <>
+      <h3 ref={heading} tabIndex={-1}>Review what would happen</h3>
+      <p>In the live app, deleting your account will withdraw access immediately and start the following cleanup.</p>
+      <dl className="account-deletion-effects">
+        <div><dt>Immediately</dt><dd>Sign out your sessions, hide your profile, and withdraw your authored prayer requests and their attached photos, audio, and transcripts from every prayer box.</dd></div>
+        <div><dt>Within 7 days</dt><dd>Purge the deleted content from primary storage.</dd></div>
+        <div><dt>Within 30 days</dt><dd>Expire remaining backup copies. A restore must keep your deletion in place.</dd></div>
+      </dl>
+      {adminGroups.length > 0 && <div className="account-deletion-handoff"><strong>Your groups need a handoff</strong><p>{adminGroups.join(', ')}: arrange an eligible admin successor before live account deletion. Deleting a group still requires every current admin’s agreement.</p><button className="text-link" onClick={onManageGroups}>Review your groups</button></div>}
+      <p>Other people keep their own accounts and independently authored prayers. No payment or subscription is active in this preview.</p>
+      <div className="account-dialog-actions"><button className="button secondary" onClick={onClose}>Keep my account</button><button className="button" onClick={() => setStep('confirm')}>Continue to confirmation</button></div>
+    </> : step === 'confirm' ? <form onSubmit={event => {
+      event.preventDefault();
+      if (!acknowledged) return;
+      feedback.prepare();
+      setStep('complete');
+      feedback.respond({ tone: 'info', title: 'Deletion preview complete.', message: 'No account, prayer, attachment, or membership was deleted.' });
+    }}>
+      <h3 ref={heading} tabIndex={-1}>One final check</h3>
+      <p className="account-deletion-auth"><AccountIcon name="lock" size={19}/><span>The live app must verify a recent sign-in on the server before accepting deletion. This preview does not verify identity or ask for your password.</span></p>
+      <label className="account-deletion-ack" htmlFor={acknowledgementId}><input id={acknowledgementId} type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} required/><span>I understand the planned deletion timing and want to complete this fictional preview.</span></label>
+      <div className="account-dialog-actions"><button type="button" className="button secondary" onClick={() => { setAcknowledged(false); setStep('review'); }}>Back to review</button><button type="button" className="text-link" onClick={onClose}>Cancel</button><button className="button" disabled={!acknowledged}>Complete deletion preview</button></div>
+    </form> : <>
+      <h3 ref={heading} tabIndex={-1}><AccountIcon name="check" size={24}/>You’ve reached the end of the preview.</h3>
+      <p role="status">No account, prayer, attachment, or membership was deleted. The fictional data and your current preview session are unchanged.</p>
+      <p>The real flow will require connected identity, server authorization, group handoff checks, and storage cleanup before it can be enabled.</p>
+      <div className="account-dialog-actions"><button className="button" onClick={onClose}>Return to settings</button></div>
+    </>}
+  </AccountDialog>;
 }
 
 function FundingMeter({ window }: { window: FundingWindow }) {
@@ -587,7 +636,6 @@ export default function AccountPages({
     "none",
   );
   const [emailPrayer, setEmailPrayer] = useState(false);
-  const [smsPrayer, setSmsPrayer] = useState(false);
   const [incomingUpdates, setIncomingUpdates] = useState(true);
   const [outgoingUpdates, setOutgoingUpdates] = useState(true);
   const [automaticPreferences, setAutomaticPreferences] = useState<
@@ -648,7 +696,6 @@ export default function AccountPages({
   const showCountry = countryPreference?.show ?? localShowCountry;
   const associationVisible = associationVisibleValue ?? localAssociationVisible;
   const emailAvailable = contact === "email" || contact === "both";
-  const phoneAvailable = contact === "phone" || contact === "both";
   const ownedAutomaticBox: "personal" | "grace" =
     groupAdmin ? "grace" : "personal";
   const template =
@@ -1579,8 +1626,6 @@ export default function AccountPages({
                         setContact(next);
                         if (next !== "email" && next !== "both")
                           setEmailPrayer(false);
-                        if (next !== "phone" && next !== "both")
-                          setSmsPrayer(false);
                       }}
                     >
                       <option value="none">No contact · in-app only</option>
@@ -1628,44 +1673,7 @@ export default function AccountPages({
                       </small>
                     </span>
                   </label>
-                  <label className="account-checkbox-row">
-                    <input
-                      type="checkbox"
-                      checked={smsPrayer}
-                      disabled={!phoneAvailable}
-                      onChange={(event) => setSmsPrayer(event.target.checked)}
-                    />
-                    <span>
-                      SMS prayer updates
-                      <small>
-                        {!phoneAvailable
-                          ? "Select a fictional verified phone in Recovery & contact options to preview."
-                          : "Optional prayer updates. Unsubscribe or SMS STOP must be honored in production."}
-                      </small>
-                    </span>
-                  </label>
-                  <label className="account-checkbox-row">
-                    <input type="checkbox" checked={false} disabled />
-                    <span>
-                      Email marketing
-                      <small>
-                        Inactive · requires separate founder approval.
-                      </small>
-                    </span>
-                  </label>
-                  <label className="account-checkbox-row">
-                    <input type="checkbox" checked={false} disabled />
-                    <span>
-                      SMS marketing
-                      <small>
-                        Inactive · requires separate founder approval.
-                      </small>
-                    </span>
-                  </label>
-                  <div className="account-setting-divider" />
-                  <p className="account-preference-heading">
-                    Which prayer updates?
-                  </p>
+                  <p className="account-field-help">The web pilot uses in-app updates and optional email. Phone verification is for recovery; SMS alerts and browser push are deferred.</p>
                   <label className="account-checkbox-row account-switch-row">
                     <PreferenceSwitch
                       checked={incomingUpdates}
@@ -1710,8 +1718,7 @@ export default function AccountPages({
                     </span>
                   </label>
                   <p className="account-small">
-                    Demo preferences only. No email, SMS, marketing or
-                    notifications are sent.
+                    Demo preferences only. No email or external notifications are sent.
                   </p>
                 </div>
               </details>
@@ -1889,7 +1896,7 @@ export default function AccountPages({
                     className="text-link account-danger-link"
                     onClick={() => setDialog("delete")}
                   >
-                    Account deletion information
+                    Review account deletion
                   </button>
                 </div>
               </details>
@@ -2082,25 +2089,12 @@ export default function AccountPages({
         </AccountDialog>
       ) : null}
       {dialog === "delete" ? (
-        <AccountDialog
-          title="Your account, your choice"
+        <AccountDeletionPreview
+          key={viewer}
           onClose={() => setDialog(null)}
-        >
-          <p>
-            No real account was created in this prototype. A future deletion
-            flow must explain what is removed, required financial-record
-            retention, appeal evidence, and how a recurring contribution is
-            canceled.
-          </p>
-          <p>
-            Deletion must never leave you unable to manage billing or retrieve
-            permitted records. The production retention and recovery policy
-            still needs approval.
-          </p>
-          <button className="button" onClick={() => setDialog(null)}>
-            Understood
-          </button>
-        </AccountDialog>
+          adminGroups={organizationMemberships.filter(group => group.admin).map(group => group.name)}
+          onManageGroups={() => { setDialog(null); onNavigate('church'); }}
+        />
       ) : null}
     </div>
   );

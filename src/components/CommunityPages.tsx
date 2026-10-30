@@ -2,16 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { Audience, PrayerRequest, Viewer } from "../domain";
 import { authorLabel, getAudienceLabel, screenText } from "../domain";
 import { Icon, Modal } from "../ui";
-import { normalizeOrganizationWebsite } from "../organization";
 import { useActionFeedback } from "../action-feedback";
-import {
-  resolveUiLanguage,
-  supportedLanguages,
-  uiText,
-} from "../localization";
 import type { UiLanguage } from "../localization";
 import "../community.css";
-import { findPrayerRecipients } from "../recipients";
+import { findPrayerRecipients, recipientNames } from "../recipients";
+import { AccountSetupPreview } from "./AccountSetupPreview";
+import { mediaSummary } from "../media-draft";
 
 type MembershipStatus = "none" | "pending" | "invited" | "approved";
 type CommunityPage = "church" | "members" | "signup" | "review";
@@ -768,9 +764,11 @@ function MembersPage(props: CommunityPagesProps) {
           <details className="community-details">
             <summary>History and removed access</summary>
             <p>
-              Future-member access to retained requests is a prototype proposal
-              that needs production approval. Existing narrower promises must
-              stay narrow.
+              For new deliveries carrying the current group-audience notice,
+              members approved later may read retained requests. The sender
+              sees this notice before sending. Older deliveries keep their
+              original, narrower promise until the author explicitly authorizes
+              a new share.
             </p>
             <p>
               Removal must revoke membership-based access to requests,
@@ -832,416 +830,12 @@ function MembersPage(props: CommunityPagesProps) {
 }
 
 function SignupPage(props: CommunityPagesProps) {
-  const feedback = useActionFeedback();
-  const [kind, setKind] = useState<"individual" | "ministry">("individual");
-  const [contacts, setContacts] = useState<"none" | "email" | "phone" | "both">(
-    "none",
-  );
-  const [privacy, setPrivacy] = useState<Audience>("private");
-  const [step, setStep] = useState<"details" | "review">("details");
-  const [website, setWebsite] = useState("");
-  const [websiteError, setWebsiteError] = useState("");
-  const reviewHeading = useRef<HTMLHeadingElement>(null);
-  const detailsForm = useRef<HTMLFormElement>(null);
-  const previousStep = useRef(step);
-  useEffect(() => {
-    if (previousStep.current === step) return;
-    previousStep.current = step;
-    if (step === "review") reviewHeading.current?.focus();
-    else
-      detailsForm.current
-        ?.querySelector<HTMLInputElement>('input[name="account-type"]:checked')
-        ?.focus();
-  }, [step]);
-  const complete = () => {
-    feedback.prepare();
-    if (kind === "ministry") props.onCreateOrganization?.(website);
-    props.onViewerChange(kind === "individual" ? "elena" : "owner");
-    props.onNotice(
-      kind === "individual"
-        ? "Your personal Prayer Box preview is ready."
-        : "Your organization’s Prayer Box preview is ready.",
-    );
-    props.onNavigate(kind === "individual" ? "box/mine" : "inbox");
-    feedback.respond({
-      tone: "success",
-      title: "Welcome to your Prayer Box preview!",
-      message:
-        "Your Prayer Box preview is ready to explore.",
-    });
-  };
-  return (
-    <div className="community-page community-signup-page">
-      <Heading
-        eyebrow="Make a little space for prayer"
-        title={
-          step === "details"
-            ? "Your prayer box starts here."
-            : "A thoughtful little beginning."
-        }
-      >
-        {step === "details"
-          ? "Asking for prayer is always free. You can begin without an email address or phone number."
-          : "Review your choices and make a little space for prayer."}
-      </Heading>
-      <div className="community-signup-layout">
-        <section className="panel community-signup-form">
-          {step === "details" ? (
-            <form
-              ref={detailsForm}
-              onSubmit={(event) => {
-                event.preventDefault();
-                feedback.prepare();
-                if (kind === "ministry") {
-                  const result = normalizeOrganizationWebsite(website);
-                  if (!result.valid) {
-                    setWebsiteError(result.error);
-                    feedback.respond({
-                      tone: "error",
-                      title:
-                        "Please check your organization’s website address.",
-                      message: result.error,
-                    });
-                    return;
-                  }
-                  setWebsite(result.url);
-                }
-                setStep("review");
-                feedback.respond({
-                  tone: "info",
-                  title: "Your Prayer Box is ready to review.",
-                  message:
-                    "Check your choices before continuing to your Prayer Box preview.",
-                });
-              }}
-            >
-              <fieldset className="community-kind-field">
-                <legend>What would you like to create?</legend>
-                <div className="community-kind-options">
-                  <label className={kind === "individual" ? "is-selected" : ""}>
-                    <input
-                      type="radio"
-                      name="account-type"
-                      value="individual"
-                      checked={kind === "individual"}
-                      onChange={() => setKind("individual")}
-                    />
-                    <span>
-                      <Icon name="heart" size={23} />
-                      <strong>Individual</strong>
-                      <small>
-                        A personal box for prayer and encouragement.
-                      </small>
-                    </span>
-                  </label>
-                  <label className={kind === "ministry" ? "is-selected" : ""}>
-                    <input
-                      type="radio"
-                      name="account-type"
-                      value="ministry"
-                      checked={kind === "ministry"}
-                      onChange={() => setKind("ministry")}
-                    />
-                    <span>
-                      <Icon name="users" size={23} />
-                      <strong>Ministry or organization</strong>
-                      <small>
-                        A separate community box, managed with your own login.
-                      </small>
-                    </span>
-                  </label>
-                </div>
-              </fieldset>
-              <div className="community-field-grid">
-                <label className="field">
-                  Username
-                  <input
-                    readOnly
-                    value={kind === "individual" ? "elena" : "church-owner"}
-                    autoComplete="off"
-                  />
-                </label>
-                <label className="field">
-                  <span>Display name <span className="community-optional">optional</span></span>
-                  <input
-                    readOnly
-                    value={kind === "individual" ? "Elena" : "Church owner"}
-                    autoComplete="off"
-                  />
-                </label>
-              </div>
-              <label className="field">
-                Password
-                <input
-                  readOnly
-                  value="prayer-box-preview"
-                  type="password"
-                  autoComplete="off"
-                />
-              </label>
-              <div className="community-signup-language">
-                <label className="field">
-                  {uiText("languageLabel", props.language)}
-                  <select
-                    value={props.language}
-                    onChange={(event) =>
-                      props.onLanguageChange(
-                        resolveUiLanguage(event.target.value),
-                      )
-                    }
-                    aria-describedby="signup-language-help"
-                  >
-                    {supportedLanguages.map((language) => (
-                      <option value={language.code} key={language.code}>
-                        {language.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p className="community-field-help" id="signup-language-help">
-                {uiText("languageHelp", props.language)}
-              </p>
-              {kind === "ministry" && (
-                <div className="community-ministry-fields">
-                  <h2>Your separate organization box</h2>
-                  <label className="field">
-                    Organization name
-                    <input readOnly value="Grace Church" />
-                  </label>
-                  <label className="field">
-                    Organization link
-                    <input readOnly value="/ministry/grace-church" />
-                  </label>
-                  <label className="field">
-                    Organization website{" "}
-                    <span className="community-optional">optional</span>
-                    <input
-                      type="text"
-                      inputMode="url"
-                      value={website}
-                      placeholder="https://example.org"
-                      maxLength={2048}
-                      autoCapitalize="none"
-                      autoComplete="off"
-                      spellCheck={false}
-                      aria-invalid={!!websiteError}
-                      aria-describedby="organization-signup-website-help"
-                      onChange={(event) => {
-                        setWebsite(event.target.value);
-                        setWebsiteError("");
-                      }}
-                    />
-                  </label>
-                  <p
-                    className="community-field-help"
-                    id="organization-signup-website-help"
-                  >
-                    Your website link will appear on your organization’s public
-                    prayer box. Leave it blank if you do not have one.
-                  </p>
-                  {websiteError && (
-                    <p className="organization-website-error" role="alert">
-                      {websiteError}
-                    </p>
-                  )}
-                  <p className="community-field-help">
-                    You can start with the owner alone and invite prayer
-                    warriors when you’re ready.
-                  </p>
-                </div>
-              )}
-              <label className="field">
-                Account visibility
-                <select
-                  value={privacy}
-                  onChange={(event) =>
-                    setPrivacy(event.target.value as Audience)
-                  }
-                >
-                  <option value="private">Private · suggested default</option>
-                  <option value="friends">My Church · accepted friends</option>
-                  <option value="public">Everyone</option>
-                </select>
-              </label>
-              <p className="community-field-help">
-                Private hides profile content and requests from outsiders.
-                Explicitly chosen recipients can still receive your request.
-              </p>
-              <details className="community-details community-contact-details">
-                <summary>Optional contact & recovery</summary>
-                <div className="community-details-body">
-                  <label className="field">
-                    Contact preference
-                    <select
-                      value={contacts}
-                      onChange={(event) =>
-                        setContacts(event.target.value as typeof contacts)
-                      }
-                    >
-                      <option value="none">No email or phone</option>
-                      <option value="email">Email only</option>
-                      <option value="phone">Phone only</option>
-                      <option value="both">Email and phone</option>
-                    </select>
-                  </label>
-                  {(contacts === "email" || contacts === "both") && (
-                    <label className="field">
-                      Email · unverified
-                      <input readOnly value="elena@example.invalid" />
-                    </label>
-                  )}
-                  {(contacts === "phone" || contacts === "both") && (
-                    <label className="field">
-                      Phone · unverified
-                      <input readOnly value="+1 (202) 555-0104" />
-                    </label>
-                  )}
-                  <p>
-                    Contact details stay private. Verification and permission
-                    to send alerts are separate choices. Marketing is optional
-                    and off by default.
-                  </p>
-                  <p>
-                    Without a verified contact method, recovery codes are
-                    essential. Losing both your password and codes can prevent
-                    recovery.
-                  </p>
-                </div>
-              </details>
-              <div className="community-signup-policy">
-                <Icon name="shield" size={20} />
-                <div>
-                  <h2>A place for prayer, not fundraising.</h2>
-                  <p>
-                    Please do not ask for money or post payment handles, QR
-                    codes, or fundraising links. For financial support, contact
-                    your local church or use a fundraising platform. Prayer
-                    about financial hardship is welcome.
-                  </p>
-                </div>
-              </div>
-              <div className="community-challenge community-signup-bot-check">
-                <Icon name="shield" size={22} />
-                <div>
-                  <strong>Bot check</strong>
-                  <p>A little care to keep this space welcoming.</p>
-                </div>
-              </div>
-              <button className="button community-full-button" type="submit">
-                Review your Prayer Box
-                <Icon name="arrow-right" size={18} />
-              </button>
-            </form>
-          ) : (
-            <div className="community-signup-review">
-              <span className="community-soft-icon">
-                <Icon name="heart" size={25} />
-              </span>
-              <h2 ref={reviewHeading} tabIndex={-1}>
-                {kind === "individual"
-                  ? "A personal box for Elena"
-                  : "A community box with its owner"}
-              </h2>
-              <dl>
-                {kind === "ministry" && (
-                  <div>
-                    <dt>Organization website</dt>
-                    <dd className="organization-website-review">
-                      {website || "Not added"}
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt>Setup</dt>
-                  <dd>
-                    {kind === "individual"
-                      ? "Individual"
-                      : "Ministry or organization"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Visibility</dt>
-                  <dd>
-                    {privacy === "private"
-                      ? "Private"
-                      : privacy === "friends"
-                        ? "Accepted friends"
-                        : "Everyone"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Contact preference</dt>
-                  <dd>
-                    {contacts === "none"
-                      ? "None required"
-                      : `${contacts === "both" ? "Email and phone" : contacts === "email" ? "Email" : "Phone"} · unverified`}
-                  </dd>
-                </div>
-                <div>
-                  <dt>External alerts</dt>
-                  <dd>Off</dd>
-                </div>
-                <div>
-                  <dt>Interface language</dt>
-                  <dd>English</dd>
-                </div>
-              </dl>
-              <section className="community-recovery">
-                <h3>Keep a way back.</h3>
-                <p>
-                  Without a verified email or phone number, keep your recovery
-                  codes somewhere safe. Losing both your password and codes can
-                  prevent account recovery.
-                </p>
-              </section>
-              {kind === "ministry" && (
-                <p className="community-field-help">
-                  Your organization can begin with its owner. Prayer warriors
-                  join through an invitation or an approved application.
-                </p>
-              )}
-              <div className="community-actions">
-                <button className="button" onClick={complete}>
-                  Open your Prayer Box preview
-                  <Icon name="arrow-right" size={17} />
-                </button>
-                <button
-                  className="button secondary"
-                  onClick={() => setStep("details")}
-                >
-                  Back to choices
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-        <aside className="community-aside">
-          <section className="community-care-note">
-            <span className="community-soft-icon">
-              <Icon name="heart" size={23} />
-            </span>
-            <h2>You do not need the perfect words.</h2>
-            <p>
-              There is room for gratitude, grief, questions, and an unfinished
-              story. You are welcome to ask for prayer.
-            </p>
-            <p>
-              We come to the Father through Jesus Christ, with the help of the
-              Holy Spirit.
-            </p>
-            <button
-              className="text-link"
-              onClick={() => props.onNavigate("about")}
-            >
-              About Prayer Box
-              <Icon name="arrow-right" size={16} />
-            </button>
-          </section>
-        </aside>
-      </div>
-    </div>
-  );
+  return <AccountSetupPreview language={props.language} onLanguageChange={props.onLanguageChange} onNavigate={props.onNavigate} onComplete={organization => {
+    if (organization) props.onCreateOrganization?.('');
+    props.onViewerChange(organization ? 'owner' : 'elena');
+    props.onNotice('Your Prayer Box preview is ready. No real account was created.');
+    props.onNavigate(organization ? 'inbox' : 'box/mine');
+  }} />;
 }
 
 function reviewReason(request: PrayerRequest) {
@@ -1265,6 +859,8 @@ function ReviewPage(props: CommunityPagesProps) {
     "Remove payment instructions or fundraising details.",
   );
   const [completed, setCompleted] = useState<string[]>([]);
+  const queueHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (completed.length) queueHeading.current?.focus(); }, [completed]);
   if (props.viewer !== "operator")
     return (
       <div className="community-page">
@@ -1364,6 +960,7 @@ function ReviewPage(props: CommunityPagesProps) {
           className="community-review-queue"
           aria-label="Fictional manual review queue"
         >
+          <h2 ref={queueHeading} tabIndex={-1} className="sr-only">Requests awaiting review</h2>
           {queue.length ? (
             queue.map((request) => (
               <article className="panel community-review-card" key={request.id}>
@@ -1386,12 +983,13 @@ function ReviewPage(props: CommunityPagesProps) {
                     ? "Grace Church"
                     : request.recipient === "maria"
                       ? "Maria’s box"
-                      : "Elena’s box"}
+                      : request.recipient === 'prayerbox' ? 'Prayer Box team' : `${recipientNames[request.recipient]}’s box`}
                   <span>
                     {getAudienceLabel(request.audience, request.recipient)}
                   </span>
                 </p>
                 <blockquote>{request.text}</blockquote>
+                {request.previewMedia && <div className="notice butter"><Icon name="lock" /><div><p>{mediaSummary(request.previewMedia)}</p>{request.previewMedia.audio && <p>Checked sample transcript · revision {request.previewMedia.audio.revision}: {request.previewMedia.audio.transcript}</p>}<p>Fictional review only. No photo or audio file is attached.</p></div></div>}
                 {request.media && (
                   <div className="community-attachment">
                     <Icon
