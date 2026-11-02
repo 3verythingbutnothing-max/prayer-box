@@ -5,7 +5,7 @@ import type { Database } from './data.ts';
 import type { Actor } from './policy.ts';
 import { HttpError, jsonResponse, readJsonObject, requireTrustedOrigin } from './http.ts';
 import { verifyTurnstile } from './turnstile.ts';
-import { authenticateCognito, cognitoConfigured, createCognitoIdentity, resetCognitoPassword, revokeCognitoSessions, validateCognitoPassword, CognitoError } from './cognito.ts';
+import { authenticateCognito, cognitoConfigured, createCognitoIdentity, resetCognitoPassword, revokeCognitoSessions, validateCognitoPassword, isCognitoSubject, CognitoError } from './cognito.ts';
 
 type Identity = { sub: string; providerUsername: string };
 export type AuthDependencies = {
@@ -164,7 +164,7 @@ async function register(request: Request, db: Database, env: BackendEnv, input: 
       if (!(error instanceof CognitoError) || error.kind !== 'identity_exists') throw error;
       identity = await provider(env, deps).authenticate({ providerUsername: `pb-${intent.id}`, password: input.password });
     }
-    if (identity.providerUsername !== `pb-${intent.id}` || !/^[a-f0-9-]{36}$/.test(identity.sub)) throw unavailable();
+    if (identity.providerUsername !== `pb-${intent.id}` || !isCognitoSubject(identity.sub)) throw unavailable();
     providerSettled = true;
     await db.prepare("UPDATE auth_registrations SET state='pending' WHERE id=? AND lease_token=? AND state='provider_write'").bind(intent.id, lease).run();
     const kit = await makeCodes(intent.user_id); const commitAt = Date.now();

@@ -107,6 +107,23 @@ async function promote(userId: string, kind: 'reviewer' | 'group admin' | 'moder
 beforeEach(resetDatabase);
 
 describe('invited Cognito-backed registration and app sessions', () => {
+  it('preserves an opaque provider subject through registration, sessions and kit recovery', async () => {
+    const h = harness(); const providerSub = 'provider-subject:opaque_123';
+    h.create.mockImplementation(async input => {
+      const identity = { sub: providerSub, providerUsername: `pb-${input.requestId}` };
+      h.remote.set(identity.providerUsername, { ...identity, password: input.password });
+      return identity;
+    });
+    const created = await register(h);
+    expect(created.identity.provider_subject).toBe(providerSub);
+    const signed = await loggedIn(h);
+    const recovered = await post('/api/auth/recover', { username: 'new-person', recoveryCode: created.recoveryCodes[0], newPassword: NEXT_PASS, turnstileToken: 'recover' }, h, created.boot);
+    expect(recovered.status).toBe(200);
+    expect(h.reset).toHaveBeenCalledWith({ providerUsername: created.identity.provider_username, expectedSub: providerSub, password: NEXT_PASS });
+    expect(h.revoke).toHaveBeenCalledWith(created.identity.provider_username, providerSub);
+    expect(await sessionActive(h, signed.cookie)).toBe(false);
+    expect((await signIn(h, 'new-person', NEXT_PASS)).status).toBe(200);
+  });
   it('default-closed capabilities neither issue bootstrap cookies nor call identity or bot providers', async () => {
     const h = harness();
     const config = await handleRequest(new Request(`${ORIGIN}/api/auth/config`), env, h.dependencies);

@@ -133,10 +133,31 @@ describe('Cognito credential authority adapter', () => {
     { Username: 'another-user', UserAttributes: [{ Name: 'sub', Value: sub }] },
     { Username: username, UserAttributes: [] },
     { Username: username, UserAttributes: [{ Name: 'sub', Value: sub }, { Name: 'sub', Value: sub }] },
-    { Username: username, UserAttributes: [{ Name: 'sub', Value: 'not-an-immutable-subject' }] },
+    { Username: username, UserAttributes: [{ Name: 'sub', Value: '' }] },
+    { Username: username, UserAttributes: [{ Name: 'sub', Value: 'unsafe\nsubject' }] },
+    { Username: username, UserAttributes: [{ Name: 'sub', Value: 'x'.repeat(129) }] },
   ])('rejects mismatched or ambiguous provider identity (%j)', async result => {
     const { fetcher } = script({ AuthenticationResult: { AccessToken: 'synthetic-access-token' } }, result);
     await expect(authenticateCognito(settings(), { providerUsername: username, password }, fetcher)).rejects.toMatchObject({ kind: 'protocol_error' });
+  });
+
+  it('keeps authenticated non-UUID subjects opaque and binds administrative changes to the exact subject', async () => {
+    const providerSub = 'native-provider-subject:opaque_123';
+    const attributes = [{ Name: 'sub', Value: providerSub }];
+    const create = script({ User: { ...user(), Attributes: attributes } }, {});
+    await expect(createCognitoIdentity(settings(), { username: 'elena', password, requestId: intent }, create.fetcher)).resolves.toEqual({ sub: providerSub, providerUsername: username });
+    expect(create.calls[1].body.Username).toBe(providerSub);
+    const auth = script({ AuthenticationResult: { AccessToken: 'synthetic-access-token' } }, { Username: username, UserAttributes: attributes });
+    await expect(authenticateCognito(settings(), { providerUsername: username, password }, auth.fetcher)).resolves.toEqual({ sub: providerSub, providerUsername: username });
+    const reset = script({ ...existing('CONFIRMED'), UserAttributes: attributes }, {});
+    await resetCognitoPassword(settings(), { providerUsername: username, expectedSub: providerSub, password }, reset.fetcher);
+    expect(reset.calls[1].body.Username).toBe(providerSub);
+    const revoke = script({});
+    await revokeCognitoSessions(settings(), username, providerSub, revoke.fetcher);
+    expect(revoke.calls[0].body.Username).toBe(providerSub);
+    const orphan = script({ ...existing(), UserAttributes: attributes }, {});
+    await deleteCognitoOrphan(settings(), { providerUsername: username, requestId: intent, expectedSub: providerSub }, orphan.fetcher);
+    expect(orphan.calls[1].body.Username).toBe(providerSub);
   });
 
   it.each(['NotAuthorizedException', 'UserNotFoundException', 'UserNotConfirmedException', 'PasswordResetRequiredException'])('maps %s to the same non-enumerating sign-in error', async code => {

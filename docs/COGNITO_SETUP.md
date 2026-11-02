@@ -1,6 +1,6 @@
 # Cognito registration adapter: staging setup and proof
 
-This is an implementation and setup contract, not evidence that an AWS account, user pool, IAM principal, real user, email or SMS has been created. Registration stays closed until the application capability gates, isolated provider proof and release approvals are complete. Payments remain deferred.
+This is an implementation and setup contract. The founder created the AWS account and root passkey MFA was verified on October 30, 2026. Resource creation and live integration proof are recorded separately in [AWS staging setup](AWS_STAGING_SETUP.md); this document alone does not certify them. Registration stays closed until the application capability gates, isolated provider proof and release approvals are complete. Payments remain deferred.
 
 ## Provider protocol
 
@@ -9,6 +9,8 @@ Cognito is the sole password authority. D1 holds application profiles, immutable
 Create a user through IAM-authorized `AdminCreateUser`, suppress its invitation, supply a random temporary password and omit contact attributes. Set the chosen permanent password with `AdminSetUserPassword`. A pool with no required contact attributes can create an account without an email address or phone number. [AdminCreateUser](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminCreateUser.html), [AdminSetUserPassword](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminSetUserPassword.html).
 
 Each private, server-generated registration-intent UUID maps to `pb-<UUID>` in Cognito. This provider username is separate from the editable public handle. Never derive it from a browser idempotency value. Resume a provider duplicate only when `AdminGetUser` identifies that same temporary native account. A confirmed duplicate requires authentication with the supplied password; never replace its credentials merely because registration was retried. Unknown mutation outcomes remain reconciliation work, not permission to delete an identity.
+
+Treat the provider's immutable `sub` as opaque. AWS explicitly warns against strict UUID-format assumptions. Validate only the bounds required to pass the subject to administrative API calls; trust the authenticated provider response and exact stored pool/subject/username binding, never a caller-supplied identifier's shape. Preserve the value without trimming, case folding or normalization. [Attribute contract](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-attributes.html), [administrative username bounds](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminSetUserPassword.html).
 
 Sign-in uses IAM-authorized `AdminInitiateAuth` with `ADMIN_USER_PASSWORD_AUTH`, followed by token-authorized `GetUser` to obtain the authoritative username and immutable `sub`. Match them to D1 before issuing an opaque application cookie. Provider tokens are discarded rather than returned to JavaScript. Every additional provider challenge is rejected by this increment; a challenge is not a signed-in user. [AdminInitiateAuth](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminInitiateAuth.html), [GetUser](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_GetUser.html).
 
