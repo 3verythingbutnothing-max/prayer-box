@@ -13,6 +13,12 @@ The template creates no users, IAM permissions, access keys, SMS roles, Lambda f
 
 AWS CloudFormation validated the template. A change set named `initial-directory` on `prayer-box-cognito-staging` in `us-east-2` was prepared and described as `CREATE_COMPLETE` / `AVAILABLE`, with two `Add` actions. **A prepared change set is not an applied directory.** The account's root console session is being used only for initial bootstrap; routine operations must move to scoped access.
 
+## Approved application pending browser access
+
+On November 2, 2026, the founder approved applying this exact staging directory/app-client change set and the $10 monthly AWS budget alerts to the account's existing owner iCloud email. The approval remains valid; do not ask for it again unless the resources, recipient, permissions or costs materially change. This does not authorize a paid-plan upgrade, additional IAM grants, credential creation, real users or opening public registration.
+
+Application is still unverified and was not attempted: the browser tool reports `Local browser use is disabled in Work settings`, including after the founder enabled browser use and the browser runtime was reset. No configured local AWS CLI or AWS connector is available as an alternative. Do not bypass browser permissions or export browser/root credentials. Reinspect the existing change set and budget before continuing in a working session; never assume their state from these notes.
+
 ## Apply only after the concrete setup is approved
 
 Use AWS's built-in CloudShell; no local AWS installation or root credential export is necessary for this bootstrap. The JSON file is nonsecret. Keep the directory and stack names stable after an uncertain response; inspect state before retrying.
@@ -39,7 +45,7 @@ Pool ID, pool ARN, region and client ID are nonsecret identifiers. Keep credenti
 
 ## Spending alerts
 
-A $10 monthly AWS-usage budget is proposed, covering all AWS services and measuring usage before credits/refunds. The monthly template alerts on actual costs at 85% ($8.50), actual costs at 100% ($10), and a 100% forecast. Sending to the account's existing owner email requires founder consent; the recipient is not stored in source control. This is an alert threshold, not a hard limit, paid-plan upgrade or spending authorization. Billing data can take up to 24 hours to appear for a new account. Budget creation and email receipt must be verified separately.
+A $10 monthly AWS-usage budget is approved, covering all AWS services and measuring usage before credits/refunds. The monthly template alerts on actual costs at 85% ($8.50), actual costs at 100% ($10), and a 100% forecast. The founder approved using the account's existing owner iCloud email; the recipient is not stored in source control. The form was prepared but has not been submitted. This is an alert threshold, not a hard limit, paid-plan upgrade or spending authorization. Billing data can take up to 24 hours to appear for a new account. Budget creation and email receipt must be verified separately.
 
 ## Still required before real registration
 
